@@ -1,7 +1,7 @@
 // Genera los flujos de n8n (JSON importables) en la carpeta n8n/.
 // Uso: node scripts/generar-flujos-n8n.mjs
 // Los flujos leen la configuración de variables de entorno de n8n:
-//   LH_API_URL, LH_API_KEY, APIFY_TOKEN, META_ADS_LIBRARY_TOKEN, TELEGRAM_CHAT_ID,
+//   LH_API_URL, LH_API_KEY, APIFY_TOKEN, META_ADS_LIBRARY_TOKEN, WHATSAPP_PHONE, WHATSAPP_APIKEY,
 //   GOOGLE_ADS_WEBHOOK_KEY, EMAIL_FROM, APP_URL
 import { writeFileSync, mkdirSync } from "node:fs";
 import { randomUUID } from "node:crypto";
@@ -40,11 +40,14 @@ function http(name, position, { method = "GET", url, body, query, headers = true
 const code = (name, position, jsCode, mode) =>
   node(name, "n8n-nodes-base.code", 2, position, mode ? { mode, jsCode } : { jsCode });
 
-const telegram = (name, position, text) =>
-  node(name, "n8n-nodes-base.telegram", 1.2, position, {
-    chatId: "={{ $env.TELEGRAM_CHAT_ID }}",
-    text,
-    additionalFields: { parse_mode: "HTML", appendAttribution: false },
+/** Aviso por WhatsApp a tu propio móvil con CallMeBot (gratis): https://www.callmebot.com/blog/free-api-whatsapp-messages/ */
+const whatsapp = (name, position, text) =>
+  http(name, position, {
+    url: "https://api.callmebot.com/whatsapp.php",
+    headers: false,
+    // WhatsApp usa *negrita* en lugar de <b>
+    query: { phone: "={{ $env.WHATSAPP_PHONE }}", apikey: "={{ $env.WHATSAPP_APIKEY }}", text: text.replace(/<\/?b>/g, "*") },
+    onError: "continueRegularOutput",
   });
 
 const email = (name, position, { to, subject, html }) =>
@@ -106,7 +109,8 @@ const CONFIG_DEFAULTS = {
   APP_URL: "https://app.tudominio.com",
   APIFY_TOKEN: "PEGA_AQUI_TU_TOKEN_DE_APIFY",
   META_ADS_LIBRARY_TOKEN: "PEGA_AQUI_TU_TOKEN_DE_META",
-  TELEGRAM_CHAT_ID: "PEGA_AQUI_TU_CHAT_ID",
+  WHATSAPP_PHONE: "+34600000000",
+  WHATSAPP_APIKEY: "PEGA_AQUI_TU_APIKEY_DE_CALLMEBOT",
   GOOGLE_ADS_WEBHOOK_KEY: "PEGA_AQUI_UNA_CLAVE_SECRETA",
   EMAIL_FROM: "Leads Hunters <hola@tudominio.com>",
   TWILIO_FROM: "+34000000000",
@@ -321,7 +325,7 @@ return $input.all()
   const summary = code("Resumen", [3960, 300], `const r = $('Enviar despachos a la app').first().json;
 return [{ json: { nuevos: r.created, actualizados: r.updated, descartados: r.skipped, analizados: $('Separar despachos').all().length } }];`);
 
-  const tg = telegram("Avisar por Telegram", [4180, 300],
+  const tg = whatsapp("Avisar por WhatsApp", [4180, 300],
     "=🔎 <b>Prospección terminada</b>\nNuevos: {{ $json.nuevos }} · actualizados: {{ $json.actualizados }} · analizados: {{ $json.analizados }}\n{{ $env.APP_URL }}/prospeccion");
   tg.onError = "continueRegularOutput";
 
@@ -331,7 +335,7 @@ return [{ json: { nuevos: r.created, actualizados: r.updated, descartados: r.ski
   });
 
   const note = sticky(
-    "## 01 · Prospección de despachos\nBusca en Google Maps (Apify) despachos de Segunda Oportunidad en las ciudades de **Configuración**, los manda a la app (que limpia, quita duplicados y puntúa) y después analiza cada uno:\n- su **web** (redes, email, formulario, WhatsApp, píxel, si habla de LSO)\n- si **anuncia en Meta** (Biblioteca de anuncios)\n- su **Instagram** (seguidores, días sin publicar)\n\nRellena el nodo **Config**: `LH_API_URL`, `LH_API_KEY`, `APIFY_TOKEN`, `META_ADS_LIBRARY_TOKEN`, `TELEGRAM_CHAT_ID`.\nSolo empresas (B2B): no se recogen datos de particulares.",
+    "## 01 · Prospección de despachos\nBusca en Google Maps (Apify) despachos de Segunda Oportunidad en las ciudades de **Configuración**, los manda a la app (que limpia, quita duplicados y puntúa) y después analiza cada uno:\n- su **web** (redes, email, formulario, WhatsApp, píxel, si habla de LSO)\n- si **anuncia en Meta** (Biblioteca de anuncios)\n- su **Instagram** (seguidores, días sin publicar)\n\nRellena el nodo **Config**: `LH_API_URL`, `LH_API_KEY`, `APIFY_TOKEN`, `META_ADS_LIBRARY_TOKEN`, `WHATSAPP_PHONE`, `WHATSAPP_APIKEY`.\nSolo empresas (B2B): no se recogen datos de particulares.",
     [180, -120], 520, 280, 4,
   );
 
@@ -345,7 +349,7 @@ return [{ json: { nuevos: r.created, actualizados: r.updated, descartados: r.ski
       ["Enviar análisis a la app", "Usuarios de Instagram"], ["Usuarios de Instagram", "¿Hay Instagram?"],
       ["¿Hay Instagram?", "Apify · Perfiles de Instagram", 0], ["¿Hay Instagram?", "Resumen", 1],
       ["Apify · Perfiles de Instagram", "Datos de Instagram"], ["Datos de Instagram", "Enviar Instagram a la app"], ["Enviar Instagram a la app", "Resumen"],
-      ["Resumen", "Avisar por Telegram"],
+      ["Resumen", "Avisar por WhatsApp"],
     ],
   ));
 }
@@ -384,10 +388,10 @@ return $input.all().map(({ json: l }) => {
   const send = http("Enviar lead a la app", [660, 300], {
     method: "POST", url: apiUrl("/api/v1/leads"), body: "={{ JSON.stringify($json) }}", timeout: 20000, onError: "continueErrorOutput",
   });
-  const fail = telegram("Avisar si falla", [880, 420],
+  const fail = whatsapp("Avisar si falla", [880, 420],
     "=⚠️ <b>Lead de Meta no guardado</b>\n{{ $json.error?.message || JSON.stringify($json).slice(0, 300) }}\nRevisa que el ID del formulario esté en la ficha del cliente.");
   const note = sticky(
-    "## 02 · Leads de Meta (Facebook/Instagram)\n1. En **Meta · Nuevo lead** conecta tu credencial de Facebook Lead Ads y elige página y formulario (duplica el flujo si quieres uno por formulario, o deja «todos»).\n2. En la app, pon el **ID del formulario** en la ficha del cliente: así cada lead va a su despacho.\n3. Rellena el nodo **Config** (`LH_API_URL`, `LH_API_KEY`, `TELEGRAM_CHAT_ID`).\n4. La app cualifica el lead y avisa al momento (flujo 04).",
+    "## 02 · Leads de Meta (Facebook/Instagram)\n1. En **Meta · Nuevo lead** conecta tu credencial de Facebook Lead Ads y elige página y formulario (duplica el flujo si quieres uno por formulario, o deja «todos»).\n2. En la app, pon el **ID del formulario** en la ficha del cliente: así cada lead va a su despacho.\n3. Rellena el nodo **Config** (`LH_API_URL`, `LH_API_KEY`, `WHATSAPP_PHONE`, `WHATSAPP_APIKEY`).\n4. La app cualifica el lead y avisa al momento (flujo 04).",
     [160, 20], 520, 220, 4,
   );
   save("02-leads-meta.json", workflow("02 · Leads de Meta Lead Ads → app", [note, trigger, map, send, fail], [
@@ -430,7 +434,7 @@ return [{ json: {
   const send = http("Enviar lead a la app", [880, 200], {
     method: "POST", url: apiUrl("/api/v1/leads"), body: "={{ JSON.stringify($json.lead) }}", timeout: 20000, onError: "continueErrorOutput",
   });
-  const fail = telegram("Avisar si falla", [1100, 320],
+  const fail = whatsapp("Avisar si falla", [1100, 320],
     "=⚠️ <b>Lead de Google no guardado</b>\n{{ $json.error?.message || JSON.stringify($json).slice(0, 300) }}");
   const note = sticky(
     "## 03 · Leads de Google Ads\nEn Google Ads → formulario de clientes potenciales → **Integración de webhook**:\n- URL: `https://TU-N8N/webhook/google-ads-leads`\n- Clave: el valor de `GOOGLE_ADS_WEBHOOK_KEY`\n\nPon el **form_id** en la ficha del cliente de la app. Usa «Enviar datos de prueba» para comprobarlo.",
@@ -469,7 +473,7 @@ return [{ json: { event_id: b.id, kind: b.kind, ...b.payload } }];`);
     options: {},
   });
 
-  const tgLead = telegram("🔥 Nuevo lead al equipo", [940, 160],
+  const tgLead = whatsapp("🔥 Nuevo lead al equipo", [940, 160],
     "=🔥 <b>Nuevo lead · {{ $json.cliente }}</b>\n{{ $json.nombre }} · {{ $json.telefono }}\nDeuda: {{ $json.deuda ? $json.deuda.toLocaleString('es-ES') + ' €' : '¿?' }} · Acreedores: {{ $json.acreedores ?? '¿?' }} · {{ $json.cualificacion }}\nOrigen: {{ $json.origen }} {{ $json.campana || '' }}\n👉 Llama YA: {{ $env.APP_URL }}/cola");
 
   const mailClient = email("Email al despacho", [940, 340], {
@@ -515,16 +519,16 @@ return [{ json: { event_id: b.id, kind: b.kind, ...b.payload } }];`);
     options: {},
   }, { disabled: true, onError: "continueRegularOutput" });
 
-  const tgDone = telegram("✅ Consulta realizada", [940, 540],
+  const tgDone = whatsapp("✅ Consulta realizada", [940, 540],
     "=✅ Consulta realizada · {{ $json.cliente }} · {{ $json.lead_nombre }} (confirmó: {{ $json.confirmed_by || 'equipo' }})");
-  const tgNo = telegram("❌ No se presentó", [940, 700],
+  const tgNo = whatsapp("❌ No se presentó", [940, 700],
     "=❌ No se presentó · {{ $json.cliente }} · {{ $json.lead_nombre }} · {{ $json.lead_telefono }}\nIntenta reagendar: {{ $env.APP_URL }}/leads/{{ $json.lead_id }}");
-  const tgClient = telegram("🎉 Nuevo cliente", [940, 860],
+  const tgClient = whatsapp("🎉 Nuevo cliente", [940, 860],
     "=🎉 <b>Nuevo cliente:</b> {{ $json.nombre }}\nCompleta su ficha: {{ $env.APP_URL }}/clientes/{{ $json.client_id }}");
   [tgLead, tgDone, tgNo, tgClient].forEach((n) => (n.onError = "continueRegularOutput"));
 
   const note = sticky(
-    "## 04 · Eventos de la app\nLa app llama a este webhook en cada evento (`N8N_EVENTS_WEBHOOK_URL`).\n- **lead.nuevo** → Telegram al equipo para llamar en < 5 min\n- **cita.agendada** → email al despacho con el resumen + enlace para confirmar asistencia, y confirmación al lead (email; SMS con Twilio si lo activas)\n- **cita.asistida / no_asistio** → aviso\n- **prospecto.cliente** → aviso de nuevo cliente\n\nActiva el flujo para que la URL de producción funcione.",
+    "## 04 · Eventos de la app\nLa app llama a este webhook en cada evento (`N8N_EVENTS_WEBHOOK_URL`).\n- **lead.nuevo** → WhatsApp al equipo para llamar en < 5 min\n- **cita.agendada** → email al despacho con el resumen + enlace para confirmar asistencia, y confirmación al lead (email; SMS con Twilio si lo activas)\n- **cita.asistida / no_asistio** → aviso\n- **prospecto.cliente** → aviso de nuevo cliente\n\nActiva el flujo para que la URL de producción funcione.",
     [160, -40], 560, 300, 4,
   );
 
@@ -654,11 +658,11 @@ const total = clients.reduce((a, c) => a + c.total, 0);
 const lineas = clients.map(c => '• ' + c.cliente + ': ' + c.total.toLocaleString('es-ES') + ' € (' + c.citas_asistidas + ' consultas)').join('\\n');
 return [{ json: { month, total, lineas } }];`, undefined);
   total.executeOnce = true;
-  const tg = telegram("Resumen al dueño", [1320, 300],
+  const tg = whatsapp("Resumen al dueño", [1320, 300],
     "=💶 <b>Facturación {{ $json.month }}</b>: {{ $json.total.toLocaleString('es-ES') }} € + IVA\n{{ $json.lineas }}\n{{ $env.APP_URL }}/facturacion?mes={{ $json.month }}");
   tg.onError = "continueRegularOutput";
   const note = sticky(
-    "## 06 · Informe mensual\nEl día 1 manda a cada despacho sus resultados del mes anterior (leads, cualificados, consultas realizadas e importe) y te pasa el total a facturar por Telegram.",
+    "## 06 · Informe mensual\nEl día 1 manda a cada despacho sus resultados del mes anterior (leads, cualificados, consultas realizadas e importe) y te pasa el total a facturar por WhatsApp.",
     [160, 40], 480, 160, 4,
   );
   save("06-informe-mensual.json", workflow("06 · Informe mensual y facturación", [note, sched, get, split, mail, total, tg], [

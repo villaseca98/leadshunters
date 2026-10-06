@@ -8,8 +8,8 @@
         "height": 140,
         "color": 4
       },
-      "id": "318b4c35-8d28-40b4-aac8-4d0806a127d3",
-      "name": "Nota baf7",
+      "id": "1048eff3-a074-45d1-96c2-f6adbc65ebd6",
+      "name": "Nota 742d",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
@@ -29,7 +29,7 @@
           ]
         }
       },
-      "id": "f47d4f5d-9555-48e0-8bcb-4b66ec28aab4",
+      "id": "c3ccaa7c-0ece-4aec-a633-288b26e0f01b",
       "name": "Cada día 20:00",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -53,7 +53,7 @@
           ]
         }
       },
-      "id": "804d0914-c652-4914-9258-f80a4c1e209e",
+      "id": "2b532b0a-9636-4d51-9a89-2dc5d25e97d2",
       "name": "Consultas pasadas sin confirmar",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -66,7 +66,7 @@
       "parameters": {
         "jsCode": "// Un email por despacho con todas sus consultas pendientes de confirmar\nconst porCliente = {};\nfor (const c of $input.first().json.consultations) {\n  if (!c.cliente_email) continue;\n  (porCliente[c.client_id] ??= { cliente: c.cliente, email: c.cliente_email, consultas: [] }).consultas.push(c);\n}\nreturn Object.values(porCliente).map(x => ({ json: {\n  ...x,\n  filas: x.consultas.map(c => '<li>' + c.lead_nombre + ' · ' + new Date(c.scheduled_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', dateStyle: 'medium', timeStyle: 'short' }) + ' · <a href=\"' + c.enlace_confirmar + '\">confirmar</a></li>').join(''),\n} }));"
       },
-      "id": "95cc2a95-8ad6-4aee-b71c-84feae213419",
+      "id": "ef3fa50a-72cb-4b48-8fe5-3be6fb1028ce",
       "name": "Agrupar por despacho",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -86,7 +86,7 @@
           "appendAttribution": false
         }
       },
-      "id": "782cc7a5-1079-417f-8a25-96b71c99cb3a",
+      "id": "9b908303-189c-4ecf-b3c1-6cd338bc1798",
       "name": "Pedir confirmación al despacho",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -103,19 +103,19 @@
         "assignments": {
           "assignments": [
             {
-              "id": "485467ed-20e5-41b8-bca2-c7eb649f34bf",
+              "id": "0c4c758a-1089-408f-b254-589bd01254f4",
               "name": "EMAIL_FROM",
               "value": "Leads Hunters <hola@tudominio.com>",
               "type": "string"
             },
             {
-              "id": "65a75dc3-6496-452f-b68b-6219f6e7ada6",
+              "id": "a3552620-285d-4b19-8cd1-94ba4da30efe",
               "name": "LH_API_KEY",
               "value": "PEGA_AQUI_LA_N8N_API_KEY_DE_LA_APP",
               "type": "string"
             },
             {
-              "id": "0ebcbd90-5504-4685-9fd5-051646720c87",
+              "id": "d69b40c4-7924-4f12-9893-d05d881796a4",
               "name": "LH_API_URL",
               "value": "https://app.tudominio.com",
               "type": "string"
@@ -124,7 +124,7 @@
         },
         "options": {}
       },
-      "id": "d997036d-8fbf-4814-b8bf-207f1e3a9d19",
+      "id": "d97e723c-979b-4ae5-82f8-636288be7a57",
       "name": "Config",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,

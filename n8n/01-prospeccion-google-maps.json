@@ -3,13 +3,13 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## 01 · Prospección de despachos\nBusca en Google Maps (Apify) despachos de Segunda Oportunidad en las ciudades de **Configuración**, los manda a la app (que limpia, quita duplicados y puntúa) y después analiza cada uno:\n- su **web** (redes, email, formulario, WhatsApp, píxel, si habla de LSO)\n- si **anuncia en Meta** (Biblioteca de anuncios)\n- su **Instagram** (seguidores, días sin publicar)\n\nRellena el nodo **Config**: `LH_API_URL`, `LH_API_KEY`, `APIFY_TOKEN`, `META_ADS_LIBRARY_TOKEN`, `TELEGRAM_CHAT_ID`.\nSolo empresas (B2B): no se recogen datos de particulares.",
+        "content": "## 01 · Prospección de despachos\nBusca en Google Maps (Apify) despachos de Segunda Oportunidad en las ciudades de **Configuración**, los manda a la app (que limpia, quita duplicados y puntúa) y después analiza cada uno:\n- su **web** (redes, email, formulario, WhatsApp, píxel, si habla de LSO)\n- si **anuncia en Meta** (Biblioteca de anuncios)\n- su **Instagram** (seguidores, días sin publicar)\n\nRellena el nodo **Config**: `LH_API_URL`, `LH_API_KEY`, `APIFY_TOKEN`, `META_ADS_LIBRARY_TOKEN`, `WHATSAPP_PHONE`, `WHATSAPP_APIKEY`.\nSolo empresas (B2B): no se recogen datos de particulares.",
         "width": 520,
         "height": 280,
         "color": 4
       },
-      "id": "55535743-6d9c-46b0-a4fe-2378be6dbb7a",
-      "name": "Nota e212",
+      "id": "5ae2292c-3f7e-4cf8-b6c7-6eb93d34b109",
+      "name": "Nota b4ff",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
@@ -19,7 +19,7 @@
     },
     {
       "parameters": {},
-      "id": "c589eeff-5110-40bc-a305-265cc2374092",
+      "id": "b6981839-95b5-4cc4-8c97-cb5fd2e65cf3",
       "name": "Lanzar a mano",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
@@ -43,7 +43,7 @@
           ]
         }
       },
-      "id": "19faa4ba-2c4c-4643-939b-2d06cf39b535",
+      "id": "5aabff39-aaf7-4bf6-ad60-293b544ca6a1",
       "name": "Cada lunes 7:00",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -57,25 +57,25 @@
         "assignments": {
           "assignments": [
             {
-              "id": "c53f2c7b-3e1d-4205-937c-cd0a04fa92ca",
+              "id": "26ffe7e0-e6a4-4c09-be87-9b5cf57e7b1e",
               "name": "busquedas",
               "type": "array",
               "value": "[\"abogados segunda oportunidad\", \"abogado ley de segunda oportunidad\", \"abogados cancelar deudas\", \"abogado concurso de acreedores persona física\"]"
             },
             {
-              "id": "5a3eaf66-9574-432b-a47c-fcbc30534bba",
+              "id": "2a6bdc1f-8e5d-4ffb-a731-6f54f8c13913",
               "name": "ciudades",
               "type": "array",
               "value": "[\"Madrid\", \"Barcelona\", \"Valencia\", \"Sevilla\", \"Málaga\", \"Alicante\", \"Murcia\", \"Zaragoza\", \"Bilbao\", \"Palma\"]"
             },
             {
-              "id": "53ca1763-70d3-4f26-b288-c4dde60d24c6",
+              "id": "7a39ed1a-16d0-4306-a354-f402deabce08",
               "name": "maxPorBusqueda",
               "type": "number",
               "value": 30
             },
             {
-              "id": "44f6020c-b56c-4c83-9f81-1be29298f878",
+              "id": "ba4b405b-5f12-4e9d-875c-809927ddaddd",
               "name": "analizarInstagram",
               "type": "boolean",
               "value": true
@@ -84,7 +84,7 @@
         },
         "options": {}
       },
-      "id": "ccb66ff5-f839-4be7-bc50-debeee66f3c2",
+      "id": "c942f3a8-811b-476a-9e37-c21393ba0acf",
       "name": "Configuración",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -97,7 +97,7 @@
       "parameters": {
         "jsCode": "// Combina cada búsqueda con cada ciudad: \"abogados segunda oportunidad Valencia\"\nconst c = $input.first().json;\nconst busquedas = [];\nfor (const ciudad of c.ciudades) for (const b of c.busquedas) busquedas.push(`${b} ${ciudad}`);\nreturn [{ json: {\n  searchStringsArray: busquedas,\n  maxCrawledPlacesPerSearch: c.maxPorBusqueda,\n  language: \"es\",\n  countryCode: \"es\",\n  skipClosedPlaces: true,\n  scrapeContacts: true,\n  scrapePlaceDetailPage: false,\n} }];"
       },
-      "id": "2e6a42d7-0557-421a-ba8a-3eaae56c6e4c",
+      "id": "89f175af-23e5-49d6-9fcd-e7d01f926774",
       "name": "Preparar búsquedas",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -117,7 +117,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json) }}"
       },
-      "id": "ba538854-24e2-4356-8315-58e020139304",
+      "id": "b773576e-5272-474d-9798-f2fb19b09623",
       "name": "Apify · Google Maps",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -130,7 +130,7 @@
       "parameters": {
         "jsCode": "// Manda todos los despachos a la app en una sola llamada (la app limpia, deduplica y puntúa)\nconst items = $input.all().map(i => i.json).filter(x => x && (x.title || x.name));\nreturn [{ json: { items, search_term: $('Configuración').first().json.busquedas.join(' | ') } }];"
       },
-      "id": "d8188333-5f4b-4707-ba77-1a2be795a118",
+      "id": "dc707e28-0262-4abe-a443-5dbbd8083454",
       "name": "Agrupar resultados",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -159,7 +159,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json) }}"
       },
-      "id": "9a650387-30ca-4b8b-bc7e-afdbbab0dc63",
+      "id": "61a1ce80-c783-469c-bcf2-cb2bafa8487c",
       "name": "Enviar despachos a la app",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -192,7 +192,7 @@
           ]
         }
       },
-      "id": "06c17902-20c0-47be-8b06-12a0a72b7024",
+      "id": "d594c463-cd87-45aa-9a33-30df9ab718c4",
       "name": "Despachos sin analizar",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -205,7 +205,7 @@
       "parameters": {
         "jsCode": "return $input.first().json.prospects.map(p => ({ json: p }));"
       },
-      "id": "b5c82322-e4ca-4a16-b39c-4e11892af22c",
+      "id": "b56065a6-3809-4e84-84d0-756b2d6d273f",
       "name": "Separar despachos",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -242,7 +242,7 @@
           ]
         }
       },
-      "id": "16933db4-ea1e-4fa2-af56-3e7f69e2563f",
+      "id": "ae516a6f-a2a5-4972-9000-14d53c3cbcf2",
       "name": "Descargar web",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -294,7 +294,7 @@
           ]
         }
       },
-      "id": "ff626b86-04a5-4c94-ad89-1a2d79ae2ae7",
+      "id": "63604233-1a50-4ce0-bf9a-15ae8fe6f31a",
       "name": "Meta · Biblioteca de anuncios",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -309,7 +309,7 @@
       "parameters": {
         "jsCode": "// Une, para cada despacho, la web descargada y los anuncios encontrados en Meta.\n// La app analiza el HTML (redes, email, formulario, WhatsApp, píxel, si habla de Segunda Oportunidad).\nconst quitarAcentos = s => (s || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\nconst palabras = s => quitarAcentos(s).split(/[^a-z0-9]+/).filter(w => w.length > 3 && !['abogados','abogado','despacho','bufete','asociados'].includes(w));\n\nreturn $input.all().map((it, i) => {\n  const p = $('Separar despachos').all()[i].json;\n  const webItem = $('Descargar web').all()[i]?.json ?? {};\n  const html = typeof webItem.html === 'string' ? webItem.html.slice(0, 400000) : (typeof webItem.data === 'string' ? webItem.data.slice(0, 400000) : null);\n\n  const out = { id: p.id };\n  if (p.website && html) out.html = html;\n\n  // Anuncios: nos quedamos con los de páginas cuyo nombre se parece al del despacho\n  const ads = Array.isArray(it.json.data) ? it.json.data : null;\n  if (ads) {\n    const claves = palabras(p.name);\n    const suyos = ads.filter(a => {\n      const pn = quitarAcentos(a.page_name);\n      return claves.length ? claves.some(w => pn.includes(w)) : false;\n    });\n    out.meta_ads_active = suyos.length > 0;\n    out.meta_ads_count = suyos.length;\n    out.meta_ads_lso = suyos.some(a => /segunda oportunidad|deuda|insolven|concurso/i.test((a.ad_creative_bodies || []).join(' ')));\n  }\n  return { json: out };\n});"
       },
-      "id": "db0082dc-f579-4005-bd5d-7f0e674367ef",
+      "id": "524e650a-69a3-465f-9764-8047fd48f2a8",
       "name": "Juntar análisis",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -338,7 +338,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json) }}"
       },
-      "id": "a6c2bb6e-6041-44b7-9470-352d9949a3e7",
+      "id": "c232fcd2-5500-4a6f-8a26-1206c2ac968f",
       "name": "Enviar análisis a la app",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -352,7 +352,7 @@
       "parameters": {
         "jsCode": "// Junta los usuarios de Instagram (de Google Maps o detectados en la web) en una sola llamada a Apify\nif (!$('Configuración').first().json.analizarInstagram) return [{ json: { usuarios: [], porUsuario: {} } }];\nconst usuarioDe = (url) => {\n  const m = (url || '').match(/instagram\\.com\\/([A-Za-z0-9_.]+)/i);\n  if (!m) return null;\n  const u = m[1].toLowerCase().replace(/\\.$/, '');\n  return ['p', 'reel', 'reels', 'explore', 'stories', 'accounts'].includes(u) ? null : u;\n};\nconst porUsuario = {};\n$('Separar despachos').all().forEach((it, i) => {\n  const detectado = $('Enviar análisis a la app').all()[i]?.json?.detected?.instagram;\n  const u = usuarioDe(it.json.instagram) || usuarioDe(detectado);\n  if (u) porUsuario[u] = it.json.id;\n});\nreturn [{ json: { usuarios: Object.keys(porUsuario), porUsuario } }];"
       },
-      "id": "d1f5dce8-e66f-4ed3-abd5-bbae96a218cb",
+      "id": "5d409e6d-553b-4f70-96aa-feb29998ceb0",
       "name": "Usuarios de Instagram",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -372,7 +372,7 @@
           },
           "conditions": [
             {
-              "id": "dc0e7fec-f866-4a04-b97d-efe9d7471e82",
+              "id": "2f951a2f-d434-4f93-871e-63ed94cc0506",
               "leftValue": "={{ $json.usuarios.length > 0 }}",
               "rightValue": "",
               "operator": {
@@ -386,7 +386,7 @@
         },
         "options": {}
       },
-      "id": "7c29ac8d-aa30-4079-a21e-1d0a264bad9e",
+      "id": "de9c15bb-f3c5-4cd8-b06d-eeb2b632df62",
       "name": "¿Hay Instagram?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -406,7 +406,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ usernames: $json.usuarios }) }}"
       },
-      "id": "63853251-f626-46dd-8ca5-85fffd7c26f5",
+      "id": "32b00e0f-6ba7-40c8-86b2-d28d9672fc84",
       "name": "Apify · Perfiles de Instagram",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -420,7 +420,7 @@
       "parameters": {
         "jsCode": "const porUsuario = $('Usuarios de Instagram').first().json.porUsuario;\nconst hoy = Date.now();\nreturn $input.all()\n  .map(i => i.json)\n  .filter(p => p && p.username && porUsuario[p.username.toLowerCase()])\n  .map(p => {\n    const ultima = (p.latestPosts || []).map(x => x.timestamp).filter(Boolean).sort().at(-1);\n    return { json: {\n      id: porUsuario[p.username.toLowerCase()],\n      instagram: 'https://www.instagram.com/' + p.username,\n      instagram_followers: p.followersCount ?? null,\n      instagram_days_since_post: ultima ? Math.round((hoy - Date.parse(ultima)) / 864e5) : null,\n    } };\n  });"
       },
-      "id": "e262e8aa-54a2-4ac6-a3f3-742d39a0697d",
+      "id": "5f985e1a-dc9b-4b0b-8adf-ecb71935b1d6",
       "name": "Datos de Instagram",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -447,7 +447,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json) }}"
       },
-      "id": "12b4177a-9c9a-41ae-86ea-7c03d388c5d4",
+      "id": "57737fa2-9b41-484b-92c4-72254d77d428",
       "name": "Enviar Instagram a la app",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -461,7 +461,7 @@
       "parameters": {
         "jsCode": "const r = $('Enviar despachos a la app').first().json;\nreturn [{ json: { nuevos: r.created, actualizados: r.updated, descartados: r.skipped, analizados: $('Separar despachos').all().length } }];"
       },
-      "id": "40140ced-3ce2-4b31-85e0-d3f8eca8ab0b",
+      "id": "e83e5d3d-8db3-45a9-ad4e-5d9d04482e81",
       "name": "Resumen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -472,17 +472,31 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $('Config').first().json.TELEGRAM_CHAT_ID }}",
-        "text": "=🔎 <b>Prospección terminada</b>\nNuevos: {{ $json.nuevos }} · actualizados: {{ $json.actualizados }} · analizados: {{ $json.analizados }}\n{{ $('Config').first().json.APP_URL }}/prospeccion",
-        "additionalFields": {
-          "parse_mode": "HTML",
-          "appendAttribution": false
+        "method": "GET",
+        "url": "https://api.callmebot.com/whatsapp.php",
+        "options": {},
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "={{ $('Config').first().json.WHATSAPP_PHONE }}"
+            },
+            {
+              "name": "apikey",
+              "value": "={{ $('Config').first().json.WHATSAPP_APIKEY }}"
+            },
+            {
+              "name": "text",
+              "value": "=🔎 *Prospección terminada*\nNuevos: {{ $json.nuevos }} · actualizados: {{ $json.actualizados }} · analizados: {{ $json.analizados }}\n{{ $('Config').first().json.APP_URL }}/prospeccion"
+            }
+          ]
         }
       },
-      "id": "4b26a60d-d7d5-409a-ba0d-6a6099648148",
-      "name": "Avisar por Telegram",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
+      "id": "c9b5ce44-c931-4e1f-9f27-1e65db6ec985",
+      "name": "Avisar por WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         4400,
         300
@@ -496,46 +510,52 @@
         "assignments": {
           "assignments": [
             {
-              "id": "9f758201-1262-4233-8056-0d302149afe5",
+              "id": "a02e4127-6001-4577-88fe-ed0e6b8968bc",
               "name": "APIFY_TOKEN",
               "value": "PEGA_AQUI_TU_TOKEN_DE_APIFY",
               "type": "string"
             },
             {
-              "id": "53fe782a-a23d-419f-a160-ed8f69ff8434",
+              "id": "7e48130b-f1aa-4ad0-b825-eea14ef26448",
               "name": "APP_URL",
               "value": "https://app.tudominio.com",
               "type": "string"
             },
             {
-              "id": "a5262253-67c3-4f6f-bf5a-d2edb8a91dbd",
+              "id": "b2581d58-b24a-474a-b7f2-8b64ed0bbcc3",
               "name": "LH_API_KEY",
               "value": "PEGA_AQUI_LA_N8N_API_KEY_DE_LA_APP",
               "type": "string"
             },
             {
-              "id": "9b475dd6-b699-4d64-bfb3-8ef9df7975af",
+              "id": "63715475-5c74-4859-8895-1bfb9026fb07",
               "name": "LH_API_URL",
               "value": "https://app.tudominio.com",
               "type": "string"
             },
             {
-              "id": "7d5fe42b-4b09-4a7f-a5cc-a3a2799855c4",
+              "id": "ddd2569c-009a-4b8f-870e-3579b82d813e",
               "name": "META_ADS_LIBRARY_TOKEN",
               "value": "PEGA_AQUI_TU_TOKEN_DE_META",
               "type": "string"
             },
             {
-              "id": "f519dabb-1df0-49ac-8d68-09eeccda26fc",
-              "name": "TELEGRAM_CHAT_ID",
-              "value": "PEGA_AQUI_TU_CHAT_ID",
+              "id": "de61527c-f815-4ac9-bcab-13fc4b38e000",
+              "name": "WHATSAPP_APIKEY",
+              "value": "PEGA_AQUI_TU_APIKEY_DE_CALLMEBOT",
+              "type": "string"
+            },
+            {
+              "id": "d6cfb185-a093-4f0a-b4a8-6e59ed2c91a7",
+              "name": "WHATSAPP_PHONE",
+              "value": "+34600000000",
               "type": "string"
             }
           ]
         },
         "options": {}
       },
-      "id": "26df4fc0-3dd7-4e5d-8f45-faa5a9711eba",
+      "id": "229c8c8a-4214-4f3d-8bd6-576d4f634820",
       "name": "Config",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -755,7 +775,7 @@
       "main": [
         [
           {
-            "node": "Avisar por Telegram",
+            "node": "Avisar por WhatsApp",
             "type": "main",
             "index": 0
           }

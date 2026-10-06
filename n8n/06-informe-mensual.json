@@ -3,13 +3,13 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## 06 · Informe mensual\nEl día 1 manda a cada despacho sus resultados del mes anterior (leads, cualificados, consultas realizadas e importe) y te pasa el total a facturar por Telegram.",
+        "content": "## 06 · Informe mensual\nEl día 1 manda a cada despacho sus resultados del mes anterior (leads, cualificados, consultas realizadas e importe) y te pasa el total a facturar por WhatsApp.",
         "width": 480,
         "height": 160,
         "color": 4
       },
-      "id": "969313a5-b9b3-4bb8-aa62-c9b31d4853f7",
-      "name": "Nota 618d",
+      "id": "13c39ecf-01a5-4763-86f8-10b33817f574",
+      "name": "Nota 7e58",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
@@ -30,7 +30,7 @@
           ]
         }
       },
-      "id": "41d58e2a-8c21-4bc0-9dcf-d4ac602475fc",
+      "id": "6e0572ff-e180-4e06-8b45-92dcf6a6aa3e",
       "name": "Día 1 a las 9:00",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -54,7 +54,7 @@
           ]
         }
       },
-      "id": "12cecb1a-9883-4a6f-8018-2325f2c72160",
+      "id": "9ebe5bed-e2cd-44b6-91cc-e147b90190ad",
       "name": "Resultados del mes anterior",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -67,7 +67,7 @@
       "parameters": {
         "jsCode": "const { month, clients } = $input.first().json;\nconst eur = n => (n ?? 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });\nconst [y, m] = month.split('-').map(Number);\nconst mes = new Date(Date.UTC(y, m - 1, 15)).toLocaleDateString('es-ES', { month: 'long', year: 'numeric', timeZone: 'UTC' });\nreturn clients.filter(c => c.email).map(c => ({ json: {\n  ...c, mes,\n  html: `<div style=\"font-family:Arial,sans-serif;font-size:14px;color:#0f172a\">\n<h2>Resultados de ${mes} · ${c.cliente}</h2>\n<table style=\"border-collapse:collapse\">\n<tr><td style=\"padding:6px 16px 6px 0;color:#64748b\">Personas interesadas (leads)</td><td><b>${c.leads}</b></td></tr>\n<tr><td style=\"padding:6px 16px 6px 0;color:#64748b\">Cualificadas para la LSO</td><td><b>${c.leads_cualificados}</b></td></tr>\n<tr><td style=\"padding:6px 16px 6px 0;color:#64748b\">Consultas agendadas</td><td><b>${c.citas_agendadas}</b></td></tr>\n<tr><td style=\"padding:6px 16px 6px 0;color:#64748b\">Consultas realizadas</td><td><b>${c.citas_asistidas}</b></td></tr>\n</table>\n<h3 style=\"margin-top:20px\">Importe del mes (sin IVA)</h3>\n<p>Cuota de marketing: ${eur(c.importe_fijo)}<br>Consultas realizadas: ${c.consultas_facturables} × ${eur(c.price_per_consultation)} = ${eur(c.importe_variable)}<br>\n<b>Total: ${eur(c.total)}</b></p>\n<p style=\"color:#64748b;font-size:12px\">Servicio de marketing y captación. No es un porcentaje de vuestros honorarios.</p></div>`,\n} }));"
       },
-      "id": "7458449d-c1bc-49ae-869b-25d71b360f23",
+      "id": "608e86df-9e44-48fa-8782-9debcb16b98c",
       "name": "Informe por cliente",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -87,7 +87,7 @@
           "appendAttribution": false
         }
       },
-      "id": "d2864af7-4985-41b3-98ed-90b1fb453a7d",
+      "id": "f5afba55-31bd-46ed-9093-1b7e57fa1c0a",
       "name": "Enviar informe",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -101,7 +101,7 @@
       "parameters": {
         "jsCode": "const { month, clients } = $('Resultados del mes anterior').first().json;\nconst total = clients.reduce((a, c) => a + c.total, 0);\nconst lineas = clients.map(c => '• ' + c.cliente + ': ' + c.total.toLocaleString('es-ES') + ' € (' + c.citas_asistidas + ' consultas)').join('\\n');\nreturn [{ json: { month, total, lineas } }];"
       },
-      "id": "fbe6ce71-8de5-435b-aad0-f1b2701c51c9",
+      "id": "02faef76-b6f2-484a-9ed5-5b63bf02aa9e",
       "name": "Total facturación",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -113,17 +113,31 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $('Config').first().json.TELEGRAM_CHAT_ID }}",
-        "text": "=💶 <b>Facturación {{ $json.month }}</b>: {{ $json.total.toLocaleString('es-ES') }} € + IVA\n{{ $json.lineas }}\n{{ $('Config').first().json.APP_URL }}/facturacion?mes={{ $json.month }}",
-        "additionalFields": {
-          "parse_mode": "HTML",
-          "appendAttribution": false
+        "method": "GET",
+        "url": "https://api.callmebot.com/whatsapp.php",
+        "options": {},
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "={{ $('Config').first().json.WHATSAPP_PHONE }}"
+            },
+            {
+              "name": "apikey",
+              "value": "={{ $('Config').first().json.WHATSAPP_APIKEY }}"
+            },
+            {
+              "name": "text",
+              "value": "=💶 *Facturación {{ $json.month }}*: {{ $json.total.toLocaleString('es-ES') }} € + IVA\n{{ $json.lineas }}\n{{ $('Config').first().json.APP_URL }}/facturacion?mes={{ $json.month }}"
+            }
+          ]
         }
       },
-      "id": "ecaf9e01-71c7-40fc-b1b7-abc2ae45178a",
+      "id": "ef615410-b142-42c7-8fa7-736bf4e94b74",
       "name": "Resumen al dueño",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         1540,
         300
@@ -137,40 +151,46 @@
         "assignments": {
           "assignments": [
             {
-              "id": "6071423d-b491-4821-bdee-0dcfe768c416",
+              "id": "5f35eccb-8e87-418c-9757-64d9921e0477",
               "name": "APP_URL",
               "value": "https://app.tudominio.com",
               "type": "string"
             },
             {
-              "id": "7d5688b0-6879-4949-a391-1cdd5bba2104",
+              "id": "b1b134aa-b20c-4b9c-8904-a3f02abc720f",
               "name": "EMAIL_FROM",
               "value": "Leads Hunters <hola@tudominio.com>",
               "type": "string"
             },
             {
-              "id": "c78a28a2-b256-4b28-87a1-ff84a4673c00",
+              "id": "826347c6-ed91-4ad5-9b52-da843fec18ab",
               "name": "LH_API_KEY",
               "value": "PEGA_AQUI_LA_N8N_API_KEY_DE_LA_APP",
               "type": "string"
             },
             {
-              "id": "d9347ef9-87e0-4338-b8e9-d66f188989e3",
+              "id": "5c0e554a-8b66-4ac9-8163-e16b456849e2",
               "name": "LH_API_URL",
               "value": "https://app.tudominio.com",
               "type": "string"
             },
             {
-              "id": "336b18ac-5d6e-4067-8370-4d7573038d30",
-              "name": "TELEGRAM_CHAT_ID",
-              "value": "PEGA_AQUI_TU_CHAT_ID",
+              "id": "5c9d07fd-634d-482d-a773-87003c7dc435",
+              "name": "WHATSAPP_APIKEY",
+              "value": "PEGA_AQUI_TU_APIKEY_DE_CALLMEBOT",
+              "type": "string"
+            },
+            {
+              "id": "1df1d8ae-c377-450c-83d1-c0cd8b7422b5",
+              "name": "WHATSAPP_PHONE",
+              "value": "+34600000000",
               "type": "string"
             }
           ]
         },
         "options": {}
       },
-      "id": "6edbe4b0-5a8a-42f3-a3d0-c8ba3d93ba1c",
+      "id": "758b832a-c9da-42b7-94cd-42ffd0adf25b",
       "name": "Config",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,

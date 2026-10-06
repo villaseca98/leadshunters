@@ -3,13 +3,13 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## 02 · Leads de Meta (Facebook/Instagram)\n1. En **Meta · Nuevo lead** conecta tu credencial de Facebook Lead Ads y elige página y formulario (duplica el flujo si quieres uno por formulario, o deja «todos»).\n2. En la app, pon el **ID del formulario** en la ficha del cliente: así cada lead va a su despacho.\n3. Rellena el nodo **Config** (`LH_API_URL`, `LH_API_KEY`, `TELEGRAM_CHAT_ID`).\n4. La app cualifica el lead y avisa al momento (flujo 04).",
+        "content": "## 02 · Leads de Meta (Facebook/Instagram)\n1. En **Meta · Nuevo lead** conecta tu credencial de Facebook Lead Ads y elige página y formulario (duplica el flujo si quieres uno por formulario, o deja «todos»).\n2. En la app, pon el **ID del formulario** en la ficha del cliente: así cada lead va a su despacho.\n3. Rellena el nodo **Config** (`LH_API_URL`, `LH_API_KEY`, `WHATSAPP_PHONE`, `WHATSAPP_APIKEY`).\n4. La app cualifica el lead y avisa al momento (flujo 04).",
         "width": 520,
         "height": 220,
         "color": 4
       },
-      "id": "e7d8c875-ad4c-4a83-89cd-f1383a06e956",
-      "name": "Nota 1c48",
+      "id": "fc6a1c56-3f7b-409f-a0a0-39f5fdee3265",
+      "name": "Nota 65e6",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
@@ -32,7 +32,7 @@
         },
         "options": {}
       },
-      "id": "c4d9dffa-4ad8-4274-a856-a5898f260f32",
+      "id": "be84af3d-ec1f-4717-ac9c-43bfbcc1f603",
       "name": "Meta · Nuevo lead",
       "type": "n8n-nodes-base.facebookLeadAdsTrigger",
       "typeVersion": 1,
@@ -40,13 +40,13 @@
         220,
         300
       ],
-      "webhookId": "f7a029d5-58f8-4f05-9303-d2b2a4c1340e"
+      "webhookId": "7fd79bba-be35-4386-ba23-d135b49532d9"
     },
     {
       "parameters": {
         "jsCode": "// Convierte el lead de Meta al formato de la app. Las preguntas del formulario se mandan tal cual\n// en \"answers\": la app reconoce deuda, acreedores, ingresos, provincia, etc. por palabras clave.\nreturn $input.all().map(({ json: l }) => {\n  let answers = {};\n  if (Array.isArray(l.field_data)) for (const f of l.field_data) answers[f.name] = Array.isArray(f.values) ? f.values.join(', ') : f.values;\n  else if (l.data && typeof l.data === 'object') answers = { ...l.data };\n  else for (const [k, v] of Object.entries(l)) if (typeof v !== 'object' && !/^[A-Z0-9_]+$/.test(k)) answers[k] = v; // sin los campos del nodo Config\n  const formId = l.form?.id ?? l.form_id ?? null;\n  return { json: {\n    source: 'meta',\n    form_id: formId ? String(formId) : undefined,\n    external_id: String(l.id ?? l.leadgen_id ?? ''),\n    campaign: l.campaign?.name ?? l.campaign_name ?? null,\n    ad_name: l.ad?.name ?? l.ad_name ?? null,\n    consent_at: l.created_time ?? new Date().toISOString(),\n    consent_text: 'Formulario de Meta Lead Ads' + (l.form?.name ? ' «' + l.form.name + '»' : ''),\n    answers,\n  } };\n});"
       },
-      "id": "e97a35aa-f9d2-43b8-9fbe-d65c2f0bea64",
+      "id": "f7524932-f3c5-4556-af29-4e89f90b8354",
       "name": "Preparar lead",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -75,7 +75,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json) }}"
       },
-      "id": "4a0f7e2f-a306-421d-9325-df021f4370f2",
+      "id": "f2b9790e-cb68-436b-b892-caa73e08731c",
       "name": "Enviar lead a la app",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -87,21 +87,36 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $('Config').first().json.TELEGRAM_CHAT_ID }}",
-        "text": "=⚠️ <b>Lead de Meta no guardado</b>\n{{ $json.error?.message || JSON.stringify($json).slice(0, 300) }}\nRevisa que el ID del formulario esté en la ficha del cliente.",
-        "additionalFields": {
-          "parse_mode": "HTML",
-          "appendAttribution": false
+        "method": "GET",
+        "url": "https://api.callmebot.com/whatsapp.php",
+        "options": {},
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "={{ $('Config').first().json.WHATSAPP_PHONE }}"
+            },
+            {
+              "name": "apikey",
+              "value": "={{ $('Config').first().json.WHATSAPP_APIKEY }}"
+            },
+            {
+              "name": "text",
+              "value": "=⚠️ *Lead de Meta no guardado*\n{{ $json.error?.message || JSON.stringify($json).slice(0, 300) }}\nRevisa que el ID del formulario esté en la ficha del cliente."
+            }
+          ]
         }
       },
-      "id": "d1953d31-6675-4623-bba6-db8449d28234",
+      "id": "f5034658-bf40-4701-8f12-04e3eeba7795",
       "name": "Avisar si falla",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         1100,
         420
-      ]
+      ],
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -110,28 +125,34 @@
         "assignments": {
           "assignments": [
             {
-              "id": "c489a996-e404-4cbc-9a9f-22f2ea08e752",
+              "id": "a1866bca-b301-4a93-8043-d7721d797287",
               "name": "LH_API_KEY",
               "value": "PEGA_AQUI_LA_N8N_API_KEY_DE_LA_APP",
               "type": "string"
             },
             {
-              "id": "19be54c5-1c9d-464a-ac8b-c9d643973171",
+              "id": "aec11b34-5eff-4311-9802-48ef2c813e3d",
               "name": "LH_API_URL",
               "value": "https://app.tudominio.com",
               "type": "string"
             },
             {
-              "id": "eb31fd96-2e6a-468b-8c72-1ef7503b9453",
-              "name": "TELEGRAM_CHAT_ID",
-              "value": "PEGA_AQUI_TU_CHAT_ID",
+              "id": "e2b96732-e46f-4c8d-a270-ebadbd1f8cbf",
+              "name": "WHATSAPP_APIKEY",
+              "value": "PEGA_AQUI_TU_APIKEY_DE_CALLMEBOT",
+              "type": "string"
+            },
+            {
+              "id": "cd83f401-f317-4f2a-b245-8ac705eb5d69",
+              "name": "WHATSAPP_PHONE",
+              "value": "+34600000000",
               "type": "string"
             }
           ]
         },
         "options": {}
       },
-      "id": "ce7fa76b-c85f-4a2c-a83c-0e1eacfd3be6",
+      "id": "fc9934ad-298e-4871-a9e1-6ea9b47ade95",
       "name": "Config",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,

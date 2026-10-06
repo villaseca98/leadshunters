@@ -135,7 +135,8 @@ Cada flujo empieza con un nodo **Config** justo después del disparador. Ábrelo
 | `APP_URL` | URL de la app para los enlaces de los avisos (normalmente igual que `LH_API_URL`) |
 | `APIFY_TOKEN` | Google Maps Scraper e Instagram Profile Scraper de Apify |
 | `META_ADS_LIBRARY_TOKEN` | API de la Biblioteca de anuncios de Meta |
-| `TELEGRAM_CHAT_ID` | A dónde llegan los avisos |
+| `WHATSAPP_PHONE` | Tu móvil con prefijo (+34…), donde llegan los avisos |
+| `WHATSAPP_APIKEY` | La apikey que te da CallMeBot |
 | `GOOGLE_ADS_WEBHOOK_KEY` | Clave del webhook de formularios de Google Ads |
 | `EMAIL_FROM`, `TWILIO_FROM` | Remitente de emails y (opcional) de SMS |
 | `N8N_EVENTS_WEBHOOK_URL` | (flujo 07) URL de producción del webhook del flujo 04 |
@@ -144,7 +145,7 @@ Cada flujo empieza con un nodo **Config** justo después del disparador. Ábrelo
 
 ### Credenciales que tienes que crear en n8n
 
-- **Telegram**: crea un bot con @BotFather y pega el token. Para saber tu `TELEGRAM_CHAT_ID`, escribe al bot y abre `https://api.telegram.org/bot<TOKEN>/getUpdates`.
+- **WhatsApp** (avisos a tu móvil, gratis): sigue los pasos de https://www.callmebot.com/blog/free-api-whatsapp-messages/ (guardar su número y enviarle el mensaje de activación). Te responde con tu apikey: pégala en `WHATSAPP_APIKEY`. No necesita credencial en n8n.
 - **SMTP** (emails): el de tu proveedor de correo (Google Workspace, Brevo, etc.).
 - **Facebook Lead Ads**: en el flujo 02.
 - **Twilio** (opcional): los nodos de SMS vienen desactivados; actívalos si quieres SMS.
@@ -155,13 +156,13 @@ Abre cada flujo, asigna las credenciales en los nodos marcados en rojo y **actí
 
 | Flujo | Disparador | Qué hace |
 |---|---|---|
-| **01 · Prospección** | A mano o cada lunes 7:00 | Apify Google Maps (búsquedas × ciudades de «Configuración») → app (limpia, deduplica, puntúa) → analiza la web, los anuncios en Meta y el Instagram de cada despacho → Telegram con el resumen |
+| **01 · Prospección** | A mano o cada lunes 7:00 | Apify Google Maps (búsquedas × ciudades de «Configuración») → app (limpia, deduplica, puntúa) → analiza la web, los anuncios en Meta y el Instagram de cada despacho → WhatsApp con el resumen |
 | **02 · Leads de Meta** | Nuevo lead en un formulario | Lo manda a la app; el ID del formulario decide el despacho |
 | **03 · Leads de Google Ads** | Webhook `/webhook/google-ads-leads` | Comprueba la `google_key`, lo manda a la app |
-| **04 · Eventos de la app** | Webhook `/webhook/leads-hunters-eventos` | Lead nuevo → Telegram al equipo · Cita agendada → email al despacho (con enlace de confirmación) y al lead · Asistió / no asistió / nuevo cliente → aviso |
+| **04 · Eventos de la app** | Webhook `/webhook/leads-hunters-eventos` | Lead nuevo → WhatsApp al equipo · Cita agendada → email al despacho (con enlace de confirmación) y al lead · Asistió / no asistió / nuevo cliente → aviso |
 | **05 · Recordatorios** | Cada 30 min | Recordatorio al lead de las consultas de las próximas 24 h |
 | **05b · Confirmar asistencia** | Cada día 20:00 | Pide a cada despacho confirmar las consultas pasadas (solo se facturan las realizadas) |
-| **06 · Informe mensual** | Día 1, 9:00 | Email a cada despacho con sus resultados e importe · Total a facturar por Telegram |
+| **06 · Informe mensual** | Día 1, 9:00 | Email a cada despacho con sus resultados e importe · Total a facturar por WhatsApp |
 | **07 · Respaldo** | Cada 10 min | Reenvía eventos que no llegaron (si n8n estuvo caído) |
 
 Para cambiar ciudades o búsquedas, edita el nodo **Configuración** del flujo 01. Si cambias el código de los flujos, puedes regenerarlos con `node scripts/generar-flujos-n8n.mjs`.

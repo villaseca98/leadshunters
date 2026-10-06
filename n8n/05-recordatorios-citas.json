@@ -8,8 +8,8 @@
         "height": 200,
         "color": 4
       },
-      "id": "866f1d9f-fa34-4bf0-b7e7-71b27e9cfc5c",
-      "name": "Nota af29",
+      "id": "703f51dc-4f25-46b7-981e-1624002af86a",
+      "name": "Nota 673c",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
@@ -28,7 +28,7 @@
           ]
         }
       },
-      "id": "79e4ab7b-4462-4623-abe0-e89737d77a91",
+      "id": "ba6a2c56-6d60-43f9-b2d3-a5108204c206",
       "name": "Cada 30 minutos",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -61,7 +61,7 @@
           ]
         }
       },
-      "id": "db696034-0baa-4008-a30f-d7fa44f420e5",
+      "id": "a2948258-53b7-4d8d-8df9-d6e8510428ce",
       "name": "Consultas en las próximas 24 h",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -74,7 +74,7 @@
       "parameters": {
         "jsCode": "return $input.first().json.consultations.map(c => ({ json: c }));"
       },
-      "id": "a61c9ad4-f04f-46b3-991a-e57764f1f331",
+      "id": "724a7494-d8a1-4f72-a6ee-b19394a96e29",
       "name": "Separar consultas",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -94,7 +94,7 @@
           },
           "conditions": [
             {
-              "id": "36095521-22c2-4109-a4a3-c9c808efd839",
+              "id": "278cff06-3d1b-4b8c-a8e2-e28de8329d9b",
               "leftValue": "={{ !!$json.lead_email }}",
               "rightValue": "",
               "operator": {
@@ -108,7 +108,7 @@
         },
         "options": {}
       },
-      "id": "569205fa-d1fe-4d58-b4e8-2381685e663b",
+      "id": "2f84bc98-8b08-4824-9572-e0ce406c4d13",
       "name": "¿Tiene email?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -128,7 +128,7 @@
           "appendAttribution": false
         }
       },
-      "id": "fd447bd8-5ae5-47a7-bb05-ab7c89705f5f",
+      "id": "9373644f-13b4-4985-b042-a11427bb83be",
       "name": "Recordatorio por email",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -145,7 +145,7 @@
         "message": "=Recordatorio: consulta con {{ $('Separar consultas').item.json.cliente }} el {{ new Date($('Separar consultas').item.json.scheduled_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) }}.",
         "options": {}
       },
-      "id": "de8afa68-fc62-43ad-a4c9-2ffdb088a040",
+      "id": "aca5a53d-1fc3-408b-93a3-39b9a24678aa",
       "name": "Recordatorio por SMS (opcional)",
       "type": "n8n-nodes-base.twilio",
       "typeVersion": 1,
@@ -174,7 +174,7 @@
         "specifyBody": "json",
         "jsonBody": "={\"reminder_sent\": true}"
       },
-      "id": "74188122-8c2f-4391-b75c-24bca5829073",
+      "id": "8d4bfa4e-6325-48a6-847d-042e36cf93a3",
       "name": "Marcar recordatorio enviado",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -190,25 +190,25 @@
         "assignments": {
           "assignments": [
             {
-              "id": "701191d7-7cfd-4dd3-8893-87cc3e4674a5",
+              "id": "907f7c60-f79c-45e8-ae01-723e709f6f7e",
               "name": "EMAIL_FROM",
               "value": "Leads Hunters <hola@tudominio.com>",
               "type": "string"
             },
             {
-              "id": "edb176ce-25c0-4127-bf12-dea15c2b5185",
+              "id": "a91f9bdf-4586-40dc-9a01-29c29db411ef",
               "name": "LH_API_KEY",
               "value": "PEGA_AQUI_LA_N8N_API_KEY_DE_LA_APP",
               "type": "string"
             },
             {
-              "id": "0beadca8-ebf3-4829-97d1-879c9ff25a81",
+              "id": "669ad327-026a-474c-9926-0d194495dd25",
               "name": "LH_API_URL",
               "value": "https://app.tudominio.com",
               "type": "string"
             },
             {
-              "id": "9c8be049-f33f-4916-8abe-e69e24716612",
+              "id": "def4a03a-b9ca-49f2-81c2-8a77d9748384",
               "name": "TWILIO_FROM",
               "value": "+34000000000",
               "type": "string"
@@ -217,7 +217,7 @@
         },
         "options": {}
       },
-      "id": "2d60a960-0dad-4821-9646-3c1fa86c942f",
+      "id": "9b2d031a-8ad8-4cbf-abdb-fbef082733f5",
       "name": "Config",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
