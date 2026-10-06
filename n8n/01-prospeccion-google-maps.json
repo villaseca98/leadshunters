@@ -1,0 +1,722 @@
+{
+  "name": "01 · Prospección de despachos (Google Maps + Meta + Instagram)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 01 · Prospección de despachos\nBusca en Google Maps (Apify) despachos de Segunda Oportunidad en las ciudades de **Configuración**, los manda a la app (que limpia, quita duplicados y puntúa) y después analiza cada uno:\n- su **web** (redes, email, formulario, WhatsApp, píxel, si habla de LSO)\n- si **anuncia en Meta** (Biblioteca de anuncios)\n- su **Instagram** (seguidores, días sin publicar)\n\nVariables: `LH_API_URL`, `LH_API_KEY`, `APIFY_TOKEN`, `META_ADS_LIBRARY_TOKEN`, `TELEGRAM_CHAT_ID`.\nSolo empresas (B2B): no se recogen datos de particulares.",
+        "width": 520,
+        "height": 280,
+        "color": 4
+      },
+      "id": "89cfcd59-c48a-40e6-96eb-c3e9205e2024",
+      "name": "Nota 9f8f",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        180,
+        -120
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "0a4d8e8c-5e38-4d58-8fd9-da6539fdf4df",
+      "name": "Lanzar a mano",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        220,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "weeksInterval": 1,
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "id": "e2bc2dd4-edbc-4e21-bbca-467458fb579d",
+      "name": "Cada lunes 7:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        220,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1bcf8703-9c26-40f8-a6d0-ec53943ec64d",
+              "name": "busquedas",
+              "type": "array",
+              "value": "[\"abogados segunda oportunidad\", \"abogado ley de segunda oportunidad\", \"abogados cancelar deudas\", \"abogado concurso de acreedores persona física\"]"
+            },
+            {
+              "id": "999ff6a7-95f5-4dda-8699-a3d1dd9b4577",
+              "name": "ciudades",
+              "type": "array",
+              "value": "[\"Madrid\", \"Barcelona\", \"Valencia\", \"Sevilla\", \"Málaga\", \"Alicante\", \"Murcia\", \"Zaragoza\", \"Bilbao\", \"Palma\"]"
+            },
+            {
+              "id": "35f1665d-83d6-490d-ae4f-de79d63d7998",
+              "name": "maxPorBusqueda",
+              "type": "number",
+              "value": 30
+            },
+            {
+              "id": "be832eec-2d58-4419-b033-12581622f7f3",
+              "name": "analizarInstagram",
+              "type": "boolean",
+              "value": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "31065c76-1281-4cfe-ae92-77c2c75d1bd5",
+      "name": "Configuración",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combina cada búsqueda con cada ciudad: \"abogados segunda oportunidad Valencia\"\nconst c = $input.first().json;\nconst busquedas = [];\nfor (const ciudad of c.ciudades) for (const b of c.busquedas) busquedas.push(`${b} ${ciudad}`);\nreturn [{ json: {\n  searchStringsArray: busquedas,\n  maxCrawledPlacesPerSearch: c.maxPorBusqueda,\n  language: \"es\",\n  countryCode: \"es\",\n  skipClosedPlaces: true,\n  scrapeContacts: true,\n  scrapePlaceDetailPage: false,\n} }];"
+      },
+      "id": "7b286f8f-bb9c-4ac7-8d61-06910a207c13",
+      "name": "Preparar búsquedas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.apify.com/v2/acts/compass~crawler-google-places/run-sync-get-dataset-items?token={{ $env.APIFY_TOKEN }}&timeout=900",
+        "options": {
+          "timeout": 900000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "a5704a97-17df-43f5-9748-85f373e8b55b",
+      "name": "Apify · Google Maps",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Manda todos los despachos a la app en una sola llamada (la app limpia, deduplica y puntúa)\nconst items = $input.all().map(i => i.json).filter(x => x && (x.title || x.name));\nreturn [{ json: { items, search_term: $('Configuración').first().json.busquedas.join(' | ') } }];"
+      },
+      "id": "716a5d89-34b0-4a6c-86ed-59c6ccc78a55",
+      "name": "Agrupar resultados",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LH_API_URL }}/api/v1/prospects",
+        "options": {
+          "timeout": 300000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.LH_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "33f02cad-ced6-4136-9f6c-10b8517b8f7b",
+      "name": "Enviar despachos a la app",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.LH_API_URL }}/api/v1/prospects/pending",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.LH_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "100"
+            }
+          ]
+        }
+      },
+      "id": "9ea7499c-d2a6-47f8-a1d7-38f6e5d97e28",
+      "name": "Despachos sin analizar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.first().json.prospects.map(p => ({ json: p }));"
+      },
+      "id": "c88d9f46-a408-40f2-a998-b89382e97ae4",
+      "name": "Separar despachos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.website || 'https://invalid.invalid' }}",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "outputPropertyName": "html"
+            }
+          },
+          "redirect": {
+            "redirect": {
+              "maxRedirects": 5
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "user-agent",
+              "value": "Mozilla/5.0 (compatible; LeadsHuntersBot/1.0)"
+            }
+          ]
+        }
+      },
+      "id": "ce5fb504-db76-4c6b-bdfe-34e2abcfc27b",
+      "name": "Descargar web",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://graph.facebook.com/v21.0/ads_archive",
+        "options": {
+          "timeout": 20000
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "search_terms",
+              "value": "={{ $('Separar despachos').item.json.name }}"
+            },
+            {
+              "name": "ad_reached_countries",
+              "value": "['ES']"
+            },
+            {
+              "name": "ad_active_status",
+              "value": "ACTIVE"
+            },
+            {
+              "name": "ad_type",
+              "value": "ALL"
+            },
+            {
+              "name": "fields",
+              "value": "page_name,ad_creative_bodies,ad_delivery_start_time"
+            },
+            {
+              "name": "limit",
+              "value": "50"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $env.META_ADS_LIBRARY_TOKEN }}"
+            }
+          ]
+        }
+      },
+      "id": "fc97e051-5a2f-4459-a2a6-77bac1606299",
+      "name": "Meta · Biblioteca de anuncios",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        300
+      ],
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Une, para cada despacho, la web descargada y los anuncios encontrados en Meta.\n// La app analiza el HTML (redes, email, formulario, WhatsApp, píxel, si habla de Segunda Oportunidad).\nconst quitarAcentos = s => (s || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\nconst palabras = s => quitarAcentos(s).split(/[^a-z0-9]+/).filter(w => w.length > 3 && !['abogados','abogado','despacho','bufete','asociados'].includes(w));\n\nreturn $input.all().map((it, i) => {\n  const p = $('Separar despachos').all()[i].json;\n  const webItem = $('Descargar web').all()[i]?.json ?? {};\n  const html = typeof webItem.html === 'string' ? webItem.html.slice(0, 400000) : (typeof webItem.data === 'string' ? webItem.data.slice(0, 400000) : null);\n\n  const out = { id: p.id };\n  if (p.website && html) out.html = html;\n\n  // Anuncios: nos quedamos con los de páginas cuyo nombre se parece al del despacho\n  const ads = Array.isArray(it.json.data) ? it.json.data : null;\n  if (ads) {\n    const claves = palabras(p.name);\n    const suyos = ads.filter(a => {\n      const pn = quitarAcentos(a.page_name);\n      return claves.length ? claves.some(w => pn.includes(w)) : false;\n    });\n    out.meta_ads_active = suyos.length > 0;\n    out.meta_ads_count = suyos.length;\n    out.meta_ads_lso = suyos.some(a => /segunda oportunidad|deuda|insolven|concurso/i.test((a.ad_creative_bodies || []).join(' ')));\n  }\n  return { json: out };\n});"
+      },
+      "id": "da497643-ce28-4386-ab9c-e43ea68c43cd",
+      "name": "Juntar análisis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LH_API_URL }}/api/v1/prospects/enrich",
+        "options": {
+          "timeout": 60000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.LH_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "452f32c1-92f7-4680-96c7-1e6b3ebf4f56",
+      "name": "Enviar análisis a la app",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Junta los usuarios de Instagram (de Google Maps o detectados en la web) en una sola llamada a Apify\nif (!$('Configuración').first().json.analizarInstagram) return [{ json: { usuarios: [], porUsuario: {} } }];\nconst usuarioDe = (url) => {\n  const m = (url || '').match(/instagram\\.com\\/([A-Za-z0-9_.]+)/i);\n  if (!m) return null;\n  const u = m[1].toLowerCase().replace(/\\.$/, '');\n  return ['p', 'reel', 'reels', 'explore', 'stories', 'accounts'].includes(u) ? null : u;\n};\nconst porUsuario = {};\n$('Separar despachos').all().forEach((it, i) => {\n  const detectado = $('Enviar análisis a la app').all()[i]?.json?.detected?.instagram;\n  const u = usuarioDe(it.json.instagram) || usuarioDe(detectado);\n  if (u) porUsuario[u] = it.json.id;\n});\nreturn [{ json: { usuarios: Object.keys(porUsuario), porUsuario } }];"
+      },
+      "id": "f5f670ef-4409-4bcd-a805-cee5bd53d641",
+      "name": "Usuarios de Instagram",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2860,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ca36cf0f-013e-4045-96f1-d14fabec335e",
+              "leftValue": "={{ $json.usuarios.length > 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f76e6a9c-80eb-4afb-9e28-b57ff1d09697",
+      "name": "¿Hay Instagram?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3080,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.apify.com/v2/acts/apify~instagram-profile-scraper/run-sync-get-dataset-items?token={{ $env.APIFY_TOKEN }}&timeout=600",
+        "options": {
+          "timeout": 600000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ usernames: $json.usuarios }) }}"
+      },
+      "id": "18e260cb-ca54-455b-8245-6af419ca7b82",
+      "name": "Apify · Perfiles de Instagram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3300,
+        200
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const porUsuario = $('Usuarios de Instagram').first().json.porUsuario;\nconst hoy = Date.now();\nreturn $input.all()\n  .map(i => i.json)\n  .filter(p => p && p.username && porUsuario[p.username.toLowerCase()])\n  .map(p => {\n    const ultima = (p.latestPosts || []).map(x => x.timestamp).filter(Boolean).sort().at(-1);\n    return { json: {\n      id: porUsuario[p.username.toLowerCase()],\n      instagram: 'https://www.instagram.com/' + p.username,\n      instagram_followers: p.followersCount ?? null,\n      instagram_days_since_post: ultima ? Math.round((hoy - Date.parse(ultima)) / 864e5) : null,\n    } };\n  });"
+      },
+      "id": "31079a40-89a7-44b9-863a-685b55a100d2",
+      "name": "Datos de Instagram",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3520,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LH_API_URL }}/api/v1/prospects/enrich",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.LH_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "00afb788-3559-4d5a-8595-dda1163069e6",
+      "name": "Enviar Instagram a la app",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3740,
+        200
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $('Enviar despachos a la app').first().json;\nreturn [{ json: { nuevos: r.created, actualizados: r.updated, descartados: r.skipped, analizados: $('Separar despachos').all().length } }];"
+      },
+      "id": "a7f8d2b7-0520-4ebd-a72f-8f9810aacd69",
+      "name": "Resumen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3960,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=🔎 <b>Prospección terminada</b>\nNuevos: {{ $json.nuevos }} · actualizados: {{ $json.actualizados }} · analizados: {{ $json.analizados }}\n{{ $env.APP_URL }}/prospeccion",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "appendAttribution": false
+        }
+      },
+      "id": "ddf901d2-27fa-4c2c-aa62-70921fe2c3a9",
+      "name": "Avisar por Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4180,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Lanzar a mano": {
+      "main": [
+        [
+          {
+            "node": "Configuración",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cada lunes 7:00": {
+      "main": [
+        [
+          {
+            "node": "Configuración",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configuración": {
+      "main": [
+        [
+          {
+            "node": "Preparar búsquedas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar búsquedas": {
+      "main": [
+        [
+          {
+            "node": "Apify · Google Maps",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify · Google Maps": {
+      "main": [
+        [
+          {
+            "node": "Agrupar resultados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agrupar resultados": {
+      "main": [
+        [
+          {
+            "node": "Enviar despachos a la app",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar despachos a la app": {
+      "main": [
+        [
+          {
+            "node": "Despachos sin analizar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Despachos sin analizar": {
+      "main": [
+        [
+          {
+            "node": "Separar despachos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Separar despachos": {
+      "main": [
+        [
+          {
+            "node": "Descargar web",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Descargar web": {
+      "main": [
+        [
+          {
+            "node": "Meta · Biblioteca de anuncios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Meta · Biblioteca de anuncios": {
+      "main": [
+        [
+          {
+            "node": "Juntar análisis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Juntar análisis": {
+      "main": [
+        [
+          {
+            "node": "Enviar análisis a la app",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar análisis a la app": {
+      "main": [
+        [
+          {
+            "node": "Usuarios de Instagram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Usuarios de Instagram": {
+      "main": [
+        [
+          {
+            "node": "¿Hay Instagram?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay Instagram?": {
+      "main": [
+        [
+          {
+            "node": "Apify · Perfiles de Instagram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Resumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify · Perfiles de Instagram": {
+      "main": [
+        [
+          {
+            "node": "Datos de Instagram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Datos de Instagram": {
+      "main": [
+        [
+          {
+            "node": "Enviar Instagram a la app",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Instagram a la app": {
+      "main": [
+        [
+          {
+            "node": "Resumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resumen": {
+      "main": [
+        [
+          {
+            "node": "Avisar por Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

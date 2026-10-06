@@ -1,0 +1,224 @@
+{
+  "name": "07 · Respaldo de eventos",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 07 · Respaldo de eventos\nSi n8n estuvo reiniciándose cuando la app mandó un evento, este flujo lo recoge y lo reenvía al flujo 04. Así ningún lead se queda sin aviso.",
+        "width": 460,
+        "height": 150,
+        "color": 4
+      },
+      "id": "0fc8d10c-70b8-4883-b5ab-04c97bf7fe8e",
+      "name": "Nota 5cd0",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        160,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 10
+            }
+          ]
+        }
+      },
+      "id": "f1f2b26a-0fd6-4501-b802-31089a3346b5",
+      "name": "Cada 10 minutos",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.LH_API_URL }}/api/v1/events",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.LH_API_KEY }}"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "100"
+            }
+          ]
+        }
+      },
+      "id": "1247fe70-b6a6-4527-9fef-b5edf1185632",
+      "name": "Eventos pendientes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Solo reenviamos eventos con más de 2 minutos (los recientes los está entregando la app)\nconst limite = Date.now() - 2 * 60 * 1000;\nreturn $input.first().json.events.filter(e => Date.parse(e.created_at) < limite).map(e => ({ json: e }));"
+      },
+      "id": "eb00267a-bf3e-46f0-89ec-fe59f02676c7",
+      "name": "Separar eventos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.N8N_EVENTS_WEBHOOK_URL || 'http://localhost:5678/webhook/leads-hunters-eventos' }}",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.LH_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ id: $json.id, kind: $json.kind, payload: $json.payload, sent_at: new Date().toISOString() }) }}"
+      },
+      "id": "519f136c-2385-4bc4-afda-462a143687f0",
+      "name": "Reenviar al flujo 04",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ids = $('Separar eventos').all().map(i => i.json.id);\nreturn ids.length ? [{ json: { ids } }] : [];"
+      },
+      "id": "851ec508-b567-4730-8528-33ff0257fb8a",
+      "name": "IDs entregados",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        300
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LH_API_URL }}/api/v1/events/ack",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.LH_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "a1671960-2408-4c71-8dcb-5d55a57aa58d",
+      "name": "Marcar como entregados",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Cada 10 minutos": {
+      "main": [
+        [
+          {
+            "node": "Eventos pendientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eventos pendientes": {
+      "main": [
+        [
+          {
+            "node": "Separar eventos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Separar eventos": {
+      "main": [
+        [
+          {
+            "node": "Reenviar al flujo 04",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reenviar al flujo 04": {
+      "main": [
+        [
+          {
+            "node": "IDs entregados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IDs entregados": {
+      "main": [
+        [
+          {
+            "node": "Marcar como entregados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

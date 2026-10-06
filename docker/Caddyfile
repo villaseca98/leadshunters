@@ -1,0 +1,8 @@
+# HTTPS automático (Let's Encrypt). Apunta los dos dominios a la IP del servidor.
+{$APP_DOMAIN} {
+	reverse_proxy app:3000
+}
+
+{$N8N_HOST} {
+	reverse_proxy n8n:5678
+}

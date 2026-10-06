@@ -1,0 +1,459 @@
+{
+  "name": "04 · Eventos de la app (avisos y emails)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 04 · Eventos de la app\nLa app llama a este webhook en cada evento (`N8N_EVENTS_WEBHOOK_URL`).\n- **lead.nuevo** → Telegram al equipo para llamar en < 5 min\n- **cita.agendada** → email al despacho con el resumen + enlace para confirmar asistencia, y confirmación al lead (email; SMS con Twilio si lo activas)\n- **cita.asistida / no_asistio** → aviso\n- **prospecto.cliente** → aviso de nuevo cliente\n\nActiva el flujo para que la URL de producción funcione.",
+        "width": 560,
+        "height": 300,
+        "color": 4
+      },
+      "id": "759f6bc1-5154-4461-8d88-44b177d48391",
+      "name": "Nota 4375",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        160,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "leads-hunters-eventos",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "e33d1c58-89ad-4d28-bfc3-975a637d4be1",
+      "name": "Eventos de la app",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        220,
+        400
+      ],
+      "webhookId": "c4b3d6af-bd47-4d70-b6df-3e848ecb901a"
+    },
+    {
+      "parameters": {
+        "jsCode": "const h = $input.first().json.headers || {};\nconst b = $input.first().json.body || {};\nif (h['x-api-key'] !== $env.LH_API_KEY) return [];\nreturn [{ json: { event_id: b.id, kind: b.kind, ...b.payload } }];"
+      },
+      "id": "ac846fdb-69fe-4b6d-b04e-bd016bd562ca",
+      "name": "Comprobar clave",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a1fb367d-0c51-4314-98df-392b36442d18",
+                    "leftValue": "={{ $json.kind }}",
+                    "rightValue": "lead.nuevo",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "lead.nuevo"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "4094e61f-aa4b-43f6-8542-c562b65fa12d",
+                    "leftValue": "={{ $json.kind }}",
+                    "rightValue": "cita.agendada",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "cita.agendada"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "8379cd45-c61d-4b4e-8d7d-287f1966b7ce",
+                    "leftValue": "={{ $json.kind }}",
+                    "rightValue": "cita.asistida",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "cita.asistida"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "191c0760-5b33-440a-a482-7a0dadfb0ff7",
+                    "leftValue": "={{ $json.kind }}",
+                    "rightValue": "cita.no_asistio",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "cita.no_asistio"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "3c2eb7cd-f206-4eb2-87a1-25b47600d5ec",
+                    "leftValue": "={{ $json.kind }}",
+                    "rightValue": "prospecto.cliente",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "prospecto.cliente"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c754ed9d-e77b-4e37-b910-52b91e91e861",
+      "name": "Tipo de evento",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        660,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=🔥 <b>Nuevo lead · {{ $json.cliente }}</b>\n{{ $json.nombre }} · {{ $json.telefono }}\nDeuda: {{ $json.deuda ? $json.deuda.toLocaleString('es-ES') + ' €' : '¿?' }} · Acreedores: {{ $json.acreedores ?? '¿?' }} · {{ $json.cualificacion }}\nOrigen: {{ $json.origen }} {{ $json.campana || '' }}\n👉 Llama YA: {{ $env.APP_URL }}/cola",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "appendAttribution": false
+        }
+      },
+      "id": "51555525-55d2-4365-a4f8-02f2ea61fc87",
+      "name": "🔥 Nuevo lead al equipo",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        940,
+        160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.EMAIL_FROM }}",
+        "toEmail": "={{ $json.cliente_email }}",
+        "subject": "=Nueva consulta: {{ $json.lead_nombre }} · {{ new Date($json.scheduled_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', dateStyle: 'full', timeStyle: 'short' }) }}",
+        "emailFormat": "html",
+        "html": "=<div style=\"font-family:Arial,sans-serif;font-size:14px;color:#0f172a\">\n<h2 style=\"margin:0 0 12px\">Nueva consulta agendada</h2>\n<p><b>{{ $json.lead_nombre }}</b> · {{ $json.lead_telefono }}{{ $json.lead_email ? ' · ' + $json.lead_email : '' }}</p>\n<p><b>Cuándo:</b> {{ new Date($json.scheduled_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', dateStyle: 'full', timeStyle: 'short' }) }} ({{ $json.mode }})</p>\n<table style=\"border-collapse:collapse;margin:12px 0\">\n<tr><td style=\"padding:4px 12px 4px 0;color:#64748b\">Deuda total</td><td>{{ $json.deuda ? $json.deuda.toLocaleString('es-ES') + ' €' : '—' }}</td></tr>\n<tr><td style=\"padding:4px 12px 4px 0;color:#64748b\">Acreedores</td><td>{{ $json.acreedores ?? '—' }}</td></tr>\n<tr><td style=\"padding:4px 12px 4px 0;color:#64748b\">Ingresos/mes</td><td>{{ $json.ingresos ? $json.ingresos.toLocaleString('es-ES') + ' €' : '—' }}</td></tr>\n<tr><td style=\"padding:4px 12px 4px 0;color:#64748b\">Situación laboral</td><td>{{ $json.situacion_laboral ?? '—' }}</td></tr>\n<tr><td style=\"padding:4px 12px 4px 0;color:#64748b\">Provincia</td><td>{{ $json.lead_provincia ?? '—' }}</td></tr>\n</table>\n<p><b>Resumen:</b> {{ ($json.resumen_cualificacion || []).join(' · ') }}</p>\n{{ $json.notas_llamada ? '<p><b>Notas de la llamada:</b> ' + $json.notas_llamada + '</p>' : '' }}\n<p style=\"margin-top:20px\">Después de la consulta, confirma si se realizó (solo se facturan las realizadas):<br>\n<a href=\"{{ $json.enlace_confirmar }}\" style=\"display:inline-block;margin-top:8px;padding:10px 16px;background:#4f46e5;color:#fff;border-radius:8px;text-decoration:none\">Confirmar asistencia</a></p>\n<p style=\"color:#94a3b8;font-size:12px\">Leads Hunters · datos tratados con el consentimiento del interesado para que su despacho estudie su caso.</p></div>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "64d2745c-94fe-4b23-8fee-f697071c060e",
+      "name": "Email al despacho",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        940,
+        340
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b76bebba-4d80-4c7f-b48e-3f0ddd9c5598",
+              "leftValue": "={{ !!$('Tipo de evento').item.json.lead_email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c1c44c81-a7b3-44dc-bcf1-acf4987b021b",
+      "name": "¿El lead tiene email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1160,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.EMAIL_FROM }}",
+        "toEmail": "={{ $('Tipo de evento').item.json.lead_email }}",
+        "subject": "=Tu consulta con {{ $('Tipo de evento').item.json.cliente }} está confirmada",
+        "emailFormat": "html",
+        "html": "=<div style=\"font-family:Arial,sans-serif;font-size:14px;color:#0f172a\">\n<p>Hola {{ $('Tipo de evento').item.json.lead_nombre.split(' ')[0] }},</p>\n<p>Tu consulta gratuita sobre la Ley de Segunda Oportunidad con <b>{{ $('Tipo de evento').item.json.cliente }}</b> es el\n<b>{{ new Date($('Tipo de evento').item.json.scheduled_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', dateStyle: 'full', timeStyle: 'short' }) }}</b>\n({{ $('Tipo de evento').item.json.mode }}).</p>\n<p>Ten a mano un resumen de tus deudas (bancos, importes) para aprovechar la consulta. Si no puedes asistir, responde a este email.</p>\n<p>Un saludo.</p></div>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "d870d705-6dc9-411c-9c6f-d5dfaa7354c2",
+      "name": "Email de confirmación al lead",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1380,
+        280
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "from": "={{ $env.TWILIO_FROM }}",
+        "to": "={{ $('Tipo de evento').item.json.lead_telefono }}",
+        "message": "=Hola, tu consulta con {{ $('Tipo de evento').item.json.cliente }} es el {{ new Date($('Tipo de evento').item.json.scheduled_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) }}. Te llamará un abogado especialista.",
+        "options": {}
+      },
+      "id": "40d0dbc3-f2b5-45d1-ab04-f71c86ca81b9",
+      "name": "SMS al lead (opcional)",
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1380,
+        460
+      ],
+      "disabled": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=✅ Consulta realizada · {{ $json.cliente }} · {{ $json.lead_nombre }} (confirmó: {{ $json.confirmed_by || 'equipo' }})",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "appendAttribution": false
+        }
+      },
+      "id": "5e7a74df-54c6-48e3-ad13-83a03cdf1a78",
+      "name": "✅ Consulta realizada",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        940,
+        540
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=❌ No se presentó · {{ $json.cliente }} · {{ $json.lead_nombre }} · {{ $json.lead_telefono }}\nIntenta reagendar: {{ $env.APP_URL }}/leads/{{ $json.lead_id }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "appendAttribution": false
+        }
+      },
+      "id": "ae1865ad-e817-4209-9f74-53bbb2563535",
+      "name": "❌ No se presentó",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        940,
+        700
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=🎉 <b>Nuevo cliente:</b> {{ $json.nombre }}\nCompleta su ficha: {{ $env.APP_URL }}/clientes/{{ $json.client_id }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "appendAttribution": false
+        }
+      },
+      "id": "1010d57f-0d94-4dd9-bb9e-641f571bc669",
+      "name": "🎉 Nuevo cliente",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        940,
+        860
+      ],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Eventos de la app": {
+      "main": [
+        [
+          {
+            "node": "Comprobar clave",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comprobar clave": {
+      "main": [
+        [
+          {
+            "node": "Tipo de evento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tipo de evento": {
+      "main": [
+        [
+          {
+            "node": "🔥 Nuevo lead al equipo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email al despacho",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "✅ Consulta realizada",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "❌ No se presentó",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "🎉 Nuevo cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email al despacho": {
+      "main": [
+        [
+          {
+            "node": "¿El lead tiene email?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "SMS al lead (opcional)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿El lead tiene email?": {
+      "main": [
+        [
+          {
+            "node": "Email de confirmación al lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

@@ -1,0 +1,95 @@
+# Leads Hunters: app + Postgres + n8n (+ Caddy para HTTPS)
+# 1) cp .env.example .env  y rellena los valores
+# 2) docker compose up -d --build
+# 3) docker compose exec app node scripts/seed.mjs   (crea tu usuario administrador)
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: leadshunters
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: leadshunters
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./docker/init-n8n-db.sh:/docker-entrypoint-initdb.d/10-n8n.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U leadshunters"]
+      interval: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://leadshunters:${POSTGRES_PASSWORD}@db:5432/leadshunters
+      APP_URL: ${APP_URL}
+      SESSION_SECRET: ${SESSION_SECRET}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      N8N_API_KEY: ${N8N_API_KEY}
+      N8N_EVENTS_WEBHOOK_URL: http://n8n:5678/webhook/leads-hunters-eventos
+      ADMIN_NAME: ${ADMIN_NAME:-Administrador}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      TZ: Europe/Madrid
+    ports:
+      - "3000:3000"
+
+  n8n:
+    # Probado con n8n 2.42
+    image: docker.n8n.io/n8nio/n8n:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: db
+      DB_POSTGRESDB_DATABASE: n8n
+      DB_POSTGRESDB_USER: leadshunters
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      N8N_HOST: ${N8N_HOST}
+      N8N_PROTOCOL: https
+      WEBHOOK_URL: https://${N8N_HOST}/
+      GENERIC_TIMEZONE: Europe/Madrid
+      TZ: Europe/Madrid
+      # los flujos leen su configuración de estas variables ($env.X)
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+      LH_API_URL: http://app:3000
+      LH_API_KEY: ${N8N_API_KEY}
+      APP_URL: ${APP_URL}
+      N8N_EVENTS_WEBHOOK_URL: http://localhost:5678/webhook/leads-hunters-eventos
+      APIFY_TOKEN: ${APIFY_TOKEN}
+      META_ADS_LIBRARY_TOKEN: ${META_ADS_LIBRARY_TOKEN}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
+      GOOGLE_ADS_WEBHOOK_KEY: ${GOOGLE_ADS_WEBHOOK_KEY}
+      EMAIL_FROM: ${EMAIL_FROM}
+      TWILIO_FROM: ${TWILIO_FROM:-}
+    volumes:
+      - n8n-data:/home/node/.n8n
+      - ./n8n:/flujos:ro
+    ports:
+      - "5678:5678"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    profiles: ["https"]
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      N8N_HOST: ${N8N_HOST}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+
+volumes:
+  db-data:
+  n8n-data:
+  caddy-data:

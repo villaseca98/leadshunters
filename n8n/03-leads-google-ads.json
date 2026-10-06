@@ -1,0 +1,191 @@
+{
+  "name": "03 · Leads de Google Ads → app",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 03 · Leads de Google Ads\nEn Google Ads → formulario de clientes potenciales → **Integración de webhook**:\n- URL: `https://TU-N8N/webhook/google-ads-leads`\n- Clave: el valor de `GOOGLE_ADS_WEBHOOK_KEY`\n\nPon el **form_id** en la ficha del cliente de la app. Usa «Enviar datos de prueba» para comprobarlo.",
+        "width": 520,
+        "height": 240,
+        "color": 4
+      },
+      "id": "97e5a5de-d682-4510-b56b-888169ed3752",
+      "name": "Nota 1f45",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        160,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "google-ads-leads",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "0e00a88e-28e7-4fdf-b914-d47869986e7a",
+      "name": "Webhook Google Ads",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "webhookId": "1053ad16-6556-49d2-8a49-6eb09f931b97"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Formato de Google: { lead_id, form_id, campaign_id, google_key, is_test, user_column_data: [{column_id, column_name, string_value}] }\nconst b = $input.first().json.body ?? $input.first().json;\nif (!$env.GOOGLE_ADS_WEBHOOK_KEY || b.google_key !== $env.GOOGLE_ADS_WEBHOOK_KEY) {\n  return [{ json: { valido: false, motivo: 'google_key incorrecta' } }];\n}\nconst nombres = { FULL_NAME: 'full_name', FIRST_NAME: 'first_name', LAST_NAME: 'last_name', PHONE_NUMBER: 'phone', EMAIL: 'email', POSTAL_CODE: 'codigo_postal', CITY: 'ciudad', REGION: 'provincia' };\nconst answers = {};\nfor (const c of b.user_column_data || []) {\n  const k = nombres[c.column_id] || c.column_name || c.column_id;\n  answers[k] = c.string_value;\n}\nreturn [{ json: {\n  valido: true,\n  lead: {\n    source: 'google',\n    form_id: String(b.form_id ?? ''),\n    external_id: String(b.lead_id ?? ''),\n    campaign: b.campaign_id ? 'Google Ads ' + b.campaign_id : null,\n    consent_text: 'Formulario de cliente potencial de Google Ads' + (b.is_test ? ' (PRUEBA)' : ''),\n    answers,\n  },\n} }];"
+      },
+      "id": "6e59cbc9-3509-46dd-b75d-c5815632e75e",
+      "name": "Validar y preparar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "bd89c5d8-be4f-42ba-9fa7-d98c61059232",
+              "leftValue": "={{ $json.valido }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "581747a3-5104-4ca4-90e5-a5802968b8b1",
+      "name": "¿Clave correcta?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LH_API_URL }}/api/v1/leads",
+        "options": {
+          "timeout": 20000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.LH_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.lead) }}"
+      },
+      "id": "33bd227f-fdea-45d7-8d4c-878dbf79469e",
+      "name": "Enviar lead a la app",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        200
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "=⚠️ <b>Lead de Google no guardado</b>\n{{ $json.error?.message || JSON.stringify($json).slice(0, 300) }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "appendAttribution": false
+        }
+      },
+      "id": "2ef3a737-3ddd-4aac-921a-2cc1df088cff",
+      "name": "Avisar si falla",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1100,
+        320
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Google Ads": {
+      "main": [
+        [
+          {
+            "node": "Validar y preparar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar y preparar": {
+      "main": [
+        [
+          {
+            "node": "¿Clave correcta?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Clave correcta?": {
+      "main": [
+        [
+          {
+            "node": "Enviar lead a la app",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar lead a la app": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Avisar si falla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
