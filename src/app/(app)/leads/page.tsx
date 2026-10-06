@@ -2,7 +2,7 @@ import Link from "next/link";
 import { query } from "@/lib/db";
 import { LEAD_STATUS, QUALIFICATION, SOURCE } from "@/lib/labels";
 import { dateTime, eur } from "@/lib/format";
-import { A, Empty, PageHeader, Pager, StatusBadge, Table, Td, btn, input } from "@/components/ui";
+import { A, Empty, Filters, PageHeader, Pager, StatusBadge, Table, Td, btn, input } from "@/components/ui";
 
 const PER_PAGE = 50;
 
@@ -49,7 +49,8 @@ export default async function Leads(props: PageProps<"/leads">) {
           </>
         }
       />
-      <form className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-6">
+      <Filters active={[client, status, qual, source].filter(Boolean).length}>
+      <form className="grid grid-cols-2 gap-2 md:grid-cols-6">
         <input name="q" defaultValue={q} placeholder="Nombre, teléfono, email…" className={`${input} col-span-2`} />
         <select name="cliente" defaultValue={client} className={input}>
           <option value="">Cliente: todos</option>
@@ -71,21 +72,22 @@ export default async function Leads(props: PageProps<"/leads">) {
           <button className={btn.secondary}>Filtrar</button>
         </div>
       </form>
+      </Filters>
       {rows.length === 0 ? (
         <Empty>No hay leads todavía. Conecta los formularios de Meta o Google con los flujos de n8n.</Empty>
       ) : (
-        <Table head={["Entró", "Nombre", "Cliente", "Origen", "Deuda", "Acreedores", "Cualificación", "Estado", "Intentos"]}>
+        <Table head={["Nombre", "Entró", "Cliente", "Origen", "Deuda", "Acreedores", "Cualificación", "Estado", "Intentos"]}>
           {rows.map((r) => (
             <tr key={r.id} className="hover:bg-slate-50">
+              <Td primary><A href={`/leads/${r.id}`}>{r.full_name}</A><div className="text-xs text-slate-500">{r.phone ?? "—"}</div></Td>
               <Td className="text-xs">{dateTime(r.created_at)}</Td>
-              <Td><A href={`/leads/${r.id}`}>{r.full_name}</A><div className="text-xs text-slate-500">{r.phone ?? "—"}</div></Td>
               <Td>{r.cliente}</Td>
-              <Td>{SOURCE[r.source] ?? r.source}<div className="max-w-40 truncate text-xs text-slate-500">{r.campaign}</div></Td>
+              <Td hide>{SOURCE[r.source] ?? r.source}<div className="max-w-40 truncate text-xs text-slate-500">{r.campaign}</div></Td>
               <Td>{eur(r.debt_amount)}</Td>
-              <Td>{r.creditors_count ?? "—"}</Td>
+              <Td hide>{r.creditors_count ?? "—"}</Td>
               <Td><StatusBadge map={QUALIFICATION} value={r.qualification_status} /> <span className="text-xs text-slate-500">{r.qualification_score}</span></Td>
               <Td><StatusBadge map={LEAD_STATUS} value={r.status} /></Td>
-              <Td>{r.attempts}</Td>
+              <Td hide>{r.attempts}</Td>
             </tr>
           ))}
         </Table>

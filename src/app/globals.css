@@ -1,10 +1,193 @@
 @import "tailwindcss";
+@import "@fontsource-variable/onest";
+@import "@fontsource-variable/unbounded";
+@import "@fontsource-variable/jetbrains-mono";
+
+/*
+  Leads Hunters · identidad "Caza"
+  Papel salvia + tinta casi negra + naranja de caza (el chaleco reflectante del cazador) para lo urgente.
+  Móvil primero: dock inferior con el botón de cazar al alcance del pulgar.
+  Las paletas slate/indigo se redefinen para que todo el código use la nueva identidad.
+*/
+@theme {
+  --font-sans: "Onest Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Unbounded Variable", "Onest Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+
+  --color-paper: #eceee6;
+  --color-ink: #121411;
+  --color-blaze: #ff5b1a;
+  --color-blaze-ink: #3a1200;
+  --color-moss: #1f6b45;
+
+  /* neutros con un punto de salvia */
+  --color-slate-50: #f6f7f2;
+  --color-slate-100: #eceee6;
+  --color-slate-200: #dcdfd3;
+  --color-slate-300: #c2c6b7;
+  --color-slate-400: #959a8b;
+  --color-slate-500: #6c7165;
+  --color-slate-600: #52574c;
+  --color-slate-700: #3c4038;
+  --color-slate-800: #262923;
+  --color-slate-900: #171915;
+  --color-slate-950: #0d0e0c;
+
+  /* acento: naranja de caza */
+  --color-indigo-50: #fff2eb;
+  --color-indigo-100: #ffe2d2;
+  --color-indigo-200: #ffc3a4;
+  --color-indigo-300: #ff9a6b;
+  --color-indigo-400: #ff7a3f;
+  --color-indigo-500: #ff5b1a;
+  --color-indigo-600: #e84a0b;
+  --color-indigo-700: #b83808;
+  --color-indigo-800: #8f2d0c;
+  --color-indigo-900: #74280f;
+
+  /* dinero y "hecho": verde musgo */
+  --color-emerald-50: #ebf5ee;
+  --color-emerald-100: #d3eadb;
+  --color-emerald-200: #a9d4b8;
+  --color-emerald-300: #74b88f;
+  --color-emerald-400: #3f9a67;
+  --color-emerald-500: #23804f;
+  --color-emerald-600: #1f6b45;
+  --color-emerald-700: #19563a;
+  --color-emerald-800: #154530;
+  --color-emerald-900: #123a29;
+
+  --radius-card: 1.375rem;
+}
 
 :root {
   color-scheme: light;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background: #f8fafc;
-  color: #0f172a;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-feature-settings: "ss01";
+}
+
+h1, h2, h3 {
+  text-wrap: balance;
+}
+
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.num {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+
+/* Tablas: en móvil cada fila es una tarjeta con etiqueta:valor */
+@media (max-width: 767px) {
+  .lh-table {
+    border: 0 !important;
+    background: transparent !important;
+    overflow: visible !important;
+  }
+  .lh-table table,
+  .lh-table tbody {
+    display: block;
+    min-width: 0 !important;
+  }
+  .lh-table thead {
+    display: none;
+  }
+  .lh-table tbody {
+    display: grid;
+    gap: 0.625rem;
+    border: 0 !important;
+  }
+  .lh-table tr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem 0.75rem;
+    padding: 0.9rem 1rem;
+    border-radius: var(--radius-card);
+    background: #fff;
+    border: 1px solid var(--color-slate-200);
+  }
+  .lh-table td {
+    display: block;
+    padding: 0 !important;
+    white-space: normal !important;
+    min-width: 0;
+  }
+  .lh-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.125rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-slate-500);
+  }
+  .lh-table td[data-primary] {
+    grid-column: 1 / -1;
+    font-size: 1rem;
+  }
+  .lh-table td[data-primary]::before {
+    display: none;
+  }
+  .lh-table td[data-wide] {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Barra horizontal deslizable (KPIs, filtros) */
+.lh-rail {
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.lh-rail::-webkit-scrollbar {
+  display: none;
+}
+.lh-rail > * {
+  scroll-snap-align: start;
+}
+
+/* Anillo de puntuación */
+.lh-ring {
+  --p: 50;
+  --c: var(--color-blaze);
+  background: conic-gradient(var(--c) calc(var(--p) * 1%), var(--color-slate-200) 0);
+}
+
+/* Latido del botón de cazar cuando hay leads esperando */
+@keyframes lh-pulse {
+  0% { box-shadow: 0 0 0 0 rgb(255 91 26 / 0.55); }
+  70% { box-shadow: 0 0 0 14px rgb(255 91 26 / 0); }
+  100% { box-shadow: 0 0 0 0 rgb(255 91 26 / 0); }
+}
+.lh-pulse {
+  animation: lh-pulse 1.8s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lh-pulse { animation: none; }
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-blaze);
+  outline-offset: 2px;
+}
+
+/* Espacio para el dock inferior en móvil */
+.pb-dock {
+  padding-bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 1024px) {
+  .pb-dock { padding-bottom: 2.5rem; }
+}
+
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: none;
 }

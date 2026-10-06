@@ -13,17 +13,18 @@ export default async function Facturacion(props: PageProps<"/facturacion">) {
   return (
     <>
       <PageHeader
-        title={`Facturación · ${monthLabel(month)}`}
+        title={monthLabel(month).replace(/^./, (c) => c.toUpperCase())}
+        eyebrow="Facturación"
         subtitle="Cuota fija de marketing + importe por consulta cualificada realizada. Importes sin IVA."
         actions={
           <>
-            <a href={`/facturacion?mes=${shiftMonth(month, -1)}`} className={btn.secondary}>← {monthLabel(shiftMonth(month, -1))}</a>
-            <a href={`/facturacion?mes=${shiftMonth(month, 1)}`} className={btn.secondary}>{monthLabel(shiftMonth(month, 1))} →</a>
+            <a href={`/facturacion?mes=${shiftMonth(month, -1)}`} className={btn.secondary} aria-label={monthLabel(shiftMonth(month, -1))}>← <span className="hidden sm:inline">{monthLabel(shiftMonth(month, -1))}</span></a>
+            <a href={`/facturacion?mes=${shiftMonth(month, 1)}`} className={btn.secondary} aria-label={monthLabel(shiftMonth(month, 1))}><span className="hidden sm:inline">{monthLabel(shiftMonth(month, 1))}</span> →</a>
             <a href={`/api/export/facturacion?mes=${month}`} className={btn.primary}>Exportar CSV</a>
           </>
         }
       />
-      <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
         <Stat label="Total del mes" value={eur(tot.total)} hint={`${eur(tot.total * 1.21)} con IVA`} tone="good" />
         <Stat label="Cuotas fijas" value={eur(tot.fijo)} />
         <Stat label="Por consultas" value={eur(tot.variable)} hint={`${tot.consultas} consultas facturables`} />
@@ -33,17 +34,17 @@ export default async function Facturacion(props: PageProps<"/facturacion">) {
         <Table head={["Cliente", "Leads", "Cualificados", "Agendadas", "Realizadas", "No asistió", "Sin confirmar", "Fijo", "Consultas", "Total", ""]}>
           {rows.map((r) => (
             <tr key={r.client_id}>
-              <Td><A href={`/clientes/${r.client_id}`}>{r.cliente}</A></Td>
+              <Td primary><A href={`/clientes/${r.client_id}`}>{r.cliente}</A></Td>
               <Td>{r.leads}</Td>
-              <Td>{r.leads_cualificados}</Td>
+              <Td hide>{r.leads_cualificados}</Td>
               <Td>{r.citas_agendadas}</Td>
               <Td className="font-medium text-emerald-700">{r.citas_asistidas}{r.max_billable_per_month != null && r.citas_asistidas > r.max_billable_per_month && <span className="text-xs text-slate-500"> (tope {r.max_billable_per_month})</span>}</Td>
-              <Td>{r.citas_no_asistio}</Td>
+              <Td hide>{r.citas_no_asistio}</Td>
               <Td className={r.citas_pendientes ? "font-medium text-amber-700" : ""}>{r.citas_pendientes}</Td>
-              <Td>{eur(r.importe_fijo)}</Td>
-              <Td>{r.consultas_facturables} × {eur(r.price_per_consultation)} = {eur(r.importe_variable)}</Td>
-              <Td className="font-semibold">{eur(r.total)}</Td>
-              <Td><a className="text-xs text-indigo-600" href={`/api/export/informe?cliente=${r.client_id}&mes=${month}`}>Justificante</a></Td>
+              <Td hide>{eur(r.importe_fijo)}</Td>
+              <Td wide>{r.consultas_facturables} × {eur(r.price_per_consultation)} = {eur(r.importe_variable)}</Td>
+              <Td className="num text-base font-semibold">{eur(r.total)}</Td>
+              <Td><a className="text-xs font-semibold text-indigo-700" href={`/api/export/informe?cliente=${r.client_id}&mes=${month}`}>Justificante</a></Td>
             </tr>
           ))}
         </Table>

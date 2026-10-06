@@ -52,7 +52,7 @@ export default async function ProspectPage(props: PageProps<"/prospeccion/[id]">
         title={p.name}
         subtitle={
           <span className="flex flex-wrap items-center gap-2">
-            <ScorePill score={p.score} tier={p.score_tier} />
+            <ScorePill score={p.score} tier={p.score_tier} size="lg" />
             <StatusBadge map={PROSPECT_STATUS} value={p.status} />
             <span>{[p.city, p.province].filter(Boolean).join(", ")}</span>
             {p.category && <span className="text-slate-400">· {p.category}</span>}
@@ -60,7 +60,7 @@ export default async function ProspectPage(props: PageProps<"/prospeccion/[id]">
         }
         actions={
           <>
-            {p.phone && <a href={telHref(p.phone)} className={btn.success}>☏ Llamar {p.phone}</a>}
+            {p.phone && <a href={telHref(p.phone)} className={`${btn.hunt} flex-1 sm:flex-none`}>Llamar {p.phone}</a>}
             {callMode && <Link href="/prospeccion/llamar" className={btn.secondary}>Saltar →</Link>}
             {client ? (
               <Link href={`/clientes/${client.id}`} className={btn.secondary}>Ver ficha de cliente</Link>
@@ -71,16 +71,16 @@ export default async function ProspectPage(props: PageProps<"/prospeccion/[id]">
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
-          <Card title="Registrar llamada" className={callMode ? "ring-2 ring-indigo-500" : ""}>
+      <div className="grid gap-4 lg:grid-cols-3 lg:gap-6">
+        <div className="space-y-4 lg:col-span-2 lg:space-y-6">
+          <Card title="Registrar llamada" className={callMode ? "ring-2 ring-blaze" : ""}>
             {p.call_hooks.length > 0 && (
-              <div className="mb-4 rounded-lg bg-indigo-50 p-3 text-sm text-indigo-900">
+              <div className="mb-4 rounded-2xl bg-indigo-50 p-3.5 text-sm text-indigo-900">
                 <div className="mb-1 font-semibold">Ganchos para abrir la llamada</div>
                 <ul className="list-disc space-y-0.5 pl-5">{p.call_hooks.map((h, i) => <li key={i}>{h}</li>)}</ul>
               </div>
             )}
-            <details className="mb-4 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+            <details className="mb-4 rounded-2xl bg-slate-50 p-3.5 text-sm text-slate-700">
               <summary className="cursor-pointer font-medium">Guion para despachos</summary>
               <ol className="mt-2 list-decimal space-y-1 pl-5">
                 <li>«Hola, ¿hablo con el responsable del despacho? Soy [nombre], de Leads Hunters. Trabajamos solo con despachos de Segunda Oportunidad.»</li>
@@ -115,9 +115,9 @@ export default async function ProspectPage(props: PageProps<"/prospeccion/[id]">
             <div className="space-y-2">
               {p.score_breakdown.map((l, i) => (
                 <div key={i} className="flex items-center gap-3 text-sm">
-                  <div className="w-40 shrink-0 font-medium text-slate-700">{l.criterio}</div>
+                  <div className="w-28 shrink-0 font-medium text-slate-700 sm:w-40">{l.criterio}</div>
                   <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
-                    <div className="h-full rounded-full bg-indigo-500" style={{ width: `${(l.puntos / l.max) * 100}%` }} />
+                    <div className="h-full rounded-full bg-blaze" style={{ width: `${(l.puntos / l.max) * 100}%` }} />
                   </div>
                   <div className="w-14 text-right tabular-nums text-slate-600">{l.puntos}/{l.max}</div>
                   <div className="hidden w-72 truncate text-xs text-slate-500 md:block" title={l.detalle}>{l.detalle}</div>
@@ -147,7 +147,7 @@ export default async function ProspectPage(props: PageProps<"/prospeccion/[id]">
           </Card>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-4 lg:space-y-6">
           <Card title="Contacto">
             <dl className="space-y-2 text-sm">
               <div><dt className="text-xs text-slate-500">Teléfono</dt><dd>{p.phone ? <a className="text-indigo-600" href={telHref(p.phone)}>{p.phone}</a> : "—"}{p.phone && <a className="ml-2 text-xs text-emerald-600" href={waHref(p.phone)} target="_blank">WhatsApp</a>}</dd></div>

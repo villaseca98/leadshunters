@@ -4,6 +4,7 @@ import { queryOne } from "@/lib/db";
 import { setConsultationStatus } from "@/lib/services/leads";
 import { dateTime, nowMs } from "@/lib/format";
 import { revalidatePath } from "next/cache";
+import { Logo } from "@/components/Sidebar";
 
 export const dynamic = "force-dynamic";
 
@@ -24,35 +25,45 @@ export default async function Confirmar(props: PageProps<"/confirmar/[token]">) 
         [token],
       )
     : null;
+  const done = c && (c.status === "asistida" || c.status === "no_asistio");
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-lg">
-        <div className="mb-4 text-sm font-bold text-slate-900">Leads<span className="text-indigo-600">Hunters</span></div>
+    <main className="flex min-h-dvh flex-col bg-paper px-5" style={{ paddingTop: "calc(1.5rem + env(safe-area-inset-top, 0px))", paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom, 0px))" }}>
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
+        <Logo />
         {!c ? (
-          <p className="text-slate-600">Enlace no válido o caducado.</p>
+          <p className="mt-16 text-slate-600">Enlace no válido o caducado.</p>
         ) : (
-          <>
-            <h1 className="text-lg font-semibold text-slate-900">¿Se realizó la consulta?</h1>
-            <p className="mt-2 text-sm text-slate-600">
-              {c.cliente} · <b>{c.full_name}</b> · {dateTime(c.scheduled_at)}
-            </p>
-            {c.status === "asistida" || c.status === "no_asistio" ? (
-              <p className={`mt-4 rounded-lg px-3 py-2 text-sm ${c.status === "asistida" ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-700"}`}>
-                Registrado: {c.status === "asistida" ? "la consulta se realizó" : "la persona no se presentó"}. ¡Gracias!
-              </p>
-            ) : new Date(c.scheduled_at) > new Date(nowMs() + 3600_000) ? (
-              <p className="mt-4 text-sm text-slate-500">Podrás confirmarlo cuando llegue la hora de la consulta.</p>
-            ) : (
-              <div className="mt-5 grid grid-cols-2 gap-3">
+          <div className="flex flex-1 flex-col">
+            <div className="mt-10 rounded-[1.75rem] bg-white p-6 ring-1 ring-slate-200">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{c.cliente}</div>
+              <h1 className="font-display mt-2 text-2xl font-semibold leading-tight">¿Se realizó la consulta con {c.full_name.split(" ")[0]}?</h1>
+              <div className="mt-4 flex items-center gap-3 rounded-2xl bg-slate-50 p-3.5">
+                <span className="grid size-11 place-items-center rounded-full bg-ink text-sm font-semibold text-white">{c.full_name.slice(0, 1)}</span>
+                <div>
+                  <div className="font-semibold">{c.full_name}</div>
+                  <div className="text-sm text-slate-500">{dateTime(c.scheduled_at)}</div>
+                </div>
+              </div>
+              {done ? (
+                <p className={`mt-5 rounded-2xl px-4 py-3 text-sm font-medium ${c.status === "asistida" ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-700"}`}>
+                  Registrado: {c.status === "asistida" ? "la consulta se realizó" : "la persona no se presentó"}. ¡Gracias!
+                </p>
+              ) : new Date(c.scheduled_at) > new Date(nowMs() + 3600_000) ? (
+                <p className="mt-5 text-sm text-slate-500">Podrás confirmarlo cuando llegue la hora de la consulta.</p>
+              ) : null}
+            </div>
+            {!done && new Date(c.scheduled_at) <= new Date(nowMs() + 3600_000) && (
+              <div className="mt-auto grid gap-3 pt-8">
                 <form action={confirm.bind(null, token, "asistida")}>
-                  <button className="w-full rounded-lg bg-emerald-600 px-4 py-3 font-medium text-white hover:bg-emerald-500">Sí, se realizó</button>
+                  <button className="min-h-14 w-full rounded-full bg-emerald-600 text-base font-semibold text-white active:scale-[0.98]">Sí, se realizó</button>
                 </form>
                 <form action={confirm.bind(null, token, "no_asistio")}>
-                  <button className="w-full rounded-lg bg-white px-4 py-3 font-medium text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">No se presentó</button>
+                  <button className="min-h-14 w-full rounded-full bg-white text-base font-semibold text-ink ring-1 ring-slate-300 active:scale-[0.98]">No se presentó</button>
                 </form>
+                <p className="text-center text-xs text-slate-500">Solo se facturan las consultas realizadas.</p>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </main>

@@ -58,3 +58,9 @@ export const waHref = (p?: string | null) => (p ? `https://wa.me/${p.replace(/[^
 
 /** Hora actual (los componentes de servidor se renderizan por petición). */
 export const nowMs = () => Date.now();
+
+/** Nombre corto para saludar: el primer nombre, o el nombre completo si el primero es muy corto ("Mi loco"). */
+export const shortName = (name: string) => {
+  const first = name.trim().split(/\s+/)[0] ?? name;
+  return first.length > 2 ? first : name.trim();
+};

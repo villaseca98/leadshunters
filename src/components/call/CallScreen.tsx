@@ -51,28 +51,32 @@ export function CallScreen({
       <input type="hidden" name="from" value={fromQueue ? "cola" : ""} />
       <input type="hidden" name="client_filter" value={clientFilter} />
 
-      <div className="flex flex-wrap items-center gap-4 rounded-xl bg-slate-900 p-4 text-white">
-        <div className="flex-1">
-          <div className="text-xs uppercase tracking-wide text-slate-400">Llamar a</div>
-          <div className="text-xl font-semibold">{lead.full_name}</div>
-          {lead.phone && (
-            <a href={`tel:${lead.phone}`} className="mt-1 inline-block text-2xl font-bold tracking-wide text-emerald-400 hover:text-emerald-300">
-              {lead.phone}
-            </a>
-          )}
+      <div className="relative overflow-hidden rounded-[1.75rem] bg-ink p-5 text-white">
+        <div className="flex items-start gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">Llamar a</div>
+            <div className="font-display mt-1 truncate text-2xl font-semibold">{lead.full_name}</div>
+            {lead.phone && <div className="mt-1 font-mono text-lg tracking-wide text-white/80">{lead.phone}</div>}
+          </div>
+          <HeatRing ms={sinceArrival} />
         </div>
-        <div className="text-right">
-          <div className="text-xs text-slate-400">Entró hace</div>
-          <div className={`text-lg font-semibold tabular-nums ${sinceArrival > 5 * 60_000 ? "text-amber-400" : "text-emerald-400"}`}>{elapsed(sinceArrival)}</div>
-          <div className="mt-1 text-xs text-slate-400">En llamada: <span className="tabular-nums">{elapsed(now - started)}</span></div>
+        {lead.phone && (
+          <a href={`tel:${lead.phone}`} className={`${btn.hunt} mt-4 min-h-14 w-full text-base`}>
+            <svg viewBox="0 0 24 24" className="size-5" fill="currentColor" aria-hidden><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z" /></svg>
+            Llamar ahora
+          </a>
+        )}
+        <div className="mt-3 flex justify-between text-xs text-white/50">
+          <span>Entró hace <span className="font-mono text-white/80">{elapsed(sinceArrival)}</span></span>
+          <span>En llamada <span className="font-mono text-white/80">{elapsed(now - started)}</span></span>
         </div>
       </div>
 
-      <fieldset className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-3">
-        <legend className="px-1 text-sm font-semibold text-slate-800">Cualificación (confírmalo en la llamada)</legend>
-        <label><span className={label}>Nombre</span><input name="full_name" defaultValue={lead.full_name} className={input} /></label>
+      <fieldset className="grid grid-cols-2 gap-3 rounded-[var(--radius-card)] border border-slate-200 bg-white p-4 sm:grid-cols-3 sm:p-5">
+        <legend className="px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Cualificación · confírmala en la llamada</legend>
+        <label className="col-span-2 sm:col-span-1"><span className={label}>Nombre</span><input name="full_name" defaultValue={lead.full_name} className={input} /></label>
         <label><span className={label}>Teléfono</span><input name="phone" defaultValue={lead.phone ?? ""} className={input} /></label>
-        <label><span className={label}>Email</span><input name="email" defaultValue={lead.email ?? ""} className={input} /></label>
+        <label className="col-span-2 sm:col-span-1"><span className={label}>Email</span><input name="email" defaultValue={lead.email ?? ""} className={input} /></label>
         <label><span className={label}>Deuda total (€)</span><input name="debt_amount" inputMode="numeric" defaultValue={lead.debt_amount ?? ""} className={input} placeholder="ej. 25000" /></label>
         <label><span className={label}>Nº de acreedores</span><input name="creditors_count" inputMode="numeric" defaultValue={lead.creditors_count ?? ""} className={input} placeholder="bancos, financieras, Hacienda…" /></label>
         <label><span className={label}>Ingresos/mes (€)</span><input name="monthly_income" inputMode="numeric" defaultValue={lead.monthly_income ?? ""} className={input} /></label>
@@ -98,20 +102,20 @@ export function CallScreen({
         </label>
       </fieldset>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-4">
+      <div className="rounded-[var(--radius-card)] border border-slate-200 bg-white p-4 sm:p-5">
         <span className={label}>Notas de la llamada (las verá el despacho si se agenda cita)</span>
         <textarea name="notes" rows={3} className={input} placeholder="Tipo de deudas, urgencia (embargos, llamadas de recobro), disponibilidad…" />
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-4">
-        <div className="mb-3 text-sm font-semibold text-slate-800">Resultado</div>
-        <div className="flex flex-wrap gap-2">
+      <div className="rounded-[var(--radius-card)] border border-slate-200 bg-white p-4 sm:p-5">
+        <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Resultado</div>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           {OUTCOMES.map((o) => (
             <button
               type="button"
               key={o.v}
               onClick={() => setOutcome(o.v)}
-              className={`${o.cls} ${outcome === o.v ? "ring-2 ring-indigo-500 ring-offset-2" : ""}`}
+              className={`${o.cls} ${o.v === "cita_agendada" ? "col-span-2" : ""} ${outcome === o.v ? "ring-2 ring-blaze ring-offset-2" : ""}`}
             >
               {o.l}
             </button>
@@ -120,7 +124,7 @@ export function CallScreen({
         {outcome && <input type="hidden" name="outcome" value={outcome} />}
 
         {outcome === "cita_agendada" && (
-          <div className="mt-4 grid gap-3 rounded-lg bg-emerald-50 p-3 sm:grid-cols-3">
+          <div className="mt-4 grid gap-3 rounded-2xl bg-emerald-50 p-3.5 sm:grid-cols-3">
             <label><span className={label}>Fecha y hora de la consulta</span><input type="datetime-local" name="scheduled_at" required defaultValue={defaultSlot} className={input} /></label>
             <label>
               <span className={label}>Modalidad</span>
@@ -138,13 +142,27 @@ export function CallScreen({
           </div>
         )}
 
-        <div className="mt-4 flex items-center gap-3">
-          <button className={btn.primary} disabled={!outcome}>
-            {fromQueue ? "Guardar y siguiente →" : "Guardar"}
+        <div className="sticky bottom-[calc(6.75rem+env(safe-area-inset-bottom,0px))] z-10 -mx-1 mt-4 flex items-center gap-3 rounded-full bg-white/90 p-1 backdrop-blur lg:bottom-4">
+          <button className={`${btn.primary} min-h-12 flex-1 sm:flex-none sm:px-8`} disabled={!outcome}>
+            {fromQueue ? "Guardar y cazar el siguiente →" : "Guardar"}
           </button>
-          {!outcome && <span className="text-xs text-slate-500">Elige un resultado</span>}
+          {!outcome && <span className="hidden text-xs text-slate-500 sm:inline">Elige un resultado</span>}
         </div>
       </div>
     </form>
+  );
+}
+
+/** Anillo que se va "calentando": verde en los 5 minutos de oro, naranja hasta 30, rojo después. */
+function HeatRing({ ms }: { ms: number }) {
+  const min = ms / 60000;
+  const p = Math.min(100, (min / 30) * 100);
+  const c = min <= 5 ? "#3f9a67" : min <= 30 ? "#ff5b1a" : "#e11d48";
+  return (
+    <div className="lh-ring grid size-16 shrink-0 place-items-center rounded-full" style={{ ["--p" as string]: p, ["--c" as string]: c, background: `conic-gradient(${c} ${p}%, rgb(255 255 255 / 0.12) 0)` }}>
+      <div className="grid size-[3.4rem] place-items-center rounded-full bg-ink text-center">
+        <span className="num text-sm font-semibold leading-none">{min < 60 ? `${Math.floor(min)}′` : `${Math.floor(min / 60)}h`}</span>
+      </div>
+    </div>
   );
 }

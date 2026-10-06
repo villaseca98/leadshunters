@@ -1,7 +1,7 @@
 import { query } from "@/lib/db";
 import { CONSULTATION_STATUS } from "@/lib/labels";
 import { dateTime, eur, telHref, toLocalInput } from "@/lib/format";
-import { A, Empty, PageHeader, StatusBadge, Table, Td, btn, input } from "@/components/ui";
+import { A, ChipLink, Empty, PageHeader, StatusBadge, Table, Td, btn, input } from "@/components/ui";
 import { markConsultation, reschedule } from "./actions";
 
 export default async function Citas(props: PageProps<"/citas">) {
@@ -27,12 +27,14 @@ export default async function Citas(props: PageProps<"/citas">) {
 
   return (
     <>
-      <PageHeader title="Consultas" subtitle="Solo las consultas realizadas (asistidas) se facturan. El despacho también puede confirmarlas desde el enlace de su email." />
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        {tabs.map(([k, l]) => (
-          <a key={k} href={`/citas?ver=${k}${client ? `&cliente=${client}` : ""}`} className={view === k ? btn.primary : btn.secondary}>{l}</a>
-        ))}
-        <form className="ml-auto flex gap-2">
+      <PageHeader title="Consultas" eyebrow="Agenda" subtitle="Solo se facturan las consultas realizadas. El despacho también puede confirmarlas desde el enlace de su email." />
+      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center">
+        <div className="lh-rail -mx-4 flex gap-2 overflow-x-auto px-4 md:mx-0 md:px-0">
+          {tabs.map(([k, l]) => (
+            <ChipLink key={k} href={`/citas?ver=${k}${client ? `&cliente=${client}` : ""}`} active={view === k}>{l}</ChipLink>
+          ))}
+        </div>
+        <form className="flex gap-2 md:ml-auto">
           <input type="hidden" name="ver" value={view} />
           <select name="cliente" defaultValue={client} className={input}>
             <option value="">Todos los clientes</option>
@@ -42,25 +44,25 @@ export default async function Citas(props: PageProps<"/citas">) {
         </form>
       </div>
       {rows.length === 0 ? <Empty>No hay consultas en esta vista.</Empty> : (
-        <Table head={["Fecha", "Lead", "Despacho", "Deuda", "Modalidad", "Estado", "Acciones"]}>
+        <Table head={["Lead", "Fecha", "Despacho", "Deuda", "Modalidad", "Estado", "Acciones"]}>
           {rows.map((r) => {
             const past = new Date(r.scheduled_at) < new Date();
             return (
               <tr key={r.id} className={past && r.status === "agendada" ? "bg-amber-50/50" : ""}>
+                <Td primary><A href={`/leads/${r.lead_id}`}>{r.full_name}</A>{r.phone && <div className="text-xs"><a href={telHref(r.phone)} className="text-slate-500">{r.phone}</a></div>}</Td>
                 <Td>{dateTime(r.scheduled_at)}{r.reminder_sent_at && <div className="text-xs text-slate-400">recordatorio enviado</div>}</Td>
-                <Td><A href={`/leads/${r.lead_id}`}>{r.full_name}</A>{r.phone && <div className="text-xs"><a href={telHref(r.phone)} className="text-slate-500">{r.phone}</a></div>}</Td>
                 <Td>{r.cliente}</Td>
                 <Td>{eur(r.debt_amount)}</Td>
-                <Td className="capitalize">{r.mode}</Td>
+                <Td hide className="capitalize">{r.mode}</Td>
                 <Td><StatusBadge map={CONSULTATION_STATUS} value={r.status} />{r.confirmed_by && <div className="text-xs text-slate-400">por {r.confirmed_by}</div>}</Td>
-                <Td>
-                  <div className="flex flex-wrap items-center gap-1">
-                    {r.status !== "asistida" && <form action={markConsultation.bind(null, r.id, "asistida")}><button className="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-500">Asistió</button></form>}
-                    {r.status !== "no_asistio" && <form action={markConsultation.bind(null, r.id, "no_asistio")}><button className="rounded bg-rose-100 px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-200">No asistió</button></form>}
-                    {r.status === "agendada" && <form action={markConsultation.bind(null, r.id, "cancelada")}><button className="rounded bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200">Cancelar</button></form>}
+                <Td wide>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {r.status !== "asistida" && <form action={markConsultation.bind(null, r.id, "asistida")}><button className="min-h-9 rounded-full bg-emerald-600 px-3 text-xs font-medium text-white hover:bg-emerald-500">Asistió</button></form>}
+                    {r.status !== "no_asistio" && <form action={markConsultation.bind(null, r.id, "no_asistio")}><button className="min-h-9 rounded-full bg-rose-100 px-3 text-xs font-medium text-rose-700 hover:bg-rose-200">No asistió</button></form>}
+                    {r.status === "agendada" && <form action={markConsultation.bind(null, r.id, "cancelada")}><button className="min-h-9 rounded-full bg-slate-100 px-3 text-xs font-medium text-slate-700 hover:bg-slate-200">Cancelar</button></form>}
                     <details className="relative">
-                      <summary className="cursor-pointer list-none rounded px-2 py-1 text-xs text-indigo-600 hover:bg-indigo-50">Mover</summary>
-                      <form action={reschedule.bind(null, r.id)} className="absolute right-0 z-10 mt-1 flex gap-1 rounded-lg bg-white p-2 shadow-lg ring-1 ring-slate-200">
+                      <summary className="flex min-h-9 cursor-pointer list-none items-center rounded-full px-3 text-xs font-semibold text-indigo-700 hover:bg-indigo-50">Mover</summary>
+                      <form action={reschedule.bind(null, r.id)} className="absolute left-0 z-10 mt-1 flex w-[min(20rem,calc(100vw-4rem))] gap-1 rounded-2xl bg-white p-2 shadow-lg ring-1 ring-slate-200 md:left-auto md:right-0">
                         <input type="datetime-local" name="scheduled_at" defaultValue={toLocalInput(new Date(r.scheduled_at))} className={input} />
                         <button className={btn.secondary}>OK</button>
                       </form>

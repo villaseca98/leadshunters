@@ -3,7 +3,7 @@ import { query } from "@/lib/db";
 import { PROSPECT_STATUS } from "@/lib/labels";
 import { PROVINCES } from "@/lib/normalize";
 import { ago } from "@/lib/format";
-import { A, Badge, Empty, PageHeader, Pager, ScorePill, StatusBadge, Table, Td, btn, input } from "@/components/ui";
+import { A, Badge, Empty, Filters, PageHeader, Pager, ScorePill, StatusBadge, Table, Td, btn, input } from "@/components/ui";
 
 const PER_PAGE = 50;
 
@@ -51,18 +51,20 @@ export default async function Prospeccion(props: PageProps<"/prospeccion">) {
   return (
     <>
       <PageHeader
-        title="Prospección de despachos"
+        title="Despachos"
+        eyebrow="Prospección"
         subtitle={`${total} despachos · A: ${t.A ?? 0} · B: ${t.B ?? 0} · C: ${t.C ?? 0}`}
         actions={
           <>
             <Link href="/prospeccion/importar" className={btn.secondary}>Importar / añadir</Link>
             <a href="/api/export/prospects" className={btn.secondary}>Exportar CSV</a>
-            <Link href="/prospeccion/llamar" className={btn.primary}>☏ Llamar al siguiente</Link>
+            <Link href="/prospeccion/llamar" className={btn.hunt}>Llamar al siguiente</Link>
           </>
         }
       />
 
-      <form className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-6">
+      <Filters active={[status, tier, province].filter(Boolean).length}>
+      <form className="grid grid-cols-2 gap-2 md:grid-cols-6">
         <input name="q" defaultValue={q} placeholder="Buscar nombre, ciudad, teléfono…" className={`${input} col-span-2`} />
         <select name="status" defaultValue={status} className={input}>
           <option value="">Estado: todos (sin descartados)</option>
@@ -88,6 +90,7 @@ export default async function Prospeccion(props: PageProps<"/prospeccion">) {
           <button className={btn.secondary}>Filtrar</button>
         </div>
       </form>
+      </Filters>
 
       {rows.length === 0 ? (
         <Empty>
@@ -95,17 +98,21 @@ export default async function Prospeccion(props: PageProps<"/prospeccion">) {
           <A href="/prospeccion/importar">importa un archivo de Apify</A>.
         </Empty>
       ) : (
-        <Table head={["Puntuación", "Despacho", "Ubicación", "Google", "Señales", "Estado", "Próxima acción"]}>
+        <Table head={["Despacho", "Ubicación", "Google", "Señales", "Estado", "Próxima acción"]}>
           {rows.map((r) => (
             <tr key={r.id} className="hover:bg-slate-50">
-              <Td><ScorePill score={r.score} tier={r.score_tier} /></Td>
-              <Td className="max-w-xs">
-                <A href={`/prospeccion/${r.id}`} className="block truncate">{r.name}</A>
-                <div className="text-xs text-slate-500">{r.phone ?? "sin teléfono"}</div>
+              <Td primary className="max-w-sm">
+                <div className="flex items-center gap-3">
+                  <ScorePill score={r.score} tier={r.score_tier} />
+                  <div className="min-w-0">
+                    <A href={`/prospeccion/${r.id}`} className="block md:truncate">{r.name}</A>
+                    <div className="text-xs text-slate-500">{r.phone ?? "sin teléfono"}</div>
+                  </div>
+                </div>
               </Td>
-              <Td>{r.city ?? "—"}<div className="text-xs text-slate-500">{r.province}</div></Td>
-              <Td>{r.rating ? `${r.rating}★` : "—"} <span className="text-xs text-slate-500">({r.reviews_count ?? 0})</span></Td>
-              <Td>
+              <Td>{r.city ?? "—"}<div className="text-xs text-slate-500 max-md:hidden">{r.province}</div></Td>
+              <Td hide>{r.rating ? `${r.rating}★` : "—"} <span className="text-xs text-slate-500">({r.reviews_count ?? 0})</span></Td>
+              <Td wide>
                 <div className="flex flex-wrap gap-1">
                   {r.website_mentions_lso && <Badge tone="emerald">LSO</Badge>}
                   {r.meta_ads_active && <Badge tone="violet">Anuncia</Badge>}
@@ -115,7 +122,7 @@ export default async function Prospeccion(props: PageProps<"/prospeccion">) {
                 </div>
               </Td>
               <Td><StatusBadge map={PROSPECT_STATUS} value={r.status} /></Td>
-              <Td className="text-xs">{r.next_action_at ? ago(r.next_action_at) : "—"}</Td>
+              <Td hide className="text-xs">{r.next_action_at ? ago(r.next_action_at) : "—"}</Td>
             </tr>
           ))}
         </Table>

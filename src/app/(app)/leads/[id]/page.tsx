@@ -43,11 +43,11 @@ export default async function LeadPage(props: PageProps<"/leads/[id]">) {
           </span>
         }
       />
-      <div className="grid gap-6 xl:grid-cols-3">
+      <div className="grid gap-4 xl:grid-cols-3 xl:gap-6">
         <div className="xl:col-span-2">
           <CallScreen lead={lead} action={logCallAction.bind(null, id)} defaultSlot={toLocalInput(slot)} fromQueue={false} clientFilter="" calendarUrl={lead.calendar_url} />
         </div>
-        <div className="space-y-6">
+        <div className="space-y-4 xl:space-y-6">
           <Card title={`Cualificación: ${lead.qualification_score}/100`}>
             <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
               {lead.qualification_reasons.map((r, i) => <li key={i}>{r}</li>)}

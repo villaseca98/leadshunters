@@ -1,6 +1,10 @@
 # Leads Hunters · App + flujos n8n
 
-![Pantalla de llamada](docs/capturas/pantalla-llamada.png)
+<p>
+  <img src="docs/capturas/resumen.png" alt="Inicio en el móvil" width="230">
+  <img src="docs/capturas/cola-llamadas.png" alt="Cola de llamadas" width="230">
+  <img src="docs/capturas/pantalla-llamada.png" alt="Pantalla de llamada" width="230">
+</p>
 
 Herramienta para montar el servicio de captación para **despachos de abogados de Ley de Segunda Oportunidad**:
 

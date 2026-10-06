@@ -50,6 +50,7 @@ document.getElementById('lh-form').onsubmit = async (e) => {
     <>
       <PageHeader
         title={c.name}
+        eyebrow="Cliente"
         subtitle={`${eur(c.monthly_fee)}/mes + ${eur(c.price_per_consultation)} por consulta realizada · ${c.status}`}
         actions={
           <>
@@ -64,7 +65,7 @@ document.getElementById('lh-form').onsubmit = async (e) => {
         </p>
       )}
 
-      <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-5">
+      <div className="lh-rail -mx-4 mb-5 flex gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:grid md:grid-cols-5 md:gap-4 md:overflow-visible md:px-0">
         <Stat label="Leads" value={b?.leads ?? 0} hint={monthLabel(month)} />
         <Stat label="Cualificados" value={b?.leads_cualificados ?? 0} />
         <Stat label="Consultas agendadas" value={b?.citas_agendadas ?? 0} />
@@ -72,13 +73,13 @@ document.getElementById('lh-form').onsubmit = async (e) => {
         <Stat label="A facturar" value={eur(b?.total ?? 0)} hint={`${eur(b?.importe_fijo ?? 0)} + ${eur(b?.importe_variable ?? 0)}`} />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-3">
+      <div className="grid gap-4 xl:grid-cols-3 xl:gap-6">
         <div className="xl:col-span-2">
           <Card title="Ficha y condiciones">
             {isAdmin ? <ClientForm action={updateClient.bind(null, id)} c={c} submit="Guardar cambios" /> : <p className="text-sm text-slate-500">Solo un administrador puede editar la ficha.</p>}
           </Card>
         </div>
-        <div className="space-y-6">
+        <div className="space-y-4 xl:space-y-6">
           <Card title="Últimas consultas" actions={<A href={`/citas?cliente=${id}`} className="text-xs">Todas</A>}>
             {consults.length === 0 ? <p className="text-sm text-slate-500">Todavía no hay consultas.</p> : (
               <ul className="divide-y divide-slate-100 text-sm">
@@ -100,7 +101,7 @@ document.getElementById('lh-form').onsubmit = async (e) => {
               </dl>
               <details className="mt-3">
                 <summary className="cursor-pointer text-xs font-medium text-indigo-600">Formulario para su web (copiar y pegar)</summary>
-                <pre className="mt-2 max-h-72 overflow-auto rounded-lg bg-slate-900 p-3 text-[11px] leading-relaxed text-slate-100">{snippet}</pre>
+                <pre className="mt-2 max-h-72 overflow-auto rounded-xl bg-ink p-3 text-[11px] leading-relaxed text-slate-100">{snippet}</pre>
               </details>
             </Card>
           )}

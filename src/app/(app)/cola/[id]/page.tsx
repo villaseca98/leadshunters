@@ -33,7 +33,8 @@ export default async function CallPage(props: PageProps<"/cola/[id]">) {
   return (
     <>
       <PageHeader
-        title={`Llamada · ${lead.cliente}`}
+        title={lead.cliente}
+        eyebrow="Llamada en curso"
         subtitle={
           <span className="flex flex-wrap items-center gap-2">
             <StatusBadge map={LEAD_STATUS} value={lead.status} />
@@ -43,7 +44,7 @@ export default async function CallPage(props: PageProps<"/cola/[id]">) {
         }
         actions={<form action={release.bind(null, id)}><button className={btn.ghost}>Soltar lead y volver</button></form>}
       />
-      <div className="grid gap-6 xl:grid-cols-3">
+      <div className="grid gap-4 xl:grid-cols-3 xl:gap-6">
         <div className="xl:col-span-2">
           <CallScreen
             lead={lead}
@@ -54,7 +55,7 @@ export default async function CallPage(props: PageProps<"/cola/[id]">) {
             calendarUrl={lead.calendar_url}
           />
         </div>
-        <div className="space-y-6">
+        <div className="space-y-4 xl:space-y-6">
           <Card title={`Cualificación: ${lead.qualification_score}/100`}>
             <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
               {lead.qualification_reasons.map((r, i) => <li key={i}>{r}</li>)}

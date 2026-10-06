@@ -15,7 +15,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen">
       <Sidebar user={user} queueCount={q?.n ?? 0} />
       <main className="lg:pl-64">
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
+        <div className="pb-dock mx-auto max-w-7xl px-4 pt-2 sm:px-6 lg:px-10 lg:pt-10">{children}</div>
       </main>
     </div>
   );
