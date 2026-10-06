@@ -34,20 +34,21 @@ export function isFromEnv(name: string) {
   return !!v && v.length >= 16;
 }
 
-export type Contact = { name: string; phone: string; email: string };
+export type Contact = { name: string; phone: string; email: string; brand: string; legal: string };
 
 /** Datos de contacto que aparecen en las auditorías. Por defecto, los del primer administrador. */
 export async function contactInfo(): Promise<Contact> {
   const rows = await query<{ key: string; value: string }>(
-    "SELECT key, value FROM app_settings WHERE key IN ('CONTACT_NAME', 'CONTACT_PHONE', 'CONTACT_EMAIL')",
+    "SELECT key, value FROM app_settings WHERE key IN ('CONTACT_NAME', 'CONTACT_PHONE', 'CONTACT_EMAIL', 'CONSUMER_BRAND', 'LEGAL_HOLDER')",
   ).catch(() => []);
   const s = Object.fromEntries(rows.map((r) => [r.key, r.value]));
   const admin = await queryOne<{ name: string; email: string }>("SELECT name, email FROM users WHERE role = 'admin' AND active ORDER BY created_at LIMIT 1");
-  return { name: s.CONTACT_NAME || admin?.name || "Leads Hunters", phone: s.CONTACT_PHONE || "", email: s.CONTACT_EMAIL || admin?.email || "" };
+  return { name: s.CONTACT_NAME || admin?.name || "Leads Hunters", phone: s.CONTACT_PHONE || "", email: s.CONTACT_EMAIL || admin?.email || "",
+    brand: s.CONSUMER_BRAND || "Tu Segunda Oportunidad", legal: s.LEGAL_HOLDER || "" };
 }
 
 export async function saveContactInfo(c: Contact) {
-  for (const [key, value] of [["CONTACT_NAME", c.name], ["CONTACT_PHONE", c.phone], ["CONTACT_EMAIL", c.email]]) {
+  for (const [key, value] of [["CONTACT_NAME", c.name], ["CONTACT_PHONE", c.phone], ["CONTACT_EMAIL", c.email], ["CONSUMER_BRAND", c.brand], ["LEGAL_HOLDER", c.legal]]) {
     await query(
       "INSERT INTO app_settings(key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
       [key, value.trim()],

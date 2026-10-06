@@ -64,12 +64,14 @@ export default async function Ajustes() {
             ))}
           </ul>
         </Card>
-        <Card title="Tus datos en las auditorías" className="lg:col-span-2">
-          <p className="mb-3 text-xs text-slate-500">Aparecen al final de la auditoría que envías a cada despacho, para que te llamen o te escriban.</p>
+        <Card title="Tus datos públicos" className="lg:col-span-2">
+          <p className="mb-3 text-xs text-slate-500">Nombre, teléfono y email salen en la auditoría que envías a cada despacho. La marca y el titular salen en el test para particulares (/test) y en su política de privacidad.</p>
           <form action={saveContact} className="grid gap-3 sm:grid-cols-4">
             <Field label="Nombre"><input name="name" defaultValue={contact.name} className={input} /></Field>
             <Field label="Teléfono / WhatsApp"><input name="phone" type="tel" defaultValue={contact.phone} placeholder="+34 600 000 000" className={input} /></Field>
             <Field label="Email"><input name="email" type="email" defaultValue={contact.email} className={input} /></Field>
+            <Field label="Marca para particulares"><input name="brand" defaultValue={contact.brand} className={input} /></Field>
+            <div className="sm:col-span-3"><Field label="Titular y NIF (política de privacidad)"><input name="legal" defaultValue={contact.legal} placeholder="Nombre y apellidos o empresa · NIF · dirección" className={input} /></Field></div>
             <div className="flex items-end"><button className={`${btn.primary} w-full`} disabled={me.role !== "admin"}>Guardar</button></div>
           </form>
         </Card>

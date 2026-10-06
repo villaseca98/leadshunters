@@ -88,3 +88,17 @@ test("auditoría: solo marca lo comprobado", async () => {
   const m = auditMessage({ name: "Bufete Pérez", call_hooks: ["Su web no tiene WhatsApp"] }, "https://l/a/1", "Ana");
   assert.match(m.body, /su web no tiene WhatsApp\./);
 });
+
+test("test de particulares: resultado y origen", async () => {
+  const { evaluateTest, sourceFromUtm, answersToFields } = await import("../src/lib/lsoTest");
+  const base = { debt: "22000", creditors: "3", income: "1250", employment: "asalariado", home: "no", blockers: "ninguna" };
+  assert.equal(evaluateTest(base).kind, "apto");
+  assert.equal(evaluateTest({ ...base, creditors: "1" }).kind, "revisar");
+  assert.equal(evaluateTest({ ...base, debt: "5000" }).kind, "revisar");
+  assert.equal(evaluateTest({ ...base, blockers: "lso_previa" }).kind, "no_apto");
+  assert.equal(answersToFields({ ...base, income: "0" }).monthly_income, 0);
+  assert.equal(answersToFields(base).owns_home, false);
+  assert.equal(sourceFromUtm("Instagram"), "meta");
+  assert.equal(sourceFromUtm("google"), "google");
+  assert.equal(sourceFromUtm(null), "web");
+});

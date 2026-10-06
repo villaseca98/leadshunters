@@ -25,6 +25,7 @@ const MAIN = [
   { href: "/prospeccion", label: "Despachos", icon: IconTarget },
 ];
 const MORE = [
+  { href: "/particulares", label: "Test particulares", hint: "Captación propia con consentimiento" },
   { href: "/citas", label: "Consultas", hint: "Agenda y asistencia" },
   { href: "/clientes", label: "Clientes", hint: "Despachos que pagan" },
   { href: "/facturacion", label: "Facturación", hint: "Cuota + consultas" },

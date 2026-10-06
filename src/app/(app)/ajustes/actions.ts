@@ -33,6 +33,8 @@ export async function saveContact(formData: FormData) {
     name: String(formData.get("name") ?? ""),
     phone: String(formData.get("phone") ?? ""),
     email: String(formData.get("email") ?? ""),
+    brand: String(formData.get("brand") ?? ""),
+    legal: String(formData.get("legal") ?? ""),
   });
   revalidatePath("/ajustes");
 }

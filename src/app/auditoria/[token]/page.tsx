@@ -10,11 +10,12 @@ import { emitEvent } from "@/lib/services/events";
 import { appUrl } from "@/lib/appUrl";
 import { dateOnly, telHref, waHref, nowMs } from "@/lib/format";
 import { Logo } from "@/components/Sidebar";
+import { matchProvince } from "@/lib/normalize";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Diagnóstico de captación · Leads Hunters", robots: { index: false, follow: false } };
 
-type Row = AuditInput & { id: string; phone: string | null; audit_last_view_at: string | null };
+type Row = AuditInput & { id: string; phone: string | null; audit_last_view_at: string | null; province: string | null };
 
 // Las vistas previas de WhatsApp, Gmail, etc. no cuentan como visita
 const BOT_RE = /bot|crawler|spider|preview|facebookexternalhit|whatsapp|telegram|slack|discord|google-?(read|image)|bingpreview|headless/i;
@@ -24,7 +25,7 @@ export default async function Auditoria(props: PageProps<"/auditoria/[token]">) 
   const p = /^[0-9a-f]{32}$/.test(token)
     ? await queryOne<Row>(
         `SELECT id, name, city, phone, website, rating, reviews_count, instagram, instagram_days_since_post, website_has_form,
-                website_has_whatsapp, website_has_pixel, meta_ads_active, call_hooks, audit_last_view_at
+                website_has_whatsapp, website_has_pixel, meta_ads_active, call_hooks, audit_last_view_at, province
            FROM prospects WHERE audit_token = $1`,
         [token],
       )
@@ -58,6 +59,13 @@ export default async function Auditoria(props: PageProps<"/auditoria/[token]">) 
     : null;
   const a = buildAudit(p, city ?? { total: 0, con_anuncios: 0, reviews_rank: null });
   const c = await contactInfo();
+  const prov = matchProvince(p.province) ?? matchProvince(p.city);
+  const demand = prov
+    ? await queryOne<{ n: number }>(
+        "SELECT count(*)::int AS n FROM test_submissions WHERE province = $1 AND verdict <> 'no_apto' AND created_at > now() - interval '30 days'",
+        [prov],
+      ).catch(() => null)
+    : null;
   const pct = a.total ? Math.round((a.passed / a.total) * 100) : 0;
 
   return (
@@ -96,6 +104,15 @@ export default async function Auditoria(props: PageProps<"/auditoria/[token]">) 
             ))}
           </ul>
         </section>
+
+        {demand && demand.n > 0 && (
+          <section className="mt-4 rounded-[1.75rem] bg-moss p-5 text-white">
+            <div className="num text-3xl font-semibold">{demand.n}</div>
+            <p className="mt-1 text-sm text-white/85">
+              {demand.n === 1 ? "persona" : "personas"} de {prov} con deudas que cumplen o pueden cumplir los requisitos nos han pedido ayuda en los últimos 30 días.
+            </p>
+          </section>
+        )}
 
         {(a.reviews || a.market) && (
           <section className="mt-4 space-y-2 rounded-[1.75rem] bg-white p-5 text-sm leading-relaxed text-slate-700 ring-1 ring-slate-200">
