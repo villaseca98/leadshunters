@@ -149,6 +149,8 @@ const CONFIG_DEFAULTS = {
   EMAIL_FROM: "Leads Hunters <hola@tudominio.com>",
   TWILIO_FROM: "+34000000000",
   N8N_EVENTS_WEBHOOK_URL: "https://TU-N8N/webhook/leads-hunters-eventos",
+  WA_ACCESS_TOKEN: "PEGA_AQUI_EL_TOKEN_PERMANENTE_DE_WHATSAPP_BUSINESS",
+  WA_NUMEROS: '{"PHONE_NUMBER_ID_DEL_DESPACHO": "CODIGO_DEL_TEST_DEL_DESPACHO"}',
 };
 const TRIGGER_TYPES = ["Trigger", "webhook", "manualTrigger"];
 
@@ -180,6 +182,8 @@ function withConfig(wf) {
   let targets = null;
   for (const t of triggers) {
     const out = wf.connections[t.name]?.main?.[0] ?? [];
+    // un disparador con otro destino (p. ej. la verificación de Meta) se queda como está
+    if (targets && JSON.stringify(out) !== JSON.stringify(targets)) continue;
     targets ??= out;
     wf.connections[t.name] = { main: [[{ node: "Config", type: "main", index: 0 }]] };
   }
@@ -552,13 +556,31 @@ return [{ json: { event_id: b.id, kind: b.kind, ...b.payload } }];`);
     "=🙋 *{{ $json.nombre }}* ({{ $json.provincia }}) ha hecho el test: {{ $json.resultado === 'apto' ? 'cumple' : 'hay que revisar' }}, deuda {{ $json.deuda ? $json.deuda.toLocaleString('es-ES') + ' €' : '¿?' }}, {{ $json.acreedores }} acreedores.\nNo tienes despacho en {{ $json.provincia }}: ya son {{ $json.en_provincia_30d }} este mes. Llámale y ofrece el caso a un despacho de allí.\n{{ $('Config').first().json.APP_URL }}/particulares");
   [tgLead, tgDone, tgNo, tgClient, tgAudit, tgPool].forEach((n) => (n.onError = "continueRegularOutput"));
 
+  // Reseña en Google (despachos con enlace de reseña): email al lead tras la consulta realizada
+  const D = "$('Tipo de evento').item.json";
+  const wantsReview = ifNode("¿Pedir reseña?", [1160, 540], `={{ !!${D}.enlace_resena && !!${D}.lead_email && !${D}.review_requested_at }}`);
+  const mailReview = email("⭐ Pedir reseña al lead", [1380, 540], {
+    to: `={{ ${D}.lead_email }}`,
+    subject: `=¿Qué tal tu consulta con {{ ${D}.cliente }}?`,
+    html: `=<div style="font-family:Arial,sans-serif;font-size:14px;color:#0f172a">
+<p>Hola {{ ${D}.lead_nombre.split(' ')[0] }},</p>
+<p>Gracias por confiar en <b>{{ ${D}.cliente }}</b>. Si la consulta te resultó útil, nos ayudaría mucho que dejaras tu opinión en Google. Es un minuto:</p>
+<p><a href="{{ ${D}.enlace_resena }}" style="display:inline-block;padding:10px 18px;background:#f26b1d;color:#1a0f05;border-radius:999px;text-decoration:none;font-weight:bold">Dejar mi opinión</a></p>
+<p>¡Gracias!</p></div>`,
+  });
+  mailReview.onError = "continueRegularOutput";
+  const markReview = http("Marcar reseña pedida", [1600, 540], {
+    method: "POST", url: `=${"{{ $env.LH_API_URL }}"}/api/v1/consultations/{{ ${D}.id }}`, body: '={"review_requested": true}',
+  });
+  markReview.onError = "continueRegularOutput";
+
   const note = sticky(
-    "## 04 · Eventos de la app\nLa app llama a este webhook en cada evento (`N8N_EVENTS_WEBHOOK_URL`).\n- **lead.nuevo** → WhatsApp al equipo para llamar en < 5 min\n- **cita.agendada** → email al despacho con el resumen + enlace para confirmar asistencia, y confirmación al lead (email; SMS con Twilio si lo activas)\n- **cita.asistida / no_asistio** → aviso\n- **prospecto.cliente** → aviso de nuevo cliente\n- **prospecto.vio_auditoria** → WhatsApp para llamar al despacho mientras mira su auditoría\n- **test.sin_despacho** → alguien hizo el test en una provincia sin despacho cliente\n\nActiva el flujo para que la URL de producción funcione.",
+    "## 04 · Eventos de la app\nLa app llama a este webhook en cada evento (`N8N_EVENTS_WEBHOOK_URL`).\n- **lead.nuevo** → WhatsApp al equipo para llamar en < 5 min\n- **cita.agendada** → email al despacho con el resumen + enlace para confirmar asistencia, y confirmación al lead (email; SMS con Twilio si lo activas)\n- **cita.asistida / no_asistio** → aviso; si el despacho tiene enlace de reseña, email al lead pidiendo su opinión en Google\n- **prospecto.cliente** → aviso de nuevo cliente\n- **prospecto.vio_auditoria** → WhatsApp para llamar al despacho mientras mira su auditoría\n- **test.sin_despacho** → alguien hizo el test en una provincia sin despacho cliente\n\nActiva el flujo para que la URL de producción funcione.",
     [160, -40], 560, 300, 4,
   );
 
   save("04-eventos-app.json", workflow("04 · Eventos de la app (avisos y emails)",
-    [note, hook, check, sw, tgLead, mailClient, hasLeadEmail, mailLead, sms, tgDone, tgNo, tgClient, tgAudit, tgPool],
+    [note, hook, check, sw, tgLead, mailClient, hasLeadEmail, mailLead, sms, tgDone, wantsReview, mailReview, markReview, tgNo, tgClient, tgAudit, tgPool],
     [
       ["Eventos de la app", "Comprobar clave"], ["Comprobar clave", "Tipo de evento"],
       ["Tipo de evento", "🔥 Nuevo lead al equipo", 0], ["Tipo de evento", "Email al despacho", 1], ["Tipo de evento", "✅ Consulta realizada", 2],
@@ -566,6 +588,7 @@ return [{ json: { event_id: b.id, kind: b.kind, ...b.payload } }];`);
       ["Tipo de evento", "👀 Están viendo la auditoría", 5], ["Tipo de evento", "🙋 Persona sin despacho", 6],
       ["Email al despacho", "¿El lead tiene email?"], ["¿El lead tiene email?", "Email de confirmación al lead", 0],
       ["Email al despacho", "SMS al lead (opcional)"],
+      ["✅ Consulta realizada", "¿Pedir reseña?"], ["¿Pedir reseña?", "⭐ Pedir reseña al lead", 0], ["⭐ Pedir reseña al lead", "Marcar reseña pedida"],
     ],
   ));
 }
@@ -669,7 +692,11 @@ return clients.filter(c => c.email).map(c => ({ json: {
 <tr><td style="padding:6px 16px 6px 0;color:#64748b">Cualificadas para la LSO</td><td><b>\${c.leads_cualificados}</b></td></tr>
 <tr><td style="padding:6px 16px 6px 0;color:#64748b">Consultas agendadas</td><td><b>\${c.citas_agendadas}</b></td></tr>
 <tr><td style="padding:6px 16px 6px 0;color:#64748b">Consultas realizadas</td><td><b>\${c.citas_asistidas}</b></td></tr>
+<tr><td style="padding:6px 16px 6px 0;color:#64748b">Casos firmados</td><td><b>\${c.casos_firmados}</b>\${c.honorarios ? ' · ' + eur(c.honorarios) + ' en honorarios' : ''}</td></tr>
+\${c.coste_por_consulta != null ? '<tr><td style="padding:6px 16px 6px 0;color:#64748b">Coste por consulta realizada</td><td><b>' + eur(c.coste_por_consulta) + '</b></td></tr>' : ''}
+\${c.retorno != null ? '<tr><td style="padding:6px 16px 6px 0;color:#64748b">Retorno</td><td><b>' + c.retorno.toLocaleString('es-ES', { maximumFractionDigits: 1 }) + ' € por cada euro invertido</b></td></tr>' : ''}
 </table>
+\${c.panel ? '<p style="margin-top:16px"><a href="' + c.panel + '" style="background:#f26b1d;color:#1a0f05;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:bold">Ver tu panel</a></p>' : ''}
 <h3 style="margin-top:20px">Importe del mes (sin IVA)</h3>
 <p>Cuota de marketing: \${eur(c.importe_fijo)}<br>Consultas realizadas: \${c.consultas_facturables} × \${eur(c.price_per_consultation)} = \${eur(c.importe_variable)}<br>
 <b>Total: \${eur(c.total)}</b></p>
@@ -681,14 +708,15 @@ return clients.filter(c => c.email).map(c => ({ json: {
   mail.onError = "continueRegularOutput";
   const total = code("Total facturación", [1100, 300], `const { month, clients } = $('Resultados del mes anterior').first().json;
 const total = clients.reduce((a, c) => a + c.total, 0);
-const lineas = clients.map(c => '• ' + c.cliente + ': ' + c.total.toLocaleString('es-ES') + ' € (' + c.citas_asistidas + ' consultas)').join('\\n');
+const wa = c => c.telefono ? ' → enviar informe: https://wa.me/34' + c.telefono.replace(/\\D/g, '').replace(/^34(?=\\d{9}$)/, '') + '?text=' + encodeURIComponent(c.texto) : '';
+const lineas = clients.map(c => '• ' + c.cliente + ': ' + c.total.toLocaleString('es-ES') + ' € (' + c.citas_asistidas + ' consultas)' + wa(c)).join('\\n');
 return [{ json: { month, total, lineas } }];`, undefined);
   total.executeOnce = true;
   const tg = whatsapp("Resumen al dueño", [1320, 300],
     "=💶 <b>Facturación {{ $json.month }}</b>: {{ $json.total.toLocaleString('es-ES') }} € + IVA\n{{ $json.lineas }}\n{{ $env.APP_URL }}/facturacion?mes={{ $json.month }}");
   tg.onError = "continueRegularOutput";
   const note = sticky(
-    "## 06 · Informe mensual\nEl día 1 manda a cada despacho sus resultados del mes anterior (leads, cualificados, consultas realizadas e importe) y te pasa el total a facturar por WhatsApp.",
+    "## 06 · Informe mensual\nEl día 1 manda a cada despacho por email sus resultados del mes anterior (leads, consultas, casos firmados, retorno, importe y enlace a su panel) y te pasa por WhatsApp el total a facturar con un enlace por despacho para reenviarle el informe por WhatsApp.",
     [160, 40], 480, 160, 4,
   );
   save("06-informe-mensual.json", workflow("06 · Informe mensual y facturación", [note, sched, get, split, mail, total, tg], [
@@ -725,6 +753,53 @@ return ids.length ? [{ json: { ids } }] : [];`);
     ["Cada 10 minutos", "Eventos pendientes"], ["Eventos pendientes", "Separar eventos"], ["Separar eventos", "Reenviar al flujo 04"],
     ["Reenviar al flujo 04", "IDs entregados"], ["IDs entregados", "Marcar como entregados"],
   ]));
+}
+
+// ---------------------------------------------------------------------------
+// 08 · Asistente de WhatsApp 24 h (Premium): test conversacional por la API oficial de WhatsApp Business
+// ---------------------------------------------------------------------------
+{
+  const verify = node("Verificación de Meta", "n8n-nodes-base.webhook", 2, [220, 200], {
+    httpMethod: "GET", path: "leads-hunters-whatsapp", responseMode: "responseNode", options: {},
+  }, { webhookId: randomUUID() });
+  const answer = node("Responder a Meta", "n8n-nodes-base.respondToWebhook", 1.1, [660, 200], {
+    respondWith: "text",
+    responseBody: "={{ $json.query['hub.mode'] === 'subscribe' ? $json.query['hub.challenge'] : 'no' }}",
+    options: {},
+  });
+  const hook = node("Mensaje de WhatsApp", "n8n-nodes-base.webhook", 2, [220, 460], {
+    httpMethod: "POST", path: "leads-hunters-whatsapp", responseMode: "onReceived", options: {},
+  }, { webhookId: randomUUID() });
+  const parse = code("Leer mensaje", [440, 460], `// Solo mensajes de texto o botones que escribe la persona (no estados de entrega)
+const numeros = JSON.parse($('Config').first().json.WA_NUMEROS || '{}');
+const out = [];
+for (const entry of $input.first().json.body?.entry ?? []) for (const ch of entry.changes ?? []) {
+  const v = ch.value ?? {};
+  for (const m of v.messages ?? []) {
+    const text = m.text?.body ?? m.button?.text ?? m.interactive?.button_reply?.title ?? m.interactive?.list_reply?.title ?? '';
+    out.push({ json: { phone: m.from, text, phone_number_id: v.metadata?.phone_number_id, client_code: numeros[v.metadata?.phone_number_id] ?? null } });
+  }
+}
+return out;`);
+  const engine = http("Asistente (app)", [660, 460], {
+    method: "POST", url: apiUrl("/api/v1/whatsapp"),
+    body: "={{ JSON.stringify({ phone: $json.phone, text: $json.text, client_code: $json.client_code }) }}",
+  });
+  const send = http("Enviar respuesta", [880, 460], {
+    method: "POST",
+    url: "=https://graph.facebook.com/v21.0/{{ $('Leer mensaje').item.json.phone_number_id }}/messages",
+    headers: { parameters: [{ name: "Authorization", value: "=Bearer {{ $env.WA_ACCESS_TOKEN }}" }] },
+    body: "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $('Leer mensaje').item.json.phone, type: 'text', text: { body: $json.reply } }) }}",
+    onError: "continueRegularOutput",
+  });
+  const note = sticky(
+    "## 08 · Asistente de WhatsApp 24 h (Premium)\nLa persona escribe al WhatsApp del despacho y el asistente le hace el test (6 preguntas, nombre, provincia y permiso). Al terminar entra como lead en la cola del despacho.\n\nNecesita la **API oficial de WhatsApp Business** (Meta) con un número propio:\n1. En Meta for Developers, webhook = URL de producción de este flujo; token de verificación = cualquier palabra; suscribir *messages*.\n2. Config: WA_ACCESS_TOKEN (token permanente) y WA_NUMEROS = { phone_number_id: código del test del despacho }.\n\nSolo responde a quien escribe primero (ventana de 24 h de WhatsApp).",
+    [160, -120], 600, 260, 4,
+  );
+  save("08-asistente-whatsapp.json", workflow("08 · Asistente de WhatsApp 24 h",
+    [note, hook, verify, answer, parse, engine, send],
+    [["Verificación de Meta", "Responder a Meta"], ["Mensaje de WhatsApp", "Leer mensaje"], ["Leer mensaje", "Asistente (app)"], ["Asistente (app)", "Enviar respuesta"]],
+  ));
 }
 
 void API;

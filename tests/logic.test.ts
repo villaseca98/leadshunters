@@ -102,3 +102,22 @@ test("test de particulares: resultado y origen", async () => {
   assert.equal(sourceFromUtm("google"), "google");
   assert.equal(sourceFromUtm(null), "web");
 });
+
+import { postsForMonth } from "../src/lib/socialPosts";
+import { reviewMessage } from "../src/lib/review";
+
+test("12 publicaciones al mes, sin repetir y con el despacho y el enlace", () => {
+  const ctx = { firm: "Despacho Test", place: "València", link: "https://x/test/abc" };
+  const a = postsForMonth("2026-10", ctx);
+  assert.equal(a.length, 12);
+  assert.equal(new Set(a.map((p) => p.title)).size, 12);
+  assert.ok(a.some((p) => p.caption.includes("https://x/test/abc")));
+  assert.ok(a.filter((p) => p.kind !== "historia").every((p) => p.caption.includes("#abogadosvalencia")));
+  assert.notEqual(postsForMonth("2026-11", ctx)[0].title, a[0].title);
+});
+
+test("mensaje de reseña con el nombre de pila y el enlace", () => {
+  const m = reviewMessage("Ana López", "Despacho Test", "https://g.page/r/x");
+  assert.ok(m.startsWith("Hola Ana,"));
+  assert.ok(m.includes("https://g.page/r/x"));
+});

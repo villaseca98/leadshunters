@@ -16,9 +16,10 @@ export type LeadInput = {
   consent_at?: string | null;
   answers?: Record<string, unknown>; // respuestas libres del formulario
   raw?: unknown;
+  silent?: boolean; // sin aviso a n8n (importaciones masivas)
 } & LeadFields;
 
-const SOURCES = ["meta", "google", "web", "manual", "otro"];
+const SOURCES = ["meta", "google", "web", "manual", "otro", "reactivacion"];
 
 type ClientRow = { id: string; name: string; status: string; min_debt: number; min_creditors: number; provinces: string[] };
 
@@ -81,7 +82,7 @@ export async function ingestLead(input: LeadInput) {
     ],
   );
 
-  if (status === "nuevo") {
+  if (status === "nuevo" && !input.silent) {
     await emitEvent("lead.nuevo", {
       lead_id: row!.id, cliente: client.name, client_id: client.id, nombre: f.full_name, telefono: f.phone,
       provincia: f.province, deuda: f.debt_amount, acreedores: f.creditors_count,
@@ -135,7 +136,8 @@ export async function claimNextLead(userId: string, clientId?: string | null) {
           AND l.phone IS NOT NULL
           AND (l.locked_by IS NULL OR l.locked_at < now() - interval '${LOCK_MINUTES} minutes')
           AND ($1::uuid IS NULL OR l.client_id = $1)
-        ORDER BY (l.attempts = 0) DESC,
+        ORDER BY (l.source = 'reactivacion') ASC, -- primero los leads de anuncios; los antiguos rellenan huecos
+                 (l.attempts = 0) DESC,
                  CASE l.qualification_status WHEN 'cualificado' THEN 0 WHEN 'pendiente' THEN 1 ELSE 2 END,
                  CASE WHEN l.attempts = 0 THEN -extract(epoch FROM l.created_at) ELSE extract(epoch FROM l.next_call_at) END
         LIMIT 1
@@ -237,7 +239,8 @@ export async function consultationPayload(id: string) {
             l.id AS lead_id, l.full_name AS lead_nombre, l.phone AS lead_telefono, l.email AS lead_email, l.province AS lead_provincia,
             l.debt_amount AS deuda, l.creditors_count AS acreedores, l.monthly_income AS ingresos, l.employment_status AS situacion_laboral,
             l.owns_home AS vivienda_propia, l.qualification_reasons AS resumen_cualificacion, l.notes AS notas_llamada,
-            c.id AS client_id, c.name AS cliente, c.notify_email AS cliente_email, c.contact_name AS cliente_contacto, c.calendar_url
+            c.id AS client_id, c.name AS cliente, c.notify_email AS cliente_email, c.contact_name AS cliente_contacto, c.calendar_url,
+            c.google_review_url AS enlace_resena, co.review_requested_at
        FROM consultations co JOIN leads l ON l.id = co.lead_id JOIN clients c ON c.id = co.client_id
       WHERE co.id = $1`,
     [id],

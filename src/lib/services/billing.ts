@@ -38,7 +38,7 @@ export async function billingForMonth(month: string, clientId?: string): Promise
        (SELECT count(*) FROM consultations co, m WHERE co.client_id = c.id AND co.scheduled_at >= m.start AND co.scheduled_at < m.stop AND co.status = 'asistida')::int AS citas_asistidas,
        (SELECT count(*) FROM consultations co JOIN leads l ON l.id = co.lead_id, m
          WHERE co.client_id = c.id AND co.scheduled_at >= m.start AND co.scheduled_at < m.stop AND co.status = 'asistida'
-           AND ${IN_HOURS} AND (SELECT min(k.created_at) FROM calls k WHERE k.lead_id = l.id) > l.created_at + interval '5 minutes')::int AS citas_gratis_retraso,
+           AND l.source <> 'reactivacion' AND ${IN_HOURS} AND (SELECT min(k.created_at) FROM calls k WHERE k.lead_id = l.id) > l.created_at + interval '5 minutes')::int AS citas_gratis_retraso,
        (SELECT count(*) FROM consultations co, m WHERE co.client_id = c.id AND co.scheduled_at >= m.start AND co.scheduled_at < m.stop AND co.status = 'no_asistio')::int AS citas_no_asistio,
        (SELECT count(*) FROM consultations co, m WHERE co.client_id = c.id AND co.scheduled_at >= m.start AND co.scheduled_at < m.stop AND co.status = 'agendada')::int AS citas_pendientes
      FROM clients c, m

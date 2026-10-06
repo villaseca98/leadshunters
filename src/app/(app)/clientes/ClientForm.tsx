@@ -5,7 +5,7 @@ export type ClientData = {
   name: string; contact_name: string | null; contact_phone: string | null; contact_email: string | null; notify_email: string | null;
   city: string | null; provinces: string[]; status: string; plan: string; monthly_fee: number; price_per_consultation: number;
   max_billable_per_month: number | null; min_debt: number; min_creditors: number; calendar_url: string | null;
-  meta_form_ids: string[]; google_form_ids: string[]; started_at: string; notes: string | null;
+  meta_form_ids: string[]; google_form_ids: string[]; started_at: string; notes: string | null; ad_spend_month: number | null; google_review_url: string | null;
 };
 
 export function ClientForm({ action, c, submit }: { action: (fd: FormData) => void; c?: Partial<ClientData>; submit: string }) {
@@ -61,6 +61,14 @@ export function ClientForm({ action, c, submit }: { action: (fd: FormData) => vo
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="IDs de formularios de Meta Lead Ads" hint="Separados por comas. Así n8n sabe de qué despacho es cada lead"><input name="meta_form_ids" defaultValue={c?.meta_form_ids?.join(", ") ?? ""} className={input} /></Field>
           <Field label="IDs de formularios de Google Ads" hint="form_id que envía el webhook de Google"><input name="google_form_ids" defaultValue={c?.google_form_ids?.join(", ") ?? ""} className={input} /></Field>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="mb-2 text-sm font-semibold text-slate-800">Servicios</h3>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Inversión mensual en anuncios (€)" hint="La paga el despacho a Meta y Google. Sirve para su coste por consulta en el panel y el informe"><input name="ad_spend_month" type="number" step="0.01" defaultValue={c?.ad_spend_month ?? ""} className={input} /></Field>
+          <Field label="Enlace para dejar reseña en Google" hint="Ficha de Google del despacho → Pedir reseñas. Se envía tras cada consulta realizada (Premium)"><input name="google_review_url" type="url" defaultValue={c?.google_review_url ?? ""} className={input} /></Field>
         </div>
       </div>
 

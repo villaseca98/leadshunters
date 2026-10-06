@@ -1,0 +1,243 @@
+{
+  "name": "08 · Asistente de WhatsApp 24 h",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 08 · Asistente de WhatsApp 24 h (Premium)\nLa persona escribe al WhatsApp del despacho y el asistente le hace el test (6 preguntas, nombre, provincia y permiso). Al terminar entra como lead en la cola del despacho.\n\nNecesita la **API oficial de WhatsApp Business** (Meta) con un número propio:\n1. En Meta for Developers, webhook = URL de producción de este flujo; token de verificación = cualquier palabra; suscribir *messages*.\n2. Config: WA_ACCESS_TOKEN (token permanente) y WA_NUMEROS = { phone_number_id: código del test del despacho }.\n\nSolo responde a quien escribe primero (ventana de 24 h de WhatsApp).",
+        "width": 600,
+        "height": 260,
+        "color": 4
+      },
+      "id": "a46897fa-6fe0-4d16-a64d-369f27861fef",
+      "name": "Nota e438",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        160,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "leads-hunters-whatsapp",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "54bac8e6-04f3-419d-8b28-e3dbcc356111",
+      "name": "Mensaje de WhatsApp",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        220,
+        460
+      ],
+      "webhookId": "ca0bad2a-6e6d-41bd-911d-04de092d0d7c"
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "leads-hunters-whatsapp",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "b0838bb0-bec5-474f-b43a-2842153752b1",
+      "name": "Verificación de Meta",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        220,
+        200
+      ],
+      "webhookId": "d548a621-787d-4a02-8611-6e35b161eb6f"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.query['hub.mode'] === 'subscribe' ? $json.query['hub.challenge'] : 'no' }}",
+        "options": {}
+      },
+      "id": "397aa035-3592-4319-a6ee-1d0f482ca33b",
+      "name": "Responder a Meta",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Solo mensajes de texto o botones que escribe la persona (no estados de entrega)\nconst numeros = JSON.parse($('Config').first().json.WA_NUMEROS || '{}');\nconst out = [];\nfor (const entry of $input.first().json.body?.entry ?? []) for (const ch of entry.changes ?? []) {\n  const v = ch.value ?? {};\n  for (const m of v.messages ?? []) {\n    const text = m.text?.body ?? m.button?.text ?? m.interactive?.button_reply?.title ?? m.interactive?.list_reply?.title ?? '';\n    out.push({ json: { phone: m.from, text, phone_number_id: v.metadata?.phone_number_id, client_code: numeros[v.metadata?.phone_number_id] ?? null } });\n  }\n}\nreturn out;"
+      },
+      "id": "44ef9350-8836-42d3-8744-d0e1d1aea15e",
+      "name": "Leer mensaje",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.LH_API_URL }}/api/v1/whatsapp",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $('Config').first().json.LH_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ phone: $json.phone, text: $json.text, client_code: $json.client_code }) }}"
+      },
+      "id": "9532334e-f376-4d38-9bae-345104ca026c",
+      "name": "Asistente (app)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $('Leer mensaje').item.json.phone_number_id }}/messages",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Config').first().json.WA_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $('Leer mensaje').item.json.phone, type: 'text', text: { body: $json.reply } }) }}"
+      },
+      "id": "fad6bfc1-87a7-4383-9252-e8dd09e1f9da",
+      "name": "Enviar respuesta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        460
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "540a61b1-84bb-4c5e-95d9-366ee4b89dd1",
+              "name": "LH_API_KEY",
+              "value": "PEGA_AQUI_LA_N8N_API_KEY_DE_LA_APP",
+              "type": "string"
+            },
+            {
+              "id": "bb90584d-f314-4541-b55d-ad1065f73da7",
+              "name": "LH_API_URL",
+              "value": "https://app.tudominio.com",
+              "type": "string"
+            },
+            {
+              "id": "121c38b1-3e4d-46f6-95b7-6647fa6d0632",
+              "name": "WA_ACCESS_TOKEN",
+              "value": "PEGA_AQUI_EL_TOKEN_PERMANENTE_DE_WHATSAPP_BUSINESS",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "430f3fd4-f3b7-4dbf-a5aa-72b7ac0cf5ae",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        330
+      ]
+    }
+  ],
+  "connections": {
+    "Verificación de Meta": {
+      "main": [
+        [
+          {
+            "node": "Responder a Meta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensaje de WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer mensaje": {
+      "main": [
+        [
+          {
+            "node": "Asistente (app)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Asistente (app)": {
+      "main": [
+        [
+          {
+            "node": "Enviar respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Leer mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

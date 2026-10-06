@@ -55,6 +55,7 @@ export const SOURCE: Record<string, string> = {
   otro: "Otro",
   google_maps: "Google Maps",
   csv: "CSV",
+  reactivacion: "Reactivación",
 };
 
 export const EMPLOYMENT: Record<string, string> = {

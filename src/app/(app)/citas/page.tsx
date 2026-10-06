@@ -15,9 +15,9 @@ export default async function Citas(props: PageProps<"/citas">) {
     "true";
   const rows = await query<{
     id: string; scheduled_at: string; status: string; mode: string; confirmed_by: string | null; reminder_sent_at: string | null;
-    lead_id: string; full_name: string; phone: string | null; debt_amount: number | null; cliente: string;
+    lead_id: string; full_name: string; phone: string | null; debt_amount: number | null; cliente: string; review_url: string | null; review_requested_at: string | null;
   }>(
-    `SELECT co.id, co.scheduled_at, co.status, co.mode, co.confirmed_by, co.reminder_sent_at, l.id AS lead_id, l.full_name, l.phone, l.debt_amount, c.name AS cliente
+    `SELECT co.id, co.scheduled_at, co.status, co.mode, co.confirmed_by, co.reminder_sent_at, l.id AS lead_id, l.full_name, l.phone, l.debt_amount, c.name AS cliente, c.google_review_url AS review_url, co.review_requested_at
        FROM consultations co JOIN leads l ON l.id = co.lead_id JOIN clients c ON c.id = co.client_id
       WHERE ${cond} AND ($1::uuid IS NULL OR co.client_id = $1)
       ORDER BY ${view === "todas" ? "co.scheduled_at DESC" : "co.scheduled_at"} LIMIT 200`,
@@ -60,6 +60,10 @@ export default async function Citas(props: PageProps<"/citas">) {
                     {r.status !== "asistida" && <form action={markConsultation.bind(null, r.id, "asistida")}><button className="min-h-9 rounded-full bg-emerald-600 px-3 text-xs font-medium text-white hover:bg-emerald-500">Asistió</button></form>}
                     {r.status !== "no_asistio" && <form action={markConsultation.bind(null, r.id, "no_asistio")}><button className="min-h-9 rounded-full bg-rose-100 px-3 text-xs font-medium text-rose-700 hover:bg-rose-200">No asistió</button></form>}
                     {r.status === "agendada" && <form action={markConsultation.bind(null, r.id, "cancelada")}><button className="min-h-9 rounded-full bg-slate-100 px-3 text-xs font-medium text-slate-700 hover:bg-slate-200">Cancelar</button></form>}
+                    {r.status === "asistida" && r.review_url && r.phone && (
+                      r.review_requested_at ? <span className="px-2 text-xs text-slate-400">reseña pedida</span>
+                        : <a href={`/citas/resena/${r.id}`} target="_blank" className="flex min-h-9 items-center rounded-full bg-amber-100 px-3 text-xs font-medium text-amber-900 hover:bg-amber-200">★ Pedir reseña</a>
+                    )}
                     <details className="relative">
                       <summary className="flex min-h-9 cursor-pointer list-none items-center rounded-full px-3 text-xs font-semibold text-indigo-700 hover:bg-indigo-50">Mover</summary>
                       <form action={reschedule.bind(null, r.id)} className="absolute left-0 z-10 mt-1 flex w-[min(20rem,calc(100vw-4rem))] gap-1 rounded-2xl bg-white p-2 shadow-lg ring-1 ring-slate-200 md:left-auto md:right-0">

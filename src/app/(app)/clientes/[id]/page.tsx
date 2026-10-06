@@ -7,15 +7,16 @@ import { CONSULTATION_STATUS } from "@/lib/labels";
 import { currentMonth, dateTime, eur, monthLabel } from "@/lib/format";
 import { A, Card, PageHeader, Stat, StatusBadge, btn } from "@/components/ui";
 import { ClientForm, type ClientData } from "../ClientForm";
-import { rotateClientKey, updateClient } from "../actions";
+import { importOldLeads, rotateClientKey, rotatePortalToken, updateClient } from "../actions";
 import { appUrl } from "@/lib/appUrl";
+import { ReactivateForm } from "./ReactivateForm";
 
 export default async function ClientePage(props: PageProps<"/clientes/[id]">) {
   const { id } = await props.params;
   const sp = await props.searchParams;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const user = await getUser();
-  const c = await queryOne<ClientData & { id: string; api_key: string; prospect_id: string | null; test_code: string | null }>("SELECT * FROM clients WHERE id = $1", [id]);
+  const c = await queryOne<ClientData & { id: string; api_key: string; prospect_id: string | null; test_code: string | null; portal_token: string | null }>("SELECT * FROM clients WHERE id = $1", [id]);
   if (!c) notFound();
   const month = currentMonth();
   const [b] = await billingForMonth(month, id);
@@ -56,6 +57,7 @@ document.getElementById('lh-form').onsubmit = async (e) => {
         actions={
           <>
             <a href={`/api/export/informe?cliente=${id}&mes=${month}`} className={btn.secondary}>Informe del mes (CSV)</a>
+            <a href={`/clientes/${id}/publicaciones`} className={btn.secondary}>Instagram</a>
             <A href={`/leads?cliente=${id}`}>Ver leads →</A>
           </>
         }
@@ -93,11 +95,27 @@ document.getElementById('lh-form').onsubmit = async (e) => {
               </ul>
             )}
           </Card>
+          {c.portal_token && (
+            <Card title="Panel del despacho" actions={isAdmin ? <form action={rotatePortalToken.bind(null, id)}><button className={btn.ghost}>Nuevo enlace</button></form> : undefined}>
+              <p className="text-sm text-slate-600">Enlace privado para el despacho: ve sus consultas, confirma las realizadas, marca los casos firmados y ve lo que gana frente a lo que paga. Va también en el informe mensual.</p>
+              <div className="mt-2 select-all break-all rounded-xl bg-slate-50 p-2.5 font-mono text-xs">{base}/portal/{c.portal_token}</div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <a href={`/portal/${c.portal_token}`} target="_blank" className={btn.secondary}>Ver su panel ↗</a>
+                {c.contact_phone && <a href={`https://wa.me/34${c.contact_phone.replace(/\D/g, "").replace(/^34(?=\d{9}$)/, "")}?text=${encodeURIComponent(`Hola${c.contact_name ? ` ${c.contact_name.split(" ")[0]}` : ""}, este es tu panel con tus consultas y resultados: ${base}/portal/${c.portal_token}`)}`} target="_blank" className={btn.secondary}>Enviar por WhatsApp</a>}
+              </div>
+            </Card>
+          )}
           {c.test_code && (
             <Card title="Test para sus anuncios">
               <p className="text-sm text-slate-600">Página del test con el nombre del despacho. Úsala en los anuncios que salen desde su página de Facebook (historias y feed de Instagram y Facebook). Cada respuesta entra directa en su cola.</p>
               <div className="mt-2 select-all break-all rounded-xl bg-slate-50 p-2.5 font-mono text-xs">{base}/test/{c.test_code}?utm_source=facebook&amp;utm_campaign=historias</div>
               <a href={`/test/${c.test_code}`} target="_blank" className={`${btn.secondary} mt-3`}>Ver el test ↗</a>
+            </Card>
+          )}
+          {isAdmin && (
+            <Card title="Reactivar leads antiguos">
+              <p className="text-sm text-slate-600">Sube en CSV los contactos que el despacho no llegó a cerrar. Columnas: nombre, teléfono y, si las tiene, email, provincia, deuda y acreedores. Entran en la cola detrás de los leads de los anuncios.</p>
+              <div className="mt-3"><ReactivateForm action={importOldLeads.bind(null, id)} /></div>
             </Card>
           )}
           {isAdmin && (
