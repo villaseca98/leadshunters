@@ -67,7 +67,7 @@ export default async function LoginPage(props: PageProps<"/login">) {
             </label>
             <label className="block">
               <span className="mb-1.5 block text-xs font-medium text-white/60">Email</span>
-              <input className={dark} id="email" name="email" type="email" required autoFocus autoComplete="username" />
+              <input className={dark} id="email" name="email" type="email" required autoFocus autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
             </label>
             <label className="block">
               <span className="mb-1.5 block text-xs font-medium text-white/60">Contraseña</span>
@@ -81,11 +81,11 @@ export default async function LoginPage(props: PageProps<"/login">) {
           {sp.error && <p className="rounded-2xl bg-rose-500/15 px-4 py-3 text-sm text-rose-200">Email o contraseña incorrectos.</p>}
           <label className="block">
             <span className="mb-1.5 block text-xs font-medium text-white/60">Email</span>
-            <input className={dark} id="email" name="email" type="email" required autoFocus autoComplete="username" />
+            <input className={dark} id="email" name="email" type="email" required autoFocus autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} />
           </label>
           <label className="block">
             <span className="mb-1.5 block text-xs font-medium text-white/60">Contraseña</span>
-            <input className={dark} id="password" name="password" type="password" required autoComplete="current-password" />
+            <input className={dark} id="password" name="password" type="password" required autoComplete="current-password" autoCapitalize="none" autoCorrect="off" />
           </label>
           <button className={`${btn.hunt} mt-2 min-h-14 w-full text-base`}>Entrar</button>
         </form>

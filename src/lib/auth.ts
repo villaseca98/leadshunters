@@ -58,7 +58,10 @@ export async function login(email: string, password: string): Promise<boolean> {
     "SELECT id, password_hash FROM users WHERE lower(email) = lower($1) AND active",
     [email.trim()],
   );
-  if (!u || !(await bcrypt.compare(password, u.password_hash))) return false;
+  if (!u) return false;
+  // en móvil el teclado a veces añade un espacio al final: se acepta la contraseña con o sin él
+  const ok = (await bcrypt.compare(password, u.password_hash)) || (password.trim() !== password && (await bcrypt.compare(password.trim(), u.password_hash)));
+  if (!ok) return false;
   await startSession(u.id);
   return true;
 }
