@@ -68,7 +68,7 @@ export async function login(email: string, password: string): Promise<boolean> {
   jar.set(COOKIE, encode(u.id), {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.COOKIE_SECURE === "true",
+    secure: process.env.COOKIE_SECURE === "true" || !!process.env.VERCEL,
     maxAge: MAX_AGE,
     path: "/",
   });

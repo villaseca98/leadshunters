@@ -3,10 +3,11 @@
 import { NextResponse } from "next/server";
 import { apiKeyFrom, isMasterKey, unauthorized } from "@/lib/apiAuth";
 import { query } from "@/lib/db";
+import { appUrl } from "@/lib/appUrl";
 
 export async function GET(req: Request) {
   if (!isMasterKey(apiKeyFrom(req))) return unauthorized();
-  const base = (process.env.APP_URL ?? "").replace(/\/$/, "");
+  const base = appUrl();
   const rows = await query<{ confirm_token: string }>(
     `SELECT co.id, co.scheduled_at, co.confirm_token, l.full_name AS lead_nombre, c.id AS client_id, c.name AS cliente,
             coalesce(c.notify_email, c.contact_email) AS cliente_email

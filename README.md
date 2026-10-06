@@ -61,6 +61,13 @@ Si no contesta se reprograma sola: 10 min, 1 h, 3 h, día siguiente, +2 días, +
 
 ---
 
+## Publicarla en Vercel (recomendado)
+
+1. En https://vercel.com/new importa el repo `leadshunters`.
+2. Antes de pulsar **Deploy**, añade en *Environment Variables*: `ADMIN_EMAIL`, `ADMIN_PASSWORD` (mínimo 8 caracteres), `SESSION_SECRET` (32+ caracteres) y `N8N_API_KEY` (16+ caracteres; la pegarás también en n8n).
+3. Pulsa **Deploy**. Después, en la pestaña **Storage**, crea una base de datos **Neon** y conéctala al proyecto. Luego, en **Deployments**, pulsa **Redeploy**.
+4. Cada despliegue aplica las migraciones y crea o actualiza tu usuario administrador. La URL pública se detecta sola.
+
 ## Publicarla en 2 clics (Render)
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/villaseca98/leadshunters)

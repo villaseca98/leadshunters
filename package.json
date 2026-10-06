@@ -10,7 +10,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "migrate": "node scripts/migrate.mjs",
     "seed": "node scripts/seed.mjs",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "tsx --test tests/*.test.ts",
+    "vercel-build": "node scripts/migrate.mjs && (node scripts/seed.mjs || true) && next build"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

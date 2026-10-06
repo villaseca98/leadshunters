@@ -3,7 +3,7 @@
 import pg from "pg";
 import bcrypt from "bcryptjs";
 
-const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
+const db = new pg.Client({ connectionString: process.env.DATABASE_URL ?? process.env.POSTGRES_URL });
 const email = (process.env.ADMIN_EMAIL ?? "admin@leadshunters.local").toLowerCase();
 const password = process.env.ADMIN_PASSWORD;
 

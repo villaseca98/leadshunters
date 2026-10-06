@@ -5,9 +5,14 @@ import { fileURLToPath } from "node:url";
 import pg from "pg";
 
 const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "db", "migrations");
-const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
+const client = new pg.Client({ connectionString: process.env.DATABASE_URL ?? process.env.POSTGRES_URL });
 
 async function main() {
+  if (!process.env.DATABASE_URL && !process.env.POSTGRES_URL) {
+    // primer despliegue en Vercel antes de conectar la base de datos: no bloquea el build
+    console.warn("⚠ Sin DATABASE_URL: no se aplican migraciones. Conecta la base de datos y vuelve a desplegar.");
+    return;
+  }
   await client.connect();
   await client.query(`CREATE TABLE IF NOT EXISTS schema_migrations (name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())`);
   const done = new Set((await client.query("SELECT name FROM schema_migrations")).rows.map((r) => r.name));

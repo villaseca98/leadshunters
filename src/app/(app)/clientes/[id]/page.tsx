@@ -7,6 +7,7 @@ import { currentMonth, dateTime, eur, monthLabel } from "@/lib/format";
 import { A, Card, PageHeader, Stat, StatusBadge, btn } from "@/components/ui";
 import { ClientForm, type ClientData } from "../ClientForm";
 import { rotateClientKey, updateClient } from "../actions";
+import { appUrl } from "@/lib/appUrl";
 
 export default async function ClientePage(props: PageProps<"/clientes/[id]">) {
   const { id } = await props.params;
@@ -22,7 +23,7 @@ export default async function ClientePage(props: PageProps<"/clientes/[id]">) {
       WHERE co.client_id = $1 ORDER BY co.scheduled_at DESC LIMIT 15`,
     [id],
   );
-  const base = (process.env.APP_URL ?? "").replace(/\/$/, "") || "https://tu-dominio";
+  const base = appUrl() || "https://tu-dominio";
   const isAdmin = user?.role === "admin";
 
   const snippet = `<form id="lh-form">

@@ -4,6 +4,7 @@ import { mapAnswers, matchProvince, normalizeEmail, normalizePhone, parseBool, p
 import { qualifyLead } from "../qualify";
 import { MAX_ATTEMPTS, nextRetry, toCallableTime } from "../schedule";
 import { emitEvent } from "./events";
+import { appUrl } from "@/lib/appUrl";
 
 export type LeadInput = {
   client_id: string;
@@ -246,7 +247,7 @@ export async function consultationPayload(id: string) {
 export async function emitConsultationEvent(kind: "cita.agendada" | "cita.asistida" | "cita.no_asistio" | "cita.cancelada", id: string) {
   const p = await consultationPayload(id);
   if (!p) return;
-  const base = process.env.APP_URL?.replace(/\/$/, "") ?? "";
+  const base = appUrl();
   await emitEvent(kind, { ...p, enlace_confirmar: base ? `${base}/confirmar/${(p as { confirm_token: string }).confirm_token}` : null });
 }
 

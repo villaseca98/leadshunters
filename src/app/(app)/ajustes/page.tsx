@@ -2,16 +2,17 @@ import { requireUser } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { Badge, Card, Field, PageHeader, Table, Td, btn, input } from "@/components/ui";
 import { createUser, toggleUser } from "./actions";
+import { appUrl } from "@/lib/appUrl";
 
 export default async function Ajustes() {
   const me = await requireUser();
   const users = await query<{ id: string; name: string; email: string; role: string; active: boolean }>("SELECT id, name, email, role, active FROM users ORDER BY created_at");
   const pending = await query<{ n: number }>("SELECT count(*)::int n FROM events WHERE delivered_at IS NULL");
-  const base = (process.env.APP_URL ?? "").replace(/\/$/, "") || "http://localhost:3000";
+  const base = appUrl() || "http://localhost:3000";
   const checks: [string, boolean, string][] = [
     ["N8N_API_KEY", !!process.env.N8N_API_KEY && process.env.N8N_API_KEY.length >= 16, "Clave que usa n8n para llamar a la API"],
     ["N8N_EVENTS_WEBHOOK_URL", !!process.env.N8N_EVENTS_WEBHOOK_URL, "Webhook de n8n que recibe eventos (lead nuevo, cita agendada…)"],
-    ["APP_URL", !!process.env.APP_URL, "URL pública de la app (enlaces de confirmación para los despachos)"],
+    ["APP_URL", !!appUrl(), "URL pública de la app (enlaces de confirmación para los despachos)"],
     ["SESSION_SECRET", !!process.env.SESSION_SECRET, "Firma de las sesiones"],
   ];
   const endpoints = [

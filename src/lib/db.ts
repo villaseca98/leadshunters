@@ -5,8 +5,9 @@ const globalForPg = globalThis as unknown as { pgPool?: Pool };
 export const pool =
   globalForPg.pgPool ??
   new Pool({
-    connectionString: process.env.DATABASE_URL,
-    max: 10,
+    // DATABASE_URL (Docker, Render, Neon en Vercel) o POSTGRES_URL (otras integraciones de Vercel)
+    connectionString: process.env.DATABASE_URL ?? process.env.POSTGRES_URL,
+    max: process.env.VERCEL ? 3 : 10,
   });
 
 if (process.env.NODE_ENV !== "production") globalForPg.pgPool = pool;
