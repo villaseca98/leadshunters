@@ -3,13 +3,13 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## 04 · Eventos de la app\nLa app llama a este webhook en cada evento (`N8N_EVENTS_WEBHOOK_URL`).\n- **lead.nuevo** → WhatsApp al equipo para llamar en < 5 min\n- **cita.agendada** → email al despacho con el resumen + enlace para confirmar asistencia, y confirmación al lead (email; SMS con Twilio si lo activas)\n- **cita.asistida / no_asistio** → aviso\n- **prospecto.cliente** → aviso de nuevo cliente\n\nActiva el flujo para que la URL de producción funcione.",
+        "content": "## 04 · Eventos de la app\nLa app llama a este webhook en cada evento (`N8N_EVENTS_WEBHOOK_URL`).\n- **lead.nuevo** → WhatsApp al equipo para llamar en < 5 min\n- **cita.agendada** → email al despacho con el resumen + enlace para confirmar asistencia, y confirmación al lead (email; SMS con Twilio si lo activas)\n- **cita.asistida / no_asistio** → aviso\n- **prospecto.cliente** → aviso de nuevo cliente\n- **prospecto.vio_auditoria** → WhatsApp para llamar al despacho mientras mira su auditoría\n\nActiva el flujo para que la URL de producción funcione.",
         "width": 560,
         "height": 300,
         "color": 4
       },
-      "id": "37fb1c43-5f4d-49c2-9233-e87fe2d01f51",
-      "name": "Nota 3c7a",
+      "id": "b8f61b0a-c204-4f88-a319-081bf4b8d8d5",
+      "name": "Nota 9443",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
@@ -24,7 +24,7 @@
         "responseMode": "onReceived",
         "options": {}
       },
-      "id": "1e95bd7b-2e23-45a5-9666-f0ab876e604f",
+      "id": "8fd98b89-c4c9-4e4c-bbe3-94bbc6e46fb3",
       "name": "Eventos de la app",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -32,13 +32,13 @@
         220,
         400
       ],
-      "webhookId": "a30671d0-50ae-4c9b-a252-1c743e04e811"
+      "webhookId": "bf0fc3c8-057e-4de9-9a79-a5fa873eda04"
     },
     {
       "parameters": {
         "jsCode": "const h = $input.first().json.headers || {};\nconst b = $input.first().json.body || {};\nif (h['x-api-key'] !== $('Config').first().json.LH_API_KEY) return [];\nreturn [{ json: { event_id: b.id, kind: b.kind, ...b.payload } }];"
       },
-      "id": "ef6677a6-7ccb-4fca-9735-32d44b43fa96",
+      "id": "2bc953e6-f33f-46f8-84c2-36a997c06f11",
       "name": "Comprobar clave",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -61,7 +61,7 @@
                 },
                 "conditions": [
                   {
-                    "id": "7842837b-cd8d-414a-86b4-b311b620fa36",
+                    "id": "640ef113-7a77-4e3c-b7c5-3dd3a5bc96a8",
                     "leftValue": "={{ $json.kind }}",
                     "rightValue": "lead.nuevo",
                     "operator": {
@@ -85,7 +85,7 @@
                 },
                 "conditions": [
                   {
-                    "id": "79e227b9-8512-40f9-a916-83d946a3c789",
+                    "id": "1b7c140f-b315-4dca-b2c1-ab09da4489ba",
                     "leftValue": "={{ $json.kind }}",
                     "rightValue": "cita.agendada",
                     "operator": {
@@ -109,7 +109,7 @@
                 },
                 "conditions": [
                   {
-                    "id": "e13b7ca4-1575-42c9-9f28-6ab7ce1498f8",
+                    "id": "2fd72d68-f980-443f-ac5d-deac81318df6",
                     "leftValue": "={{ $json.kind }}",
                     "rightValue": "cita.asistida",
                     "operator": {
@@ -133,7 +133,7 @@
                 },
                 "conditions": [
                   {
-                    "id": "81bd238a-f614-4608-ab4c-d00da3a5eabd",
+                    "id": "1900983f-e12e-4caf-9ee2-208d31c4903e",
                     "leftValue": "={{ $json.kind }}",
                     "rightValue": "cita.no_asistio",
                     "operator": {
@@ -157,7 +157,7 @@
                 },
                 "conditions": [
                   {
-                    "id": "66c3db79-3fb0-4a77-870e-1c277d3542f4",
+                    "id": "6af3388a-881c-4614-968b-1d6525946f42",
                     "leftValue": "={{ $json.kind }}",
                     "rightValue": "prospecto.cliente",
                     "operator": {
@@ -170,12 +170,36 @@
               },
               "renameOutput": true,
               "outputKey": "prospecto.cliente"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "311ee6bc-44ef-4da0-a337-72651fe1a530",
+                    "leftValue": "={{ $json.kind }}",
+                    "rightValue": "prospecto.vio_auditoria",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "prospecto.vio_auditoria"
             }
           ]
         },
         "options": {}
       },
-      "id": "7e9b7fbc-5f80-4fef-a1c5-0c09ceb26ffa",
+      "id": "cde0fb30-04bf-4001-85ed-5ece9d255725",
       "name": "Tipo de evento",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
@@ -207,7 +231,7 @@
           ]
         }
       },
-      "id": "7bbd7c21-933d-41a2-bc70-4a6dbbb68b94",
+      "id": "e7daaebb-babd-4a84-998e-617f51b13f6d",
       "name": "🔥 Nuevo lead al equipo",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -228,7 +252,7 @@
           "appendAttribution": false
         }
       },
-      "id": "2ba1182c-666d-4b3e-84fd-b0d4d51e2862",
+      "id": "5f94d32c-4c60-4ebe-87be-7253c95203bf",
       "name": "Email al despacho",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -249,7 +273,7 @@
           },
           "conditions": [
             {
-              "id": "62996ec1-b306-4544-ae24-728049b910f5",
+              "id": "701475cd-959a-4317-8353-cdde138688a7",
               "leftValue": "={{ !!$('Tipo de evento').item.json.lead_email }}",
               "rightValue": "",
               "operator": {
@@ -263,7 +287,7 @@
         },
         "options": {}
       },
-      "id": "d7de8b93-bb58-4b4d-8117-fcab85b80096",
+      "id": "96476dc3-bb9b-45cd-8408-cde7a055775b",
       "name": "¿El lead tiene email?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -283,7 +307,7 @@
           "appendAttribution": false
         }
       },
-      "id": "c98f271d-44bf-48b4-921e-ca09f55deb60",
+      "id": "ee8a2a49-6d10-4d05-8d01-d3a424c67b6d",
       "name": "Email de confirmación al lead",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -300,7 +324,7 @@
         "message": "=Hola, tu consulta con {{ $('Tipo de evento').item.json.cliente }} es el {{ new Date($('Tipo de evento').item.json.scheduled_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) }}. Te llamará un abogado especialista.",
         "options": {}
       },
-      "id": "7985f117-78d9-40a3-985e-67d6eb9a8627",
+      "id": "c5e983df-251b-4714-912b-2ea1ae552d28",
       "name": "SMS al lead (opcional)",
       "type": "n8n-nodes-base.twilio",
       "typeVersion": 1,
@@ -334,7 +358,7 @@
           ]
         }
       },
-      "id": "95826656-2d81-4a67-8b97-6a2965738b0c",
+      "id": "f96b673e-e73a-4e65-bc86-deed326948c5",
       "name": "✅ Consulta realizada",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -367,7 +391,7 @@
           ]
         }
       },
-      "id": "ab77fcb2-54f9-4b48-b8f1-395a20f5c0b3",
+      "id": "60cf636b-0e66-4697-9e61-918a762a5e62",
       "name": "❌ No se presentó",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -400,7 +424,7 @@
           ]
         }
       },
-      "id": "df216d2b-949f-4c87-931d-96fa228526d3",
+      "id": "5fb45a37-43a7-4430-9fb9-cd0cc16abbe8",
       "name": "🎉 Nuevo cliente",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -412,42 +436,75 @@
     },
     {
       "parameters": {
+        "method": "GET",
+        "url": "https://api.callmebot.com/whatsapp.php",
+        "options": {},
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "={{ $('Config').first().json.WHATSAPP_PHONE }}"
+            },
+            {
+              "name": "apikey",
+              "value": "={{ $('Config').first().json.WHATSAPP_APIKEY }}"
+            },
+            {
+              "name": "text",
+              "value": "=👀 *{{ $json.nombre }}* ({{ $json.ciudad || '' }}) está viendo tu auditoría ahora mismo.\nLlámale ya: {{ $json.telefono || 'sin teléfono' }}\n{{ $json.enlace }}"
+            }
+          ]
+        }
+      },
+      "id": "8c793cee-5db9-42e3-8f53-0a8862026cab",
+      "name": "👀 Están viendo la auditoría",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1160,
+        1020
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
         "mode": "manual",
         "includeOtherFields": true,
         "assignments": {
           "assignments": [
             {
-              "id": "2abdc6e6-7066-4650-9b7b-6ec3de5f5ab2",
+              "id": "06d2f7b2-80ac-43d5-82ca-21cac452c9b7",
               "name": "APP_URL",
               "value": "https://app.tudominio.com",
               "type": "string"
             },
             {
-              "id": "db77a597-d394-4d66-bf08-5b948b7a14fd",
+              "id": "9d6261d1-8bf9-4489-ab8e-c06e1424f90d",
               "name": "EMAIL_FROM",
               "value": "Leads Hunters <hola@tudominio.com>",
               "type": "string"
             },
             {
-              "id": "ab1c0ae8-0bf0-4206-9fa6-069cab67a7eb",
+              "id": "8749e456-4cf8-4ceb-a9e3-5e28f466d3af",
               "name": "LH_API_KEY",
               "value": "PEGA_AQUI_LA_N8N_API_KEY_DE_LA_APP",
               "type": "string"
             },
             {
-              "id": "991c2164-cf77-4a7c-b3b1-961735abe58a",
+              "id": "43425d7d-9727-42e1-ad72-61dc8fffabf8",
               "name": "TWILIO_FROM",
               "value": "+34000000000",
               "type": "string"
             },
             {
-              "id": "a679efbc-b16e-4676-bbe9-e27d10d4bd71",
+              "id": "33cd4c9f-527b-4c91-9972-0b4cc2da739c",
               "name": "WHATSAPP_APIKEY",
               "value": "PEGA_AQUI_TU_APIKEY_DE_CALLMEBOT",
               "type": "string"
             },
             {
-              "id": "014e59f1-a581-4c16-9574-1eb30a829aff",
+              "id": "e87f2dcc-2234-4e8a-8b8f-143d354aecb0",
               "name": "WHATSAPP_PHONE",
               "value": "+34600000000",
               "type": "string"
@@ -456,7 +513,7 @@
         },
         "options": {}
       },
-      "id": "6a62af89-6589-4d93-b9a8-b7c7a11da768",
+      "id": "dcbd78a0-0231-45d5-bba0-ea332131bec5",
       "name": "Config",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -522,6 +579,13 @@
         [
           {
             "node": "🎉 Nuevo cliente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "👀 Están viendo la auditoría",
             "type": "main",
             "index": 0
           }

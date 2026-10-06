@@ -490,7 +490,7 @@ return [{ json: { event_id: b.id, kind: b.kind, ...b.payload } }];`);
     outputKey: key,
   });
   const sw = node("Tipo de evento", "n8n-nodes-base.switch", 3.2, [660, 400], {
-    rules: { values: ["lead.nuevo", "cita.agendada", "cita.asistida", "cita.no_asistio", "prospecto.cliente"].map(rule) },
+    rules: { values: ["lead.nuevo", "cita.agendada", "cita.asistida", "cita.no_asistio", "prospecto.cliente", "prospecto.vio_auditoria"].map(rule) },
     options: {},
   });
 
@@ -545,20 +545,23 @@ return [{ json: { event_id: b.id, kind: b.kind, ...b.payload } }];`);
   const tgNo = whatsapp("❌ No se presentó", [940, 700],
     "=❌ No se presentó · {{ $json.cliente }} · {{ $json.lead_nombre }} · {{ $json.lead_telefono }}\nIntenta reagendar: {{ $env.APP_URL }}/leads/{{ $json.lead_id }}");
   const tgClient = whatsapp("🎉 Nuevo cliente", [940, 860],
-    "=🎉 <b>Nuevo cliente:</b> {{ $json.nombre }}\nCompleta su ficha: {{ $env.APP_URL }}/clientes/{{ $json.client_id }}");
-  [tgLead, tgDone, tgNo, tgClient].forEach((n) => (n.onError = "continueRegularOutput"));
+    "=🎉 *Nuevo cliente:* {{ $json.nombre }}\nCompleta su ficha: {{ $env.APP_URL }}/clientes/{{ $json.client_id }}");
+  const tgAudit = whatsapp("👀 Están viendo la auditoría", [940, 1020],
+    "=👀 *{{ $json.nombre }}* ({{ $json.ciudad || '' }}) está viendo tu auditoría ahora mismo.\nLlámale ya: {{ $json.telefono || 'sin teléfono' }}\n{{ $json.enlace }}");
+  [tgLead, tgDone, tgNo, tgClient, tgAudit].forEach((n) => (n.onError = "continueRegularOutput"));
 
   const note = sticky(
-    "## 04 · Eventos de la app\nLa app llama a este webhook en cada evento (`N8N_EVENTS_WEBHOOK_URL`).\n- **lead.nuevo** → WhatsApp al equipo para llamar en < 5 min\n- **cita.agendada** → email al despacho con el resumen + enlace para confirmar asistencia, y confirmación al lead (email; SMS con Twilio si lo activas)\n- **cita.asistida / no_asistio** → aviso\n- **prospecto.cliente** → aviso de nuevo cliente\n\nActiva el flujo para que la URL de producción funcione.",
+    "## 04 · Eventos de la app\nLa app llama a este webhook en cada evento (`N8N_EVENTS_WEBHOOK_URL`).\n- **lead.nuevo** → WhatsApp al equipo para llamar en < 5 min\n- **cita.agendada** → email al despacho con el resumen + enlace para confirmar asistencia, y confirmación al lead (email; SMS con Twilio si lo activas)\n- **cita.asistida / no_asistio** → aviso\n- **prospecto.cliente** → aviso de nuevo cliente\n- **prospecto.vio_auditoria** → WhatsApp para llamar al despacho mientras mira su auditoría\n\nActiva el flujo para que la URL de producción funcione.",
     [160, -40], 560, 300, 4,
   );
 
   save("04-eventos-app.json", workflow("04 · Eventos de la app (avisos y emails)",
-    [note, hook, check, sw, tgLead, mailClient, hasLeadEmail, mailLead, sms, tgDone, tgNo, tgClient],
+    [note, hook, check, sw, tgLead, mailClient, hasLeadEmail, mailLead, sms, tgDone, tgNo, tgClient, tgAudit],
     [
       ["Eventos de la app", "Comprobar clave"], ["Comprobar clave", "Tipo de evento"],
       ["Tipo de evento", "🔥 Nuevo lead al equipo", 0], ["Tipo de evento", "Email al despacho", 1], ["Tipo de evento", "✅ Consulta realizada", 2],
       ["Tipo de evento", "❌ No se presentó", 3], ["Tipo de evento", "🎉 Nuevo cliente", 4],
+      ["Tipo de evento", "👀 Están viendo la auditoría", 5],
       ["Email al despacho", "¿El lead tiene email?"], ["¿El lead tiene email?", "Email de confirmación al lead", 0],
       ["Email al despacho", "SMS al lead (opcional)"],
     ],

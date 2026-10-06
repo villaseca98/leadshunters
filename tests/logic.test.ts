@@ -70,3 +70,21 @@ test("cadencia de rellamadas", () => {
   const night = nextRetry(1, new Date("2026-10-06T19:55:00Z"))!; // 21:55 Madrid -> mañana a las 9
   assert.equal(night.toISOString(), "2026-10-07T07:00:00.000Z");
 });
+
+test("auditoría: solo marca lo comprobado", async () => {
+  const { buildAudit, auditMessage } = await import("../src/lib/audit");
+  const a = buildAudit(
+    {
+      name: "Bufete Pérez", city: "Valencia", website: "https://x.es", rating: 4.8, reviews_count: 40,
+      instagram: null, instagram_days_since_post: null, website_has_form: true, website_has_whatsapp: false,
+      website_has_pixel: null, meta_ads_active: null, call_hooks: ["Su web no tiene WhatsApp"],
+    },
+    { total: 12, con_anuncios: 3, reviews_rank: 4 },
+  );
+  assert.equal(a.total, 4); // píxel y anuncios sin comprobar no cuentan
+  assert.equal(a.passed, 2);
+  assert.match(a.reviews!, /puesto 4 de 12/);
+  assert.match(a.market!, /3 ya anuncian/);
+  const m = auditMessage({ name: "Bufete Pérez", call_hooks: ["Su web no tiene WhatsApp"] }, "https://l/a/1", "Ana");
+  assert.match(m.body, /su web no tiene WhatsApp\./);
+});

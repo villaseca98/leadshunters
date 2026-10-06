@@ -1,9 +1,9 @@
 import { requireUser } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { Badge, Card, Field, PageHeader, Table, Td, btn, input } from "@/components/ui";
-import { createUser, toggleUser } from "./actions";
+import { createUser, saveContact, toggleUser } from "./actions";
 import { appUrl } from "@/lib/appUrl";
-import { isFromEnv, secretSetting } from "@/lib/settings";
+import { contactInfo, isFromEnv, secretSetting } from "@/lib/settings";
 
 export default async function Ajustes() {
   const me = await requireUser();
@@ -11,6 +11,7 @@ export default async function Ajustes() {
   const pending = await query<{ n: number }>("SELECT count(*)::int n FROM events WHERE delivered_at IS NULL");
   const base = appUrl() || "http://localhost:3000";
   const apiKey = me.role === "admin" ? await secretSetting("N8N_API_KEY") : null;
+  const contact = await contactInfo();
   const checks: [string, boolean, string][] = [
     ["N8N_API_KEY", true, isFromEnv("N8N_API_KEY") ? "Clave que usa n8n para llamar a la API" : "Clave que usa n8n para llamar a la API (generada por la app)"],
     ["N8N_EVENTS_WEBHOOK_URL", !!process.env.N8N_EVENTS_WEBHOOK_URL, "Webhook de n8n que recibe eventos (lead nuevo, cita agendada…)"],
@@ -62,6 +63,15 @@ export default async function Ajustes() {
               </li>
             ))}
           </ul>
+        </Card>
+        <Card title="Tus datos en las auditorías" className="lg:col-span-2">
+          <p className="mb-3 text-xs text-slate-500">Aparecen al final de la auditoría que envías a cada despacho, para que te llamen o te escriban.</p>
+          <form action={saveContact} className="grid gap-3 sm:grid-cols-4">
+            <Field label="Nombre"><input name="name" defaultValue={contact.name} className={input} /></Field>
+            <Field label="Teléfono / WhatsApp"><input name="phone" type="tel" defaultValue={contact.phone} placeholder="+34 600 000 000" className={input} /></Field>
+            <Field label="Email"><input name="email" type="email" defaultValue={contact.email} className={input} /></Field>
+            <div className="flex items-end"><button className={`${btn.primary} w-full`} disabled={me.role !== "admin"}>Guardar</button></div>
+          </form>
         </Card>
         <Card title="Equipo" className="lg:col-span-2">
           <Table head={["Nombre", "Email", "Rol", "Estado", ""]}>

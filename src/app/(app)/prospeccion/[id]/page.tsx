@@ -5,6 +5,9 @@ import { ACTIVITY_KIND, PROSPECT_STATUS } from "@/lib/labels";
 import { ago, dateTime, telHref, toLocalInput, waHref, nowMs } from "@/lib/format";
 import type { ScoreLine } from "@/lib/scoring";
 import { A, Badge, Card, PageHeader, ScorePill, StatusBadge, btn, input, label } from "@/components/ui";
+import { appUrl } from "@/lib/appUrl";
+import { auditMessage } from "@/lib/audit";
+import { contactInfo } from "@/lib/settings";
 import { analyzeWebsite, convertToClient, logProspectActivity, saveProspectNotes, setMetaAds, updateProspectStatus } from "../actions";
 
 type P = {
@@ -15,6 +18,7 @@ type P = {
   website_mentions_lso: boolean | null; website_has_form: boolean | null; website_has_whatsapp: boolean | null; website_has_pixel: boolean | null;
   meta_ads_active: boolean | null; meta_ads_count: number | null; meta_ads_lso: boolean | null; meta_ads_checked_at: string | null;
   enriched_at: string | null; score: number; score_tier: string; score_breakdown: ScoreLine[]; call_hooks: string[];
+  audit_token: string | null; audit_views: number; audit_last_view_at: string | null;
   status: string; next_action_at: string | null; notes: string | null; source: string; search_term: string | null; created_at: string;
 };
 
@@ -35,6 +39,11 @@ export default async function ProspectPage(props: PageProps<"/prospeccion/[id]">
   const client = await queryOne<{ id: string }>("SELECT id FROM clients WHERE prospect_id = $1", [id]);
   const adLibrary = `https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=ES&q=${encodeURIComponent(p.name)}`;
   const tomorrow = new Date(nowMs() + 24 * 3600_000);
+  const me = await contactInfo();
+  const auditLink = p.audit_token ? `${appUrl()}/auditoria/${p.audit_token}` : null;
+  const msg = auditLink ? auditMessage(p, auditLink, me.name || "el equipo") : null;
+  const waDigits = p.phone?.replace(/[^\d]/g, "") ?? "";
+  const waNumber = waDigits.length === 9 ? `34${waDigits}` : waDigits;
 
   const log = logProspectActivity.bind(null, id);
   const outcomes: [string, string, string][] = [
@@ -110,6 +119,28 @@ export default async function ProspectPage(props: PageProps<"/prospeccion/[id]">
               </div>
             </form>
           </Card>
+
+          {auditLink && msg && (
+            <Card title="Auditoría para enviarle">
+              <p className="text-sm text-slate-600">
+                {p.audit_views > 0 ? (
+                  <><span className="font-semibold text-emerald-700">La ha abierto {p.audit_views} {p.audit_views === 1 ? "vez" : "veces"}</span> · última {ago(p.audit_last_view_at)}</>
+                ) : (
+                  "Todavía no la ha abierto."
+                )}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <a href={auditLink} target="_blank" className={btn.secondary}>Ver auditoría ↗</a>
+                {waNumber && <a href={`https://wa.me/${waNumber}?text=${encodeURIComponent(msg.body)}`} target="_blank" className={btn.success}>Enviar por WhatsApp</a>}
+                {p.email && <a href={`mailto:${p.email}?subject=${encodeURIComponent(msg.subject)}&body=${encodeURIComponent(msg.body)}`} className={btn.secondary}>Enviar por email</a>}
+              </div>
+              <details className="mt-3 text-sm text-slate-600">
+                <summary className="cursor-pointer font-medium">Ver el mensaje</summary>
+                <p className="mt-2 whitespace-pre-wrap rounded-2xl bg-slate-50 p-3">{msg.body}</p>
+              </details>
+              <p className="mt-3 text-xs text-slate-400">Envíala después de hablar con ellos y con su permiso (la ley prohíbe el email comercial no solicitado). Te avisamos por WhatsApp cuando la abran.</p>
+            </Card>
+          )}
 
           <Card title={`Por qué tiene ${p.score} puntos`}>
             <div className="space-y-2">
