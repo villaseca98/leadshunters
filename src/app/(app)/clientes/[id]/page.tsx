@@ -14,7 +14,7 @@ export default async function ClientePage(props: PageProps<"/clientes/[id]">) {
   const sp = await props.searchParams;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const user = await getUser();
-  const c = await queryOne<ClientData & { id: string; api_key: string; prospect_id: string | null }>("SELECT * FROM clients WHERE id = $1", [id]);
+  const c = await queryOne<ClientData & { id: string; api_key: string; prospect_id: string | null; test_code: string | null }>("SELECT * FROM clients WHERE id = $1", [id]);
   if (!c) notFound();
   const month = currentMonth();
   const [b] = await billingForMonth(month, id);
@@ -92,6 +92,13 @@ document.getElementById('lh-form').onsubmit = async (e) => {
               </ul>
             )}
           </Card>
+          {c.test_code && (
+            <Card title="Test para sus anuncios">
+              <p className="text-sm text-slate-600">Página del test con el nombre del despacho. Úsala en los anuncios que salen desde su página de Facebook (historias y feed de Instagram y Facebook). Cada respuesta entra directa en su cola.</p>
+              <div className="mt-2 select-all break-all rounded-xl bg-slate-50 p-2.5 font-mono text-xs">{base}/test/{c.test_code}?utm_source=facebook&amp;utm_campaign=historias</div>
+              <a href={`/test/${c.test_code}`} target="_blank" className={`${btn.secondary} mt-3`}>Ver el test ↗</a>
+            </Card>
+          )}
           {isAdmin && (
             <Card title="Integración" actions={<form action={rotateClientKey.bind(null, id)}><button className={btn.ghost}>Regenerar clave</button></form>}>
               <dl className="space-y-3 text-sm">

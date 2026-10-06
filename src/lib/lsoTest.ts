@@ -136,3 +136,6 @@ export function sourceFromUtm(utmSource?: string | null): "meta" | "google" | "w
 
 export const CONSENT_TEXT = (brand: string) =>
   `Acepto la política de privacidad y que ${brand} y un despacho de abogados colaborador de mi provincia me contacten por teléfono, WhatsApp o email para estudiar mi caso.`;
+
+export const FIRM_CONSENT_TEXT = (firm: string) =>
+  `Acepto la política de privacidad y que ${firm} me contacte, directamente o a través de su equipo de atención, por teléfono, WhatsApp o email para estudiar mi caso.`;

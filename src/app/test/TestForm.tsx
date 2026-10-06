@@ -6,7 +6,7 @@ import { sendTest } from "./actions";
 const field =
   "block min-h-12 w-full rounded-2xl border-0 bg-white px-4 text-base text-ink ring-1 ring-slate-200 placeholder:text-slate-400 focus:ring-2 focus:ring-blaze focus:outline-none";
 
-export function TestForm({ questions, provinces, consentText, utm }: { questions: Question[]; provinces: string[]; consentText: string; utm: Record<string, string> }) {
+export function TestForm({ questions, provinces, consentText, utm, code, privacyHref = "/privacidad" }: { questions: Question[]; provinces: string[]; consentText: string; utm: Record<string, string>; code?: string; privacyHref?: string }) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Partial<TestAnswers>>({});
   const [error, setError] = useState("");
@@ -51,6 +51,7 @@ export function TestForm({ questions, provinces, consentText, utm }: { questions
         marketing_ok: fd.get("marketing_ok") === "1",
         website: String(fd.get("website") ?? ""),
         utm,
+        client_code: code,
       });
       if (r.ok) {
         setVerdict(r.verdict);
@@ -111,7 +112,7 @@ export function TestForm({ questions, provinces, consentText, utm }: { questions
           <input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden />
           <label className="flex gap-3 rounded-2xl bg-white p-4 text-sm leading-snug text-slate-700 ring-1 ring-slate-200">
             <input type="checkbox" name="consent" value="1" required className="mt-0.5 size-5 shrink-0 accent-[var(--color-blaze)]" />
-            <span>{consentText} <a href="/privacidad" target="_blank" className="underline">Ver política</a></span>
+            <span>{consentText} <a href={privacyHref} target="_blank" className="underline">Ver política</a></span>
           </label>
           <label className="flex gap-3 px-1 text-sm leading-snug text-slate-500">
             <input type="checkbox" name="marketing_ok" value="1" className="mt-0.5 size-5 shrink-0 accent-[var(--color-blaze)]" />

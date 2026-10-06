@@ -1,7 +1,7 @@
 import "server-only";
 import { query, queryOne } from "../db";
 import { matchProvince, normalizeEmail, normalizePhone } from "../normalize";
-import { answersToFields, CONSENT_TEXT, evaluateTest, QUESTIONS, sourceFromUtm, type TestAnswers, type Verdict } from "../lsoTest";
+import { answersToFields, CONSENT_TEXT, FIRM_CONSENT_TEXT, evaluateTest, QUESTIONS, sourceFromUtm, type TestAnswers, type Verdict } from "../lsoTest";
 import { contactInfo } from "../settings";
 import { emitEvent } from "./events";
 import { ingestLead } from "./leads";
@@ -15,7 +15,13 @@ export type TestSubmission = {
   consent: boolean;
   marketing_ok: boolean;
   utm: Record<string, string>;
+  client_code?: string;
 };
+
+export async function clientByTestCode(code: string) {
+  if (!/^[0-9a-f]{10}$/.test(code)) return null;
+  return queryOne<{ id: string; name: string }>("SELECT id, name FROM clients WHERE test_code = $1 AND status <> 'baja'", [code]);
+}
 
 /** Despacho activo que atiende esa provincia: primero los que la tienen explícita, luego los de toda España; reparte al que menos leads lleva este mes. */
 async function pickClient(province: string | null) {
@@ -42,8 +48,10 @@ export async function submitTest(s: TestSubmission): Promise<{ ok: true; verdict
   if (!s.consent) return { ok: false, error: "Necesitamos tu permiso para que un abogado te llame." };
 
   const verdict = evaluateTest(s.answers);
+  const firm = s.client_code ? await clientByTestCode(s.client_code) : null;
+  if (s.client_code && !firm) return { ok: false, error: "Este enlace ya no está activo." };
   const { brand } = await contactInfo();
-  const consent_text = CONSENT_TEXT(brand);
+  const consent_text = firm ? FIRM_CONSENT_TEXT(firm.name) : CONSENT_TEXT(brand);
   const email = normalizeEmail(s.email);
   const utm = Object.fromEntries(Object.entries(s.utm).filter(([k]) => /^utm_|^fbclid$|^gclid$/.test(k)).map(([k, v]) => [k, String(v).slice(0, 200)]));
 
@@ -53,7 +61,7 @@ export async function submitTest(s: TestSubmission): Promise<{ ok: true; verdict
     [full_name, phone, email, province, JSON.stringify(s.answers), verdict.kind, consent_text, s.marketing_ok, JSON.stringify(utm)],
   );
 
-  const client = await pickClient(province);
+  const client = firm ?? (await pickClient(province));
   if (client) {
     const lead = await ingestLead({
       client_id: client.id,

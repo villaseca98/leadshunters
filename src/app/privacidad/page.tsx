@@ -1,13 +1,37 @@
 // Política de privacidad del test para particulares (/test).
 import type { Metadata } from "next";
 import { contactInfo } from "@/lib/settings";
+import { clientByTestCode } from "@/lib/services/testLeads";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Política de privacidad" };
 
-export default async function Privacidad() {
+export default async function Privacidad(props: PageProps<"/privacidad">) {
+  const sp = await props.searchParams;
+  const firm = typeof sp.d === "string" ? await clientByTestCode(sp.d) : null;
   const c = await contactInfo();
   const holder = c.legal || c.name;
+  if (firm) {
+    return (
+      <main className="min-h-dvh bg-paper px-5 py-8">
+        <article className="mx-auto max-w-2xl space-y-4 text-[15px] leading-relaxed text-slate-700 [&_h2]:mt-6 [&_h2]:font-semibold [&_h2]:text-ink">
+          <h1 className="font-display text-2xl font-semibold text-ink">Política de privacidad · {firm.name}</h1>
+          <h2>Quién trata tus datos</h2>
+          <p>{firm.name} es el responsable. Su equipo de atención ({holder}{c.email ? `, ${c.email}` : ""}) trata los datos por cuenta del despacho como encargado del tratamiento, para atenderte y agendar tu consulta.</p>
+          <h2>Para qué</h2>
+          <p>Para revisar si puedes acogerte a la Ley de Segunda Oportunidad, llamarte para comentarlo y, si encaja, darte una consulta con el despacho. Si marcas la casilla opcional, también para enviarte avisos y consejos sobre deudas por WhatsApp.</p>
+          <h2>Con qué base legal</h2>
+          <p>Tu consentimiento, que das al marcar la casilla del test. Puedes retirarlo cuando quieras sin que afecte a lo hecho antes.</p>
+          <h2>A quién se comunican</h2>
+          <p>A nadie fuera del despacho y de su equipo de atención, salvo los proveedores técnicos que alojan la web y la base de datos. No vendemos tus datos.</p>
+          <h2>Cuánto tiempo</h2>
+          <p>Mientras se estudia tu caso y, como máximo, 12 meses desde que hiciste el test si no llegas a contratar, salvo que pidas antes que los borremos.</p>
+          <h2>Tus derechos</h2>
+          <p>Puedes pedir acceso, rectificación, supresión, oposición, limitación y portabilidad al despacho{c.email ? ` o escribiendo a ${c.email}` : ""}. También puedes reclamar ante la Agencia Española de Protección de Datos (aepd.es).</p>
+        </article>
+      </main>
+    );
+  }
   return (
     <main className="min-h-dvh bg-paper px-5 py-8">
       <article className="mx-auto max-w-2xl space-y-4 text-[15px] leading-relaxed text-slate-700 [&_h2]:mt-6 [&_h2]:font-semibold [&_h2]:text-ink">
