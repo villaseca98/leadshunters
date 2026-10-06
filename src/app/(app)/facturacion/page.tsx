@@ -42,7 +42,7 @@ export default async function Facturacion(props: PageProps<"/facturacion">) {
               <Td hide>{r.citas_no_asistio}</Td>
               <Td className={r.citas_pendientes ? "font-medium text-amber-700" : ""}>{r.citas_pendientes}</Td>
               <Td hide>{eur(r.importe_fijo)}</Td>
-              <Td wide>{r.consultas_facturables} × {eur(r.price_per_consultation)} = {eur(r.importe_variable)}</Td>
+              <Td wide>{r.consultas_facturables} × {eur(r.price_per_consultation)} = {eur(r.importe_variable)}{r.citas_gratis_retraso > 0 && <div className="text-xs text-slate-500">{r.citas_gratis_retraso} gratis por llamada tardía</div>}</Td>
               <Td className="num text-base font-semibold">{eur(r.total)}</Td>
               <Td><a className="text-xs font-semibold text-indigo-700" href={`/api/export/informe?cliente=${r.client_id}&mes=${month}`}>Justificante</a></Td>
             </tr>
@@ -51,8 +51,8 @@ export default async function Facturacion(props: PageProps<"/facturacion">) {
       )}
       <Card className="mt-6" title="Cómo se factura">
         <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600">
-          <li>Cada despacho paga una <b>cuota fija mensual</b> (500 € por defecto) por la gestión de campañas y el equipo de llamadas.</li>
-          <li>Además paga <b>30-50 € por consulta cualificada que se realiza</b>. Las que no se presentan o se cancelan no se cobran.</li>
+          <li>Cada despacho paga la <b>cuota fija de su plan</b>: Esencial 500 €, Completo 900 € o Premium 1.400 € al mes. La inversión en anuncios la paga aparte, directamente a Meta y Google.</li>
+          <li>Además paga <b>por cada consulta cualificada que se realiza</b> (40, 35 o 30 € según el plan). Las que no se presentan o se cancelan no se cobran, y tampoco las de leads que llamamos más tarde de 5 minutos en horario de atención (garantía).</li>
           <li>Es un <b>servicio de marketing</b>: nunca se factura un porcentaje de los honorarios del despacho (código deontológico de la abogacía).</li>
           <li>El justificante CSV lista cada consulta con fecha, deuda y quién confirmó la asistencia (equipo o despacho).</li>
         </ul>

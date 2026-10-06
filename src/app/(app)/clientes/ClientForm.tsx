@@ -1,8 +1,9 @@
 import { Field, btn, input } from "@/components/ui";
+import { PLANS, PLAN_IDS } from "@/lib/plans";
 
 export type ClientData = {
   name: string; contact_name: string | null; contact_phone: string | null; contact_email: string | null; notify_email: string | null;
-  city: string | null; provinces: string[]; status: string; monthly_fee: number; price_per_consultation: number;
+  city: string | null; provinces: string[]; status: string; plan: string; monthly_fee: number; price_per_consultation: number;
   max_billable_per_month: number | null; min_debt: number; min_creditors: number; calendar_url: string | null;
   meta_form_ids: string[]; google_form_ids: string[]; started_at: string; notes: string | null;
 };
@@ -27,6 +28,14 @@ export function ClientForm({ action, c, submit }: { action: (fd: FormData) => vo
 
       <div>
         <h3 className="mb-2 text-sm font-semibold text-slate-800">Condiciones económicas</h3>
+        <div className="mb-3">
+          <Field label="Plan" hint="Fija la cuota y el precio por consulta. Elige Personalizado para poner otros precios.">
+            <select name="plan" defaultValue={c?.plan ?? "esencial"} className={input}>
+              {PLAN_IDS.map((id) => <option key={id} value={id}>{PLANS[id].name} · {PLANS[id].fee} €/mes + {PLANS[id].perConsultation} € por consulta{PLANS[id].exclusive ? " · exclusividad provincial" : ""}</option>)}
+              <option value="personalizado">Personalizado (los precios de abajo)</option>
+            </select>
+          </Field>
+        </div>
         <div className="grid gap-3 sm:grid-cols-4">
           <Field label="Fijo mensual (€)"><input name="monthly_fee" type="number" step="0.01" defaultValue={c?.monthly_fee ?? 500} className={input} /></Field>
           <Field label="Por consulta realizada (€)" hint="Recomendado 30-50 €"><input name="price_per_consultation" type="number" step="0.01" defaultValue={c?.price_per_consultation ?? 40} className={input} /></Field>

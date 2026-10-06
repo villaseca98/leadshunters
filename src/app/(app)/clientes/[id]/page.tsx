@@ -1,3 +1,4 @@
+import { planName } from "@/lib/plans";
 import { notFound } from "next/navigation";
 import { getUser } from "@/lib/auth";
 import { query, queryOne } from "@/lib/db";
@@ -51,7 +52,7 @@ document.getElementById('lh-form').onsubmit = async (e) => {
       <PageHeader
         title={c.name}
         eyebrow="Cliente"
-        subtitle={`${eur(c.monthly_fee)}/mes + ${eur(c.price_per_consultation)} por consulta realizada · ${c.status}`}
+        subtitle={`Plan ${planName(c.plan)} · ${eur(c.monthly_fee)}/mes + ${eur(c.price_per_consultation)} por consulta realizada · ${c.status}`}
         actions={
           <>
             <a href={`/api/export/informe?cliente=${id}&mes=${month}`} className={btn.secondary}>Informe del mes (CSV)</a>
