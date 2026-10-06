@@ -10,7 +10,7 @@ import { emitEvent } from "@/lib/services/events";
 import { appUrl } from "@/lib/appUrl";
 import { dateOnly, telHref, waHref, nowMs } from "@/lib/format";
 import { Logo } from "@/components/Sidebar";
-import { GUARANTEES, PLANS, PLAN_IDS, STEPS, TIMELINE } from "@/lib/plans";
+import { COMPARE, FAQ, GUARANTEES, NEXT_STEPS, PLANS, PLAN_IDS, PROBLEMS, STEPS, TIMELINE } from "@/lib/plans";
 import { matchProvince } from "@/lib/normalize";
 
 export const dynamic = "force-dynamic";
@@ -123,6 +123,24 @@ export default async function Auditoria(props: PageProps<"/auditoria/[token]">) 
           </section>
         )}
 
+        <div className="mt-10 mb-2 px-1">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-blaze">Propuesta para {p.name}</div>
+          <h2 className="font-display mt-1 text-2xl font-semibold leading-tight">Te llenamos la agenda de consultas de Segunda Oportunidad</h2>
+          <p className="mt-2 text-sm leading-relaxed text-slate-600">Cuota fija más cada consulta que se realiza. Nunca un porcentaje de tus honorarios.</p>
+        </div>
+
+        <section className="mt-4 rounded-[1.75rem] bg-white p-5 ring-1 ring-slate-200">
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">El problema que resolvemos</h2>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {PROBLEMS.map((pr) => (
+              <div key={pr.title} className="rounded-2xl bg-slate-50 p-4">
+                <div className="font-semibold">{pr.title}</div>
+                <div className="mt-1 text-sm text-slate-600">{pr.text}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
         <section className="mt-4 rounded-[1.75rem] bg-white p-5 ring-1 ring-slate-200">
           <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Cómo te ayudamos</h2>
           <p className="mt-2 text-sm leading-relaxed text-slate-700">
@@ -151,7 +169,7 @@ export default async function Auditoria(props: PageProps<"/auditoria/[token]">) 
                       {id === "completo" && <div className="mb-1 inline-block rounded-full bg-blaze px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blaze-ink">El más elegido</div>}
                       <div className="font-display text-lg font-semibold">{pl.name}</div>
                     </div>
-                    <div className="num text-right text-sm"><span className="text-lg font-semibold">{pl.fee} €</span>/mes<div className={`text-xs ${id === "completo" ? "text-white/60" : "text-slate-500"}`}>+ {pl.perConsultation} € por consulta realizada</div></div>
+                    <div className="num text-right text-sm"><span className="text-lg font-semibold">{pl.fee.toLocaleString("de-DE")} €</span>/mes<div className={`text-xs ${id === "completo" ? "text-white/60" : "text-slate-500"}`}>+ {pl.perConsultation} € por consulta realizada</div></div>
                   </div>
                   <ul className={`mt-2 space-y-1 text-sm ${id === "completo" ? "text-white/80" : "text-slate-600"}`}>
                     {pl.features.map((f) => <li key={f}>• {f}</li>)}
@@ -159,6 +177,25 @@ export default async function Auditoria(props: PageProps<"/auditoria/[token]">) 
                 </div>
               );
             })}
+          </div>
+          <div className="mt-5 overflow-hidden rounded-2xl ring-1 ring-slate-200">
+            <table className="w-full table-fixed text-left text-xs">
+              <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
+                <tr><th className="p-2.5 font-semibold">Comparativa</th>{PLAN_IDS.map((id) => <th key={id} className={`w-[54px] px-1 py-2.5 text-center font-semibold sm:w-24 ${id === "completo" ? "text-ink" : ""}`}><span className="sm:hidden">{PLANS[id].name.slice(0, 4)}.</span><span className="hidden sm:inline">{PLANS[id].name}</span></th>)}</tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {COMPARE.map(([label, ...vals]) => (
+                  <tr key={label}>
+                    <td className="p-2.5 text-slate-700">{label}</td>
+                    {vals.map((v, k) => (
+                      <td key={k} className={`px-1 py-2.5 text-center ${k === 1 ? "bg-slate-50" : ""}`}>
+                        {typeof v === "string" ? <span className="text-[11px] text-slate-700">{v}</span> : v ? <span className="font-bold text-moss">✓</span> : <span className="text-slate-300">—</span>}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </section>
 
@@ -187,9 +224,29 @@ export default async function Auditoria(props: PageProps<"/auditoria/[token]">) 
           </ol>
         </section>
 
+        <section className="mt-4 rounded-[1.75rem] bg-white p-5 ring-1 ring-slate-200">
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Preguntas frecuentes</h2>
+          <div className="mt-2 divide-y divide-slate-100">
+            {FAQ.map((f) => (
+              <details key={f.q} className="group py-3">
+                <summary className="flex cursor-pointer list-none items-start justify-between gap-3 font-semibold">
+                  {f.q}
+                  <span className="mt-0.5 text-blaze transition group-open:rotate-45">+</span>
+                </summary>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">{f.a}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+
         <section className="mt-4 rounded-[1.75rem] bg-blaze p-6 text-blaze-ink">
           <h2 className="font-display text-xl font-semibold leading-tight">¿Lo vemos en 15 minutos?</h2>
-          <p className="mt-1 text-sm">Te enseño cómo funcionaría en tu despacho y qué plan te encaja.</p>
+          <p className="mt-1 text-sm">Si te encaja, en 5 días tienes los anuncios publicados.</p>
+          <ol className="mt-4 space-y-2 text-sm">
+            {NEXT_STEPS.map((st, i) => (
+              <li key={st} className="flex gap-3"><span className="num grid size-6 shrink-0 place-items-center rounded-full bg-ink text-xs font-semibold text-white">{i + 1}</span>{st}</li>
+            ))}
+          </ol>
           <div className="mt-5 grid gap-2 sm:grid-cols-2">
             {c.phone && <a href={waHref(c.phone)} className="grid min-h-12 place-items-center rounded-full bg-ink px-4 text-sm font-semibold text-white">Escribir por WhatsApp</a>}
             {c.phone && <a href={telHref(c.phone)} className="grid min-h-12 place-items-center rounded-full bg-white/70 px-4 text-sm font-semibold">Llamar a {c.name.split(" ")[0]}</a>}

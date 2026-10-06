@@ -76,3 +76,43 @@ export const TIMELINE: { when: string; text: string }[] = [
   { when: "Día 30", text: "Primer informe y ajuste de anuncios según el coste por consulta." },
   { when: "Meses 2-3", text: "Campañas optimizadas y coste por consulta estable." },
 ];
+
+/** Lo que le pasa hoy a un despacho de Segunda Oportunidad sin un sistema de captación. */
+export const PROBLEMS: { title: string; text: string }[] = [
+  { title: "Los leads se enfrían en minutos", text: "Quien tiene deudas rellena varios formularios. Gana el despacho que llama primero, y casi nadie llama en menos de una hora." },
+  { title: "No hay tiempo para llamar", text: "Los abogados están en juzgados y consultas. Los interesados de noche y en fin de semana se pierden." },
+  { title: "Muchas consultas no encajan", text: "Deudas pequeñas, un solo acreedor o casos que la ley no cubre hacen perder horas de abogado." },
+  { title: "El boca a boca no da estabilidad", text: "Un mes entran diez casos y el siguiente dos." },
+];
+
+/** Comparativa de planes: [concepto, esencial, completo, premium]. */
+export const COMPARE: [string, boolean | string, boolean | string, boolean | string][] = [
+  ["Anuncios en Meta desde tu página", true, true, true],
+  ["Test con el nombre del despacho", true, true, true],
+  ["Llamada en menos de 5 minutos", true, true, true],
+  ["Consulta en tu agenda con resumen", true, true, true],
+  ["Anuncios en Google Search", false, true, true],
+  ["Tu Instagram: 12 publicaciones/mes", false, true, true],
+  ["Recordatorios y recuperar ausencias", false, true, true],
+  ["Reactivar tus leads antiguos", false, true, true],
+  ["Informe mensual", false, true, true],
+  ["Asistente de WhatsApp 24 h", false, false, true],
+  ["Reseñas automáticas en Google", false, false, true],
+  ["Exclusividad en tu provincia", false, false, true],
+  ["Permanencia mínima", "No", "No", "3 m"],
+];
+
+export const FAQ: { q: string; a: string }[] = [
+  { q: "¿Por qué no cobráis un porcentaje de lo que facture el despacho?", a: "Porque el código deontológico lo limita. Somos un servicio de marketing: cuota fija y un precio cerrado por consulta realizada." },
+  { q: "Ya tengo una agencia que me hace anuncios.", a: "La diferencia está en lo que pasa después del anuncio: llamamos en menos de 5 minutos, filtramos y solo te llega la consulta cualificada a tu agenda." },
+  { q: "¿Y si los leads no son buenos?", a: "Tú fijas los criterios (deuda mínima, acreedores, provincias) y solo pagas las consultas que se realizan." },
+  { q: "¿Cuánto tengo que invertir en anuncios?", a: "Recomendamos al menos 600 €/mes, pagados directamente a Meta y Google desde tu cuenta. Así siempre ves en qué se gasta." },
+  { q: "¿Tengo que tener Instagram?", a: "No. Los anuncios salen desde la página de Facebook del despacho, también en Instagram. En el plan Completo te lo gestionamos si lo tienes." },
+  { q: "¿Qué pasa con los datos de los interesados?", a: "Cada persona da su consentimiento en el test a nombre de tu despacho. Nosotros actuamos como tu equipo de atención." },
+];
+
+export const NEXT_STEPS = [
+  "Videollamada de 15 minutos para ver tu caso",
+  "Eliges plan y criterios de cualificación",
+  "Nos das acceso de anunciante a tu página de Facebook y a tu agenda",
+];
