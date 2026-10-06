@@ -4,7 +4,8 @@ import { getUser } from "@/lib/auth";
 import { query, queryOne } from "@/lib/db";
 import { billingForMonth } from "@/lib/services/billing";
 import { CONSULTATION_STATUS } from "@/lib/labels";
-import { currentMonth, dateTime, eur, monthLabel } from "@/lib/format";
+import { currentMonth, dateTime, eur, monthLabel, shiftMonth } from "@/lib/format";
+import { monthSummary, reportText } from "@/lib/services/portal";
 import { A, Card, PageHeader, Stat, StatusBadge, btn } from "@/components/ui";
 import { ClientForm, type ClientData } from "../ClientForm";
 import { importOldLeads, rotateClientKey, rotatePortalToken, updateClient } from "../actions";
@@ -16,7 +17,7 @@ export default async function ClientePage(props: PageProps<"/clientes/[id]">) {
   const sp = await props.searchParams;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const user = await getUser();
-  const c = await queryOne<ClientData & { id: string; api_key: string; prospect_id: string | null; test_code: string | null; portal_token: string | null }>("SELECT * FROM clients WHERE id = $1", [id]);
+  const c = await queryOne<ClientData & { id: string; api_key: string; prospect_id: string | null; test_code: string | null; portal_token: string | null; ad_spend_month: number | null }>("SELECT * FROM clients WHERE id = $1", [id]);
   if (!c) notFound();
   const month = currentMonth();
   const [b] = await billingForMonth(month, id);
@@ -26,6 +27,9 @@ export default async function ClientePage(props: PageProps<"/clientes/[id]">) {
     [id],
   );
   const base = appUrl() || "https://tu-dominio";
+  const prevMonth = shiftMonth(month, -1);
+  const report = c.portal_token ? reportText(c.name, c.plan, await monthSummary(c, prevMonth), `${base}/portal/${c.portal_token}`) : "";
+  const waTo = c.contact_phone ? `https://wa.me/34${c.contact_phone.replace(/\D/g, "").replace(/^34(?=\d{9}$)/, "")}` : null;
   const isAdmin = user?.role === "admin";
 
   const snippet = `<form id="lh-form">
@@ -101,7 +105,8 @@ document.getElementById('lh-form').onsubmit = async (e) => {
               <div className="mt-2 select-all break-all rounded-xl bg-slate-50 p-2.5 font-mono text-xs">{base}/portal/{c.portal_token}</div>
               <div className="mt-3 flex flex-wrap gap-2">
                 <a href={`/portal/${c.portal_token}`} target="_blank" className={btn.secondary}>Ver su panel ↗</a>
-                {c.contact_phone && <a href={`https://wa.me/34${c.contact_phone.replace(/\D/g, "").replace(/^34(?=\d{9}$)/, "")}?text=${encodeURIComponent(`Hola${c.contact_name ? ` ${c.contact_name.split(" ")[0]}` : ""}, este es tu panel con tus consultas y resultados: ${base}/portal/${c.portal_token}`)}`} target="_blank" className={btn.secondary}>Enviar por WhatsApp</a>}
+                {waTo && <a href={`${waTo}?text=${encodeURIComponent(`Hola${c.contact_name ? ` ${c.contact_name.split(" ")[0]}` : ""}, este es tu panel con tus consultas y resultados: ${base}/portal/${c.portal_token}`)}`} target="_blank" className={btn.secondary}>Enviar panel</a>}
+                {waTo && <a href={`${waTo}?text=${encodeURIComponent(report)}`} target="_blank" className={btn.secondary}>Informe de {monthLabel(prevMonth).split(" ")[0]} por WhatsApp</a>}
               </div>
             </Card>
           )}

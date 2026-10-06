@@ -708,7 +708,8 @@ return clients.filter(c => c.email).map(c => ({ json: {
   mail.onError = "continueRegularOutput";
   const total = code("Total facturación", [1100, 300], `const { month, clients } = $('Resultados del mes anterior').first().json;
 const total = clients.reduce((a, c) => a + c.total, 0);
-const wa = c => c.telefono ? ' → enviar informe: https://wa.me/34' + c.telefono.replace(/\\D/g, '').replace(/^34(?=\\d{9}$)/, '') + '?text=' + encodeURIComponent(c.texto) : '';
+const app = $('Config').first().json.APP_URL;
+const wa = c => ' → enviar informe: ' + app + '/clientes/' + c.client_id;
 const lineas = clients.map(c => '• ' + c.cliente + ': ' + c.total.toLocaleString('es-ES') + ' € (' + c.citas_asistidas + ' consultas)' + wa(c)).join('\\n');
 return [{ json: { month, total, lineas } }];`, undefined);
   total.executeOnce = true;
@@ -716,7 +717,7 @@ return [{ json: { month, total, lineas } }];`, undefined);
     "=💶 <b>Facturación {{ $json.month }}</b>: {{ $json.total.toLocaleString('es-ES') }} € + IVA\n{{ $json.lineas }}\n{{ $env.APP_URL }}/facturacion?mes={{ $json.month }}");
   tg.onError = "continueRegularOutput";
   const note = sticky(
-    "## 06 · Informe mensual\nEl día 1 manda a cada despacho por email sus resultados del mes anterior (leads, consultas, casos firmados, retorno, importe y enlace a su panel) y te pasa por WhatsApp el total a facturar con un enlace por despacho para reenviarle el informe por WhatsApp.",
+    "## 06 · Informe mensual\nEl día 1 manda a cada despacho por email sus resultados del mes anterior (leads, consultas, casos firmados, retorno, importe y enlace a su panel) y te pasa por WhatsApp el total a facturar con un enlace a la ficha de cada despacho, donde hay un botón para mandarle el informe por WhatsApp.",
     [160, 40], 480, 160, 4,
   );
   save("06-informe-mensual.json", workflow("06 · Informe mensual y facturación", [note, sched, get, split, mail, total, tg], [
