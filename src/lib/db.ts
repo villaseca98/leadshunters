@@ -15,6 +15,8 @@ if (process.env.NODE_ENV !== "production") globalForPg.pgPool = pool;
 import pg from "pg";
 pg.types.setTypeParser(1700, (v) => (v === null ? null : parseFloat(v)));
 pg.types.setTypeParser(20, (v) => (v === null ? null : parseInt(v, 10)));
+// date (sin hora) como texto "YYYY-MM-DD", para no desplazar el día por la zona horaria
+pg.types.setTypeParser(1082, (v) => v);
 
 export async function query<T extends QueryResultRow = Record<string, unknown>>(
   text: string,

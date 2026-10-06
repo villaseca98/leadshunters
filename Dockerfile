@@ -25,5 +25,6 @@ COPY --from=build /app/scripts ./scripts
 COPY --from=deps /app/node_modules/bcryptjs ./node_modules/bcryptjs
 USER app
 EXPOSE 3000
-# aplica migraciones pendientes y arranca
-CMD ["sh", "-c", "node scripts/migrate.mjs && node server.js"]
+# aplica migraciones pendientes, crea el admin si hay ADMIN_PASSWORD y arranca
+# (en Render, APP_URL toma la URL pública del servicio si no la defines)
+CMD ["sh", "-c", "export APP_URL=${APP_URL:-$RENDER_EXTERNAL_URL}; node scripts/migrate.mjs && if [ -n \"$ADMIN_PASSWORD\" ]; then node scripts/seed.mjs; fi && node server.js"]

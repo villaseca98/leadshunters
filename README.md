@@ -61,6 +61,17 @@ Si no contesta se reprograma sola: 10 min, 1 h, 3 h, día siguiente, +2 días, +
 
 ---
 
+## Publicarla en 2 clics (Render)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/villaseca98/leadshunters)
+
+1. Pulsa el botón, entra con tu cuenta de GitHub y elige el repo `leadshunters`.
+2. Render te pide `ADMIN_EMAIL` y `ADMIN_PASSWORD` (mínimo 8 caracteres): será tu usuario para entrar.
+3. Pulsa **Apply**. Render crea la base de datos, construye la app y te da una URL tipo `https://leadshunters-xxxx.onrender.com`.
+4. En Render → servicio `leadshunters` → **Environment**, copia el valor de `N8N_API_KEY`. Pégalo, junto con la URL, en el nodo **Config** de cada flujo de n8n (`LH_API_KEY` y `LH_API_URL`/`APP_URL`).
+
+El plan gratuito sirve para probar: la app se duerme si nadie la usa (tarda unos segundos en despertar) y la base de datos gratuita caduca a los 30 días. Para trabajar con clientes, sube a un plan de pago o usa la instalación con Docker de abajo.
+
 ## Instalación en un servidor (recomendado)
 
 Necesitas un VPS con Docker (Hetzner, Contabo, DigitalOcean… 2 GB de RAM sobran) y dos subdominios apuntando a su IP, por ejemplo `app.tudominio.com` y `n8n.tudominio.com`.

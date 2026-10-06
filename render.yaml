@@ -1,0 +1,34 @@
+# Blueprint de Render: publica la app y su base de datos con el botón «Deploy to Render» del README.
+services:
+  - type: web
+    name: leadshunters
+    runtime: docker
+    plan: free
+    region: frankfurt
+    healthCheckPath: /login
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: leadshunters-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: N8N_API_KEY
+        generateValue: true
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: ADMIN_NAME
+        value: Administrador
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: N8N_EVENTS_WEBHOOK_URL
+        value: https://leadshunters.app.n8n.cloud/webhook/leads-hunters-eventos
+
+databases:
+  - name: leadshunters-db
+    plan: free
+    region: frankfurt
+    databaseName: leadshunters
+    user: leadshunters
