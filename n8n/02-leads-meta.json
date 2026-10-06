@@ -3,13 +3,13 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## 02 · Leads de Meta (Facebook/Instagram)\n1. En **Meta · Nuevo lead** conecta tu credencial de Facebook Lead Ads y elige página y formulario (duplica el flujo si quieres uno por formulario, o deja «todos»).\n2. En la app, pon el **ID del formulario** en la ficha del cliente: así cada lead va a su despacho.\n3. La app cualifica el lead y avisa al momento (flujo 05).",
+        "content": "## 02 · Leads de Meta (Facebook/Instagram)\n1. En **Meta · Nuevo lead** conecta tu credencial de Facebook Lead Ads y elige página y formulario (duplica el flujo si quieres uno por formulario, o deja «todos»).\n2. En la app, pon el **ID del formulario** en la ficha del cliente: así cada lead va a su despacho.\n3. Rellena el nodo **Config** (`LH_API_URL`, `LH_API_KEY`, `TELEGRAM_CHAT_ID`).\n4. La app cualifica el lead y avisa al momento (flujo 04).",
         "width": 520,
         "height": 220,
         "color": 4
       },
-      "id": "1010d50e-2397-43b6-ad2f-d1c2c1a4599b",
-      "name": "Nota bd4f",
+      "id": "e7d8c875-ad4c-4a83-89cd-f1383a06e956",
+      "name": "Nota 1c48",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
@@ -32,7 +32,7 @@
         },
         "options": {}
       },
-      "id": "8fcfa8db-1ea0-4e88-8ab0-dac18567123c",
+      "id": "c4d9dffa-4ad8-4274-a856-a5898f260f32",
       "name": "Meta · Nuevo lead",
       "type": "n8n-nodes-base.facebookLeadAdsTrigger",
       "typeVersion": 1,
@@ -40,25 +40,25 @@
         220,
         300
       ],
-      "webhookId": "3e2bb9c2-4e46-4324-aaf8-ff799b400ecc"
+      "webhookId": "f7a029d5-58f8-4f05-9303-d2b2a4c1340e"
     },
     {
       "parameters": {
-        "jsCode": "// Convierte el lead de Meta al formato de la app. Las preguntas del formulario se mandan tal cual\n// en \"answers\": la app reconoce deuda, acreedores, ingresos, provincia, etc. por palabras clave.\nreturn $input.all().map(({ json: l }) => {\n  let answers = {};\n  if (Array.isArray(l.field_data)) for (const f of l.field_data) answers[f.name] = Array.isArray(f.values) ? f.values.join(', ') : f.values;\n  else if (l.data && typeof l.data === 'object') answers = { ...l.data };\n  else for (const [k, v] of Object.entries(l)) if (typeof v !== 'object') answers[k] = v;\n  const formId = l.form?.id ?? l.form_id ?? null;\n  return { json: {\n    source: 'meta',\n    form_id: formId ? String(formId) : undefined,\n    external_id: String(l.id ?? l.leadgen_id ?? ''),\n    campaign: l.campaign?.name ?? l.campaign_name ?? null,\n    ad_name: l.ad?.name ?? l.ad_name ?? null,\n    consent_at: l.created_time ?? new Date().toISOString(),\n    consent_text: 'Formulario de Meta Lead Ads' + (l.form?.name ? ' «' + l.form.name + '»' : ''),\n    answers,\n  } };\n});"
+        "jsCode": "// Convierte el lead de Meta al formato de la app. Las preguntas del formulario se mandan tal cual\n// en \"answers\": la app reconoce deuda, acreedores, ingresos, provincia, etc. por palabras clave.\nreturn $input.all().map(({ json: l }) => {\n  let answers = {};\n  if (Array.isArray(l.field_data)) for (const f of l.field_data) answers[f.name] = Array.isArray(f.values) ? f.values.join(', ') : f.values;\n  else if (l.data && typeof l.data === 'object') answers = { ...l.data };\n  else for (const [k, v] of Object.entries(l)) if (typeof v !== 'object' && !/^[A-Z0-9_]+$/.test(k)) answers[k] = v; // sin los campos del nodo Config\n  const formId = l.form?.id ?? l.form_id ?? null;\n  return { json: {\n    source: 'meta',\n    form_id: formId ? String(formId) : undefined,\n    external_id: String(l.id ?? l.leadgen_id ?? ''),\n    campaign: l.campaign?.name ?? l.campaign_name ?? null,\n    ad_name: l.ad?.name ?? l.ad_name ?? null,\n    consent_at: l.created_time ?? new Date().toISOString(),\n    consent_text: 'Formulario de Meta Lead Ads' + (l.form?.name ? ' «' + l.form.name + '»' : ''),\n    answers,\n  } };\n});"
       },
-      "id": "3e6d330f-d229-4e26-bef8-7b7b5fc17550",
+      "id": "e97a35aa-f9d2-43b8-9fbe-d65c2f0bea64",
       "name": "Preparar lead",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        440,
+        660,
         300
       ]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.LH_API_URL }}/api/v1/leads",
+        "url": "={{ $('Config').first().json.LH_API_URL }}/api/v1/leads",
         "options": {
           "timeout": 20000
         },
@@ -67,7 +67,7 @@
           "parameters": [
             {
               "name": "x-api-key",
-              "value": "={{ $env.LH_API_KEY }}"
+              "value": "={{ $('Config').first().json.LH_API_KEY }}"
             }
           ]
         },
@@ -75,32 +75,69 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json) }}"
       },
-      "id": "4a2743d6-32df-4213-91e3-2f63c837e7af",
+      "id": "4a0f7e2f-a306-421d-9325-df021f4370f2",
       "name": "Enviar lead a la app",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        660,
+        880,
         300
       ],
       "onError": "continueErrorOutput"
     },
     {
       "parameters": {
-        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "chatId": "={{ $('Config').first().json.TELEGRAM_CHAT_ID }}",
         "text": "=⚠️ <b>Lead de Meta no guardado</b>\n{{ $json.error?.message || JSON.stringify($json).slice(0, 300) }}\nRevisa que el ID del formulario esté en la ficha del cliente.",
         "additionalFields": {
           "parse_mode": "HTML",
           "appendAttribution": false
         }
       },
-      "id": "691dd5ae-0b26-44bc-9d70-0a6b75735074",
+      "id": "d1953d31-6675-4623-bba6-db8449d28234",
       "name": "Avisar si falla",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        880,
+        1100,
         420
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c489a996-e404-4cbc-9a9f-22f2ea08e752",
+              "name": "LH_API_KEY",
+              "value": "PEGA_AQUI_LA_N8N_API_KEY_DE_LA_APP",
+              "type": "string"
+            },
+            {
+              "id": "19be54c5-1c9d-464a-ac8b-c9d643973171",
+              "name": "LH_API_URL",
+              "value": "https://app.tudominio.com",
+              "type": "string"
+            },
+            {
+              "id": "eb31fd96-2e6a-468b-8c72-1ef7503b9453",
+              "name": "TELEGRAM_CHAT_ID",
+              "value": "PEGA_AQUI_TU_CHAT_ID",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ce7fa76b-c85f-4a2c-a83c-0e1eacfd3be6",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        300
       ]
     }
   ],
@@ -109,7 +146,7 @@
       "main": [
         [
           {
-            "node": "Preparar lead",
+            "node": "Config",
             "type": "main",
             "index": 0
           }
@@ -133,6 +170,17 @@
         [
           {
             "node": "Avisar si falla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Preparar lead",
             "type": "main",
             "index": 0
           }

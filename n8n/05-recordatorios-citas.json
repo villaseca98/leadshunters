@@ -1,15 +1,15 @@
 {
-  "name": "05 · Recordatorios de consultas y confirmaciones",
+  "name": "05 · Recordatorios de consultas",
   "nodes": [
     {
       "parameters": {
-        "content": "## 05 · Recordatorios y confirmaciones\n- Cada 30 min: recordatorio al lead de las consultas de las próximas 24 h (email; SMS con Twilio si lo activas). Menos ausencias = más consultas facturables.\n- Cada día a las 20:00: email a cada despacho con las consultas pasadas sin confirmar.",
+        "content": "## 05 · Recordatorios de consultas\nCada 30 min: recordatorio al lead de las consultas de las próximas 24 h (email; SMS con Twilio si lo activas). Menos ausencias = más consultas facturables.\n\nLa confirmación diaria de asistencia al despacho está en el flujo 05b.",
         "width": 540,
         "height": 200,
         "color": 4
       },
-      "id": "f03bf017-d5d7-4038-8900-c585613647da",
-      "name": "Nota e807",
+      "id": "866f1d9f-fa34-4bf0-b7e7-71b27e9cfc5c",
+      "name": "Nota af29",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
@@ -28,7 +28,7 @@
           ]
         }
       },
-      "id": "9c82e3b2-d110-4cbe-90f6-d1377f02f01c",
+      "id": "79e4ab7b-4462-4623-abe0-e89737d77a91",
       "name": "Cada 30 minutos",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -40,14 +40,14 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $env.LH_API_URL }}/api/v1/consultations/reminders",
+        "url": "={{ $('Config').first().json.LH_API_URL }}/api/v1/consultations/reminders",
         "options": {},
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "x-api-key",
-              "value": "={{ $env.LH_API_KEY }}"
+              "value": "={{ $('Config').first().json.LH_API_KEY }}"
             }
           ]
         },
@@ -61,12 +61,12 @@
           ]
         }
       },
-      "id": "0f2a8269-feab-47f6-9381-46b9c96e3c16",
+      "id": "db696034-0baa-4008-a30f-d7fa44f420e5",
       "name": "Consultas en las próximas 24 h",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        440,
+        660,
         260
       ]
     },
@@ -74,12 +74,12 @@
       "parameters": {
         "jsCode": "return $input.first().json.consultations.map(c => ({ json: c }));"
       },
-      "id": "97638504-49be-4cce-85af-35b8ffea9650",
+      "id": "a61c9ad4-f04f-46b3-991a-e57764f1f331",
       "name": "Separar consultas",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        660,
+        880,
         260
       ]
     },
@@ -94,7 +94,7 @@
           },
           "conditions": [
             {
-              "id": "631aa59f-fcac-4f0d-8c09-a1c29679853a",
+              "id": "36095521-22c2-4109-a4a3-c9c808efd839",
               "leftValue": "={{ !!$json.lead_email }}",
               "rightValue": "",
               "operator": {
@@ -108,18 +108,18 @@
         },
         "options": {}
       },
-      "id": "15aab9d6-2d42-496a-a4bc-724d5ab0c053",
+      "id": "569205fa-d1fe-4d58-b4e8-2381685e663b",
       "name": "¿Tiene email?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        880,
+        1100,
         260
       ]
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.EMAIL_FROM }}",
+        "fromEmail": "={{ $('Config').first().json.EMAIL_FROM }}",
         "toEmail": "={{ $json.lead_email }}",
         "subject": "=Recordatorio: tu consulta con {{ $json.cliente }}",
         "emailFormat": "html",
@@ -128,29 +128,29 @@
           "appendAttribution": false
         }
       },
-      "id": "7429310f-b84b-4413-894f-1bc75e1e80b5",
+      "id": "fd447bd8-5ae5-47a7-bb05-ab7c89705f5f",
       "name": "Recordatorio por email",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        1100,
+        1320,
         160
       ],
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "from": "={{ $env.TWILIO_FROM }}",
+        "from": "={{ $('Config').first().json.TWILIO_FROM }}",
         "to": "={{ $('Separar consultas').item.json.lead_telefono }}",
         "message": "=Recordatorio: consulta con {{ $('Separar consultas').item.json.cliente }} el {{ new Date($('Separar consultas').item.json.scheduled_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) }}.",
         "options": {}
       },
-      "id": "46142c5b-234e-454c-adbd-2a91e82fc781",
+      "id": "de8afa68-fc62-43ad-a4c9-2ffdb088a040",
       "name": "Recordatorio por SMS (opcional)",
       "type": "n8n-nodes-base.twilio",
       "typeVersion": 1,
       "position": [
-        1100,
+        1320,
         360
       ],
       "disabled": true,
@@ -159,14 +159,14 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.LH_API_URL }}/api/v1/consultations/{{ $('Separar consultas').item.json.id }}",
+        "url": "={{ $('Config').first().json.LH_API_URL }}/api/v1/consultations/{{ $('Separar consultas').item.json.id }}",
         "options": {},
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "x-api-key",
-              "value": "={{ $env.LH_API_KEY }}"
+              "value": "={{ $('Config').first().json.LH_API_KEY }}"
             }
           ]
         },
@@ -174,93 +174,57 @@
         "specifyBody": "json",
         "jsonBody": "={\"reminder_sent\": true}"
       },
-      "id": "40b8cea5-ed7b-4e2c-90c3-b5a8b3f0be8b",
+      "id": "74188122-8c2f-4391-b75c-24bca5829073",
       "name": "Marcar recordatorio enviado",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1320,
+        1540,
         260
       ]
     },
     {
       "parameters": {
-        "rule": {
-          "interval": [
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
             {
-              "field": "days",
-              "daysInterval": 1,
-              "triggerAtHour": 20
+              "id": "701191d7-7cfd-4dd3-8893-87cc3e4674a5",
+              "name": "EMAIL_FROM",
+              "value": "Leads Hunters <hola@tudominio.com>",
+              "type": "string"
+            },
+            {
+              "id": "edb176ce-25c0-4127-bf12-dea15c2b5185",
+              "name": "LH_API_KEY",
+              "value": "PEGA_AQUI_LA_N8N_API_KEY_DE_LA_APP",
+              "type": "string"
+            },
+            {
+              "id": "0beadca8-ebf3-4829-97d1-879c9ff25a81",
+              "name": "LH_API_URL",
+              "value": "https://app.tudominio.com",
+              "type": "string"
+            },
+            {
+              "id": "9c8be049-f33f-4916-8abe-e69e24716612",
+              "name": "TWILIO_FROM",
+              "value": "+34000000000",
+              "type": "string"
             }
           ]
-        }
+        },
+        "options": {}
       },
-      "id": "3fa9b9a5-ceae-4cdf-a65b-b308ad5d70cf",
-      "name": "Cada día 20:00",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
-      "position": [
-        220,
-        620
-      ]
-    },
-    {
-      "parameters": {
-        "method": "GET",
-        "url": "={{ $env.LH_API_URL }}/api/v1/consultations/unconfirmed",
-        "options": {},
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "x-api-key",
-              "value": "={{ $env.LH_API_KEY }}"
-            }
-          ]
-        }
-      },
-      "id": "e268513b-7a8e-4d3e-9ea1-95d55b9c0fea",
-      "name": "Consultas pasadas sin confirmar",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "id": "2d60a960-0dad-4821-9646-3c1fa86c942f",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
       "position": [
         440,
-        620
+        260
       ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Un email por despacho con todas sus consultas pendientes de confirmar\nconst porCliente = {};\nfor (const c of $input.first().json.consultations) {\n  if (!c.cliente_email) continue;\n  (porCliente[c.client_id] ??= { cliente: c.cliente, email: c.cliente_email, consultas: [] }).consultas.push(c);\n}\nreturn Object.values(porCliente).map(x => ({ json: {\n  ...x,\n  filas: x.consultas.map(c => '<li>' + c.lead_nombre + ' · ' + new Date(c.scheduled_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', dateStyle: 'medium', timeStyle: 'short' }) + ' · <a href=\"' + c.enlace_confirmar + '\">confirmar</a></li>').join(''),\n} }));"
-      },
-      "id": "dd373613-4526-4507-bd2f-fc5d4661512a",
-      "name": "Agrupar por despacho",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        660,
-        620
-      ]
-    },
-    {
-      "parameters": {
-        "fromEmail": "={{ $env.EMAIL_FROM }}",
-        "toEmail": "={{ $json.email }}",
-        "subject": "=¿Se realizaron estas consultas? ({{ $json.consultas.length }})",
-        "emailFormat": "html",
-        "html": "=<div style=\"font-family:Arial,sans-serif;font-size:14px\"><p>Hola,</p>\n<p>Estas consultas ya han pasado y aún no sabemos si se realizaron. Un clic en cada una nos basta:</p>\n<ul>{{ $json.filas }}</ul><p>¡Gracias!</p></div>",
-        "options": {
-          "appendAttribution": false
-        }
-      },
-      "id": "24ea5ff5-41c5-482e-aec3-ad9ff22ca2fd",
-      "name": "Pedir confirmación al despacho",
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2.1,
-      "position": [
-        880,
-        620
-      ],
-      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -268,7 +232,7 @@
       "main": [
         [
           {
-            "node": "Consultas en las próximas 24 h",
+            "node": "Config",
             "type": "main",
             "index": 0
           }
@@ -337,33 +301,11 @@
         ]
       ]
     },
-    "Cada día 20:00": {
+    "Config": {
       "main": [
         [
           {
-            "node": "Consultas pasadas sin confirmar",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Consultas pasadas sin confirmar": {
-      "main": [
-        [
-          {
-            "node": "Agrupar por despacho",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Agrupar por despacho": {
-      "main": [
-        [
-          {
-            "node": "Pedir confirmación al despacho",
+            "node": "Consultas en las próximas 24 h",
             "type": "main",
             "index": 0
           }

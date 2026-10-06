@@ -17,7 +17,7 @@ Todo en español, se instala en tu propio servidor con Docker.
 |---|---|
 | **App web** (Next.js + Postgres) | Panel, prospección, cola de llamadas, leads, consultas, clientes, facturación, usuarios |
 | **API** `/api/v1/*` | La usan los flujos de n8n (clave `x-api-key`) |
-| **7 flujos n8n** (`n8n/*.json`) | Prospección, entrada de leads de Meta y Google, avisos, recordatorios, informe mensual, respaldo |
+| **8 flujos n8n** (`n8n/*.json`) | Prospección, entrada de leads de Meta y Google, avisos, recordatorios, informe mensual, respaldo |
 | **Docker Compose** | App + Postgres + n8n (+ Caddy para HTTPS) |
 
 ### Pantallas de la app
@@ -99,18 +99,23 @@ npm test           # pruebas de la lógica (puntuación, cualificación, rellama
 
 ## Configurar n8n
 
-### Variables (ya vienen del `.env` vía Docker Compose)
+### Nodo «Config» de cada flujo (funciona en n8n Cloud y en tu propio n8n)
 
-| Variable | Para qué |
+Cada flujo empieza con un nodo **Config** justo después del disparador. Ábrelo y sustituye los valores `PEGA_AQUI_…` y `tudominio.com`. Solo aparecen las claves que usa ese flujo:
+
+| Clave | Para qué |
 |---|---|
-| `LH_API_URL`, `LH_API_KEY` | Hablar con la app |
+| `LH_API_URL` | URL pública de la app, p. ej. `https://app.tudominio.com` |
+| `LH_API_KEY` | La `N8N_API_KEY` del `.env` de la app |
+| `APP_URL` | URL de la app para los enlaces de los avisos (normalmente igual que `LH_API_URL`) |
 | `APIFY_TOKEN` | Google Maps Scraper e Instagram Profile Scraper de Apify |
 | `META_ADS_LIBRARY_TOKEN` | API de la Biblioteca de anuncios de Meta |
 | `TELEGRAM_CHAT_ID` | A dónde llegan los avisos |
 | `GOOGLE_ADS_WEBHOOK_KEY` | Clave del webhook de formularios de Google Ads |
 | `EMAIL_FROM`, `TWILIO_FROM` | Remitente de emails y (opcional) de SMS |
+| `N8N_EVENTS_WEBHOOK_URL` | (flujo 07) URL de producción del webhook del flujo 04 |
 
-> Los flujos leen estas variables con `$env`. Por eso el compose pone `N8N_BLOCK_ENV_ACCESS_IN_NODE=false`. Si usas n8n Cloud, cambia `$env.X` por los valores (o usa Variables de n8n).
+> Los flujos ya no usan `$env`, así que funcionan en n8n Cloud. Las variables de n8n del `docker-compose.yml` son opcionales. En la app, pon en `N8N_EVENTS_WEBHOOK_URL` la URL de producción del webhook del flujo 04 (`https://TU-N8N/webhook/leads-hunters-eventos`).
 
 ### Credenciales que tienes que crear en n8n
 
@@ -129,7 +134,8 @@ Abre cada flujo, asigna las credenciales en los nodos marcados en rojo y **actí
 | **02 · Leads de Meta** | Nuevo lead en un formulario | Lo manda a la app; el ID del formulario decide el despacho |
 | **03 · Leads de Google Ads** | Webhook `/webhook/google-ads-leads` | Comprueba la `google_key`, lo manda a la app |
 | **04 · Eventos de la app** | Webhook `/webhook/leads-hunters-eventos` | Lead nuevo → Telegram al equipo · Cita agendada → email al despacho (con enlace de confirmación) y al lead · Asistió / no asistió / nuevo cliente → aviso |
-| **05 · Recordatorios** | Cada 30 min y cada día 20:00 | Recordatorio al lead 24 h antes · Pide al despacho confirmar las consultas pasadas |
+| **05 · Recordatorios** | Cada 30 min | Recordatorio al lead de las consultas de las próximas 24 h |
+| **05b · Confirmar asistencia** | Cada día 20:00 | Pide a cada despacho confirmar las consultas pasadas (solo se facturan las realizadas) |
 | **06 · Informe mensual** | Día 1, 9:00 | Email a cada despacho con sus resultados e importe · Total a facturar por Telegram |
 | **07 · Respaldo** | Cada 10 min | Reenvía eventos que no llegaron (si n8n estuvo caído) |
 

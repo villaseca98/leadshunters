@@ -98,7 +98,59 @@ function workflow(name, nodes, links, settings = {}) {
   };
 }
 
+// Valores por defecto del nodo "Config" que se añade a cada flujo.
+// Se edita una vez en n8n (funciona igual en n8n Cloud y en tu servidor).
+const CONFIG_DEFAULTS = {
+  LH_API_URL: "https://app.tudominio.com",
+  LH_API_KEY: "PEGA_AQUI_LA_N8N_API_KEY_DE_LA_APP",
+  APP_URL: "https://app.tudominio.com",
+  APIFY_TOKEN: "PEGA_AQUI_TU_TOKEN_DE_APIFY",
+  META_ADS_LIBRARY_TOKEN: "PEGA_AQUI_TU_TOKEN_DE_META",
+  TELEGRAM_CHAT_ID: "PEGA_AQUI_TU_CHAT_ID",
+  GOOGLE_ADS_WEBHOOK_KEY: "PEGA_AQUI_UNA_CLAVE_SECRETA",
+  EMAIL_FROM: "Leads Hunters <hola@tudominio.com>",
+  TWILIO_FROM: "+34000000000",
+  N8N_EVENTS_WEBHOOK_URL: "https://TU-N8N/webhook/leads-hunters-eventos",
+};
+const TRIGGER_TYPES = ["Trigger", "webhook", "manualTrigger"];
+
+/**
+ * Sustituye $env.X por $('Config').first().json.X y mete un nodo "Config" (Set que conserva
+ * los datos de entrada) justo después de los disparadores. n8n Cloud no permite $env.
+ */
+function withConfig(wf) {
+  const used = new Set();
+  const re = /\$env\.([A-Z0-9_]+)/g;
+  for (const n of wf.nodes) for (const m of JSON.stringify(n.parameters).matchAll(re)) used.add(m[1]);
+  if (!used.size) return wf;
+  const ref = (k) => `$('Config').first().json.${k}`;
+  for (const n of wf.nodes) n.parameters = JSON.parse(JSON.stringify(n.parameters).replace(re, (_, k) => ref(k)));
+  const triggers = wf.nodes.filter((n) => TRIGGER_TYPES.some((t) => n.type.endsWith(t) || n.type.includes(t)) && n.type !== "n8n-nodes-base.stickyNote");
+  const t0 = triggers[0];
+  const shift = 220;
+  for (const n of wf.nodes) if (!triggers.includes(n) && n.type !== "n8n-nodes-base.stickyNote") n.position = [n.position[0] + shift, n.position[1]];
+  const ys = triggers.map((t) => t.position[1]);
+  const config = node("Config", "n8n-nodes-base.set", 3.4, [t0.position[0] + shift, Math.round(ys.reduce((a, b) => a + b, 0) / ys.length)], {
+    mode: "manual",
+    includeOtherFields: true,
+    assignments: {
+      assignments: [...used].sort().map((k) => ({ id: randomUUID(), name: k, value: CONFIG_DEFAULTS[k] ?? "", type: "string" })),
+    },
+    options: {},
+  });
+  wf.nodes.push(config);
+  let targets = null;
+  for (const t of triggers) {
+    const out = wf.connections[t.name]?.main?.[0] ?? [];
+    targets ??= out;
+    wf.connections[t.name] = { main: [[{ node: "Config", type: "main", index: 0 }]] };
+  }
+  wf.connections.Config = { main: [targets ?? []] };
+  return wf;
+}
+
 function save(file, wf) {
+  wf = withConfig(wf);
   writeFileSync(path.join(OUT, file), JSON.stringify(wf, null, 2) + "\n");
   console.log("✓", file);
 }
@@ -279,7 +331,7 @@ return [{ json: { nuevos: r.created, actualizados: r.updated, descartados: r.ski
   });
 
   const note = sticky(
-    "## 01 · Prospección de despachos\nBusca en Google Maps (Apify) despachos de Segunda Oportunidad en las ciudades de **Configuración**, los manda a la app (que limpia, quita duplicados y puntúa) y después analiza cada uno:\n- su **web** (redes, email, formulario, WhatsApp, píxel, si habla de LSO)\n- si **anuncia en Meta** (Biblioteca de anuncios)\n- su **Instagram** (seguidores, días sin publicar)\n\nVariables: `LH_API_URL`, `LH_API_KEY`, `APIFY_TOKEN`, `META_ADS_LIBRARY_TOKEN`, `TELEGRAM_CHAT_ID`.\nSolo empresas (B2B): no se recogen datos de particulares.",
+    "## 01 · Prospección de despachos\nBusca en Google Maps (Apify) despachos de Segunda Oportunidad en las ciudades de **Configuración**, los manda a la app (que limpia, quita duplicados y puntúa) y después analiza cada uno:\n- su **web** (redes, email, formulario, WhatsApp, píxel, si habla de LSO)\n- si **anuncia en Meta** (Biblioteca de anuncios)\n- su **Instagram** (seguidores, días sin publicar)\n\nRellena el nodo **Config**: `LH_API_URL`, `LH_API_KEY`, `APIFY_TOKEN`, `META_ADS_LIBRARY_TOKEN`, `TELEGRAM_CHAT_ID`.\nSolo empresas (B2B): no se recogen datos de particulares.",
     [180, -120], 520, 280, 4,
   );
 
@@ -315,7 +367,7 @@ return $input.all().map(({ json: l }) => {
   let answers = {};
   if (Array.isArray(l.field_data)) for (const f of l.field_data) answers[f.name] = Array.isArray(f.values) ? f.values.join(', ') : f.values;
   else if (l.data && typeof l.data === 'object') answers = { ...l.data };
-  else for (const [k, v] of Object.entries(l)) if (typeof v !== 'object') answers[k] = v;
+  else for (const [k, v] of Object.entries(l)) if (typeof v !== 'object' && !/^[A-Z0-9_]+$/.test(k)) answers[k] = v; // sin los campos del nodo Config
   const formId = l.form?.id ?? l.form_id ?? null;
   return { json: {
     source: 'meta',
@@ -335,7 +387,7 @@ return $input.all().map(({ json: l }) => {
   const fail = telegram("Avisar si falla", [880, 420],
     "=⚠️ <b>Lead de Meta no guardado</b>\n{{ $json.error?.message || JSON.stringify($json).slice(0, 300) }}\nRevisa que el ID del formulario esté en la ficha del cliente.");
   const note = sticky(
-    "## 02 · Leads de Meta (Facebook/Instagram)\n1. En **Meta · Nuevo lead** conecta tu credencial de Facebook Lead Ads y elige página y formulario (duplica el flujo si quieres uno por formulario, o deja «todos»).\n2. En la app, pon el **ID del formulario** en la ficha del cliente: así cada lead va a su despacho.\n3. La app cualifica el lead y avisa al momento (flujo 05).",
+    "## 02 · Leads de Meta (Facebook/Instagram)\n1. En **Meta · Nuevo lead** conecta tu credencial de Facebook Lead Ads y elige página y formulario (duplica el flujo si quieres uno por formulario, o deja «todos»).\n2. En la app, pon el **ID del formulario** en la ficha del cliente: así cada lead va a su despacho.\n3. Rellena el nodo **Config** (`LH_API_URL`, `LH_API_KEY`, `TELEGRAM_CHAT_ID`).\n4. La app cualifica el lead y avisa al momento (flujo 04).",
     [160, 20], 520, 220, 4,
   );
   save("02-leads-meta.json", workflow("02 · Leads de Meta Lead Ads → app", [note, trigger, map, send, fail], [
@@ -545,17 +597,24 @@ return Object.values(porCliente).map(x => ({ json: {
   mailFirm.onError = "continueRegularOutput";
 
   const note = sticky(
-    "## 05 · Recordatorios y confirmaciones\n- Cada 30 min: recordatorio al lead de las consultas de las próximas 24 h (email; SMS con Twilio si lo activas). Menos ausencias = más consultas facturables.\n- Cada día a las 20:00: email a cada despacho con las consultas pasadas sin confirmar.",
+    "## 05 · Recordatorios de consultas\nCada 30 min: recordatorio al lead de las consultas de las próximas 24 h (email; SMS con Twilio si lo activas). Menos ausencias = más consultas facturables.\n\nLa confirmación diaria de asistencia al despacho está en el flujo 05b.",
     [160, -60], 540, 200, 4,
   );
-  save("05-recordatorios-citas.json", workflow("05 · Recordatorios de consultas y confirmaciones",
-    [note, every, getRem, split, hasEmail, mail, sms, mark, daily, getUnc, group, mailFirm],
+  const note2 = sticky(
+    "## 05b · Confirmación de asistencia\nCada día a las 20:00 manda a cada despacho un email con las consultas ya pasadas que siguen sin confirmar (sin confirmar no se facturan).",
+    [160, 440], 540, 140, 4,
+  );
+  save("05-recordatorios-citas.json", workflow("05 · Recordatorios de consultas",
+    [note, every, getRem, split, hasEmail, mail, sms, mark],
     [
       ["Cada 30 minutos", "Consultas en las próximas 24 h"], ["Consultas en las próximas 24 h", "Separar consultas"], ["Separar consultas", "¿Tiene email?"],
       ["¿Tiene email?", "Recordatorio por email", 0], ["¿Tiene email?", "Recordatorio por SMS (opcional)", 1], ["Recordatorio por email", "Marcar recordatorio enviado"],
       ["Recordatorio por SMS (opcional)", "Marcar recordatorio enviado"],
-      ["Cada día 20:00", "Consultas pasadas sin confirmar"], ["Consultas pasadas sin confirmar", "Agrupar por despacho"], ["Agrupar por despacho", "Pedir confirmación al despacho"],
     ],
+  ));
+  save("05b-confirmar-asistencia.json", workflow("05b · Confirmación de asistencia por el despacho",
+    [note2, daily, getUnc, group, mailFirm],
+    [["Cada día 20:00", "Consultas pasadas sin confirmar"], ["Consultas pasadas sin confirmar", "Agrupar por despacho"], ["Agrupar por despacho", "Pedir confirmación al despacho"]],
   ));
 }
 

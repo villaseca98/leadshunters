@@ -8,8 +8,8 @@
         "height": 160,
         "color": 4
       },
-      "id": "3f9295a2-a52e-4029-9918-0a6b22f32a13",
-      "name": "Nota 9d44",
+      "id": "969313a5-b9b3-4bb8-aa62-c9b31d4853f7",
+      "name": "Nota 618d",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
@@ -30,7 +30,7 @@
           ]
         }
       },
-      "id": "c19a4769-27fd-4001-acc2-0d059d93d1f0",
+      "id": "41d58e2a-8c21-4bc0-9dcf-d4ac602475fc",
       "name": "Día 1 a las 9:00",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -42,35 +42,22 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{ $env.LH_API_URL }}/api/v1/billing",
+        "url": "={{ $('Config').first().json.LH_API_URL }}/api/v1/billing",
         "options": {},
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "x-api-key",
-              "value": "={{ $env.LH_API_KEY }}"
+              "value": "={{ $('Config').first().json.LH_API_KEY }}"
             }
           ]
         }
       },
-      "id": "5b701112-5106-4d7a-a780-0ce9a1d4d9b0",
+      "id": "12cecb1a-9883-4a6f-8018-2325f2c72160",
       "name": "Resultados del mes anterior",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        440,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const { month, clients } = $input.first().json;\nconst eur = n => (n ?? 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });\nconst [y, m] = month.split('-').map(Number);\nconst mes = new Date(Date.UTC(y, m - 1, 15)).toLocaleDateString('es-ES', { month: 'long', year: 'numeric', timeZone: 'UTC' });\nreturn clients.filter(c => c.email).map(c => ({ json: {\n  ...c, mes,\n  html: `<div style=\"font-family:Arial,sans-serif;font-size:14px;color:#0f172a\">\n<h2>Resultados de ${mes} · ${c.cliente}</h2>\n<table style=\"border-collapse:collapse\">\n<tr><td style=\"padding:6px 16px 6px 0;color:#64748b\">Personas interesadas (leads)</td><td><b>${c.leads}</b></td></tr>\n<tr><td style=\"padding:6px 16px 6px 0;color:#64748b\">Cualificadas para la LSO</td><td><b>${c.leads_cualificados}</b></td></tr>\n<tr><td style=\"padding:6px 16px 6px 0;color:#64748b\">Consultas agendadas</td><td><b>${c.citas_agendadas}</b></td></tr>\n<tr><td style=\"padding:6px 16px 6px 0;color:#64748b\">Consultas realizadas</td><td><b>${c.citas_asistidas}</b></td></tr>\n</table>\n<h3 style=\"margin-top:20px\">Importe del mes (sin IVA)</h3>\n<p>Cuota de marketing: ${eur(c.importe_fijo)}<br>Consultas realizadas: ${c.consultas_facturables} × ${eur(c.price_per_consultation)} = ${eur(c.importe_variable)}<br>\n<b>Total: ${eur(c.total)}</b></p>\n<p style=\"color:#64748b;font-size:12px\">Servicio de marketing y captación. No es un porcentaje de vuestros honorarios.</p></div>`,\n} }));"
-      },
-      "id": "c9c87df7-e7b2-4367-a643-dcd16e39ade7",
-      "name": "Informe por cliente",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
       "position": [
         660,
         300
@@ -78,7 +65,20 @@
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.EMAIL_FROM }}",
+        "jsCode": "const { month, clients } = $input.first().json;\nconst eur = n => (n ?? 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });\nconst [y, m] = month.split('-').map(Number);\nconst mes = new Date(Date.UTC(y, m - 1, 15)).toLocaleDateString('es-ES', { month: 'long', year: 'numeric', timeZone: 'UTC' });\nreturn clients.filter(c => c.email).map(c => ({ json: {\n  ...c, mes,\n  html: `<div style=\"font-family:Arial,sans-serif;font-size:14px;color:#0f172a\">\n<h2>Resultados de ${mes} · ${c.cliente}</h2>\n<table style=\"border-collapse:collapse\">\n<tr><td style=\"padding:6px 16px 6px 0;color:#64748b\">Personas interesadas (leads)</td><td><b>${c.leads}</b></td></tr>\n<tr><td style=\"padding:6px 16px 6px 0;color:#64748b\">Cualificadas para la LSO</td><td><b>${c.leads_cualificados}</b></td></tr>\n<tr><td style=\"padding:6px 16px 6px 0;color:#64748b\">Consultas agendadas</td><td><b>${c.citas_agendadas}</b></td></tr>\n<tr><td style=\"padding:6px 16px 6px 0;color:#64748b\">Consultas realizadas</td><td><b>${c.citas_asistidas}</b></td></tr>\n</table>\n<h3 style=\"margin-top:20px\">Importe del mes (sin IVA)</h3>\n<p>Cuota de marketing: ${eur(c.importe_fijo)}<br>Consultas realizadas: ${c.consultas_facturables} × ${eur(c.price_per_consultation)} = ${eur(c.importe_variable)}<br>\n<b>Total: ${eur(c.total)}</b></p>\n<p style=\"color:#64748b;font-size:12px\">Servicio de marketing y captación. No es un porcentaje de vuestros honorarios.</p></div>`,\n} }));"
+      },
+      "id": "7458449d-c1bc-49ae-869b-25d71b360f23",
+      "name": "Informe por cliente",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $('Config').first().json.EMAIL_FROM }}",
         "toEmail": "={{ $json.email }}",
         "subject": "=Leads Hunters · resultados de {{ $json.mes }}",
         "emailFormat": "html",
@@ -87,12 +87,12 @@
           "appendAttribution": false
         }
       },
-      "id": "0ff7ff17-7c1c-4c68-90a0-18ae3dbb618d",
+      "id": "d2864af7-4985-41b3-98ed-90b1fb453a7d",
       "name": "Enviar informe",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        880,
+        1100,
         300
       ],
       "onError": "continueRegularOutput"
@@ -101,34 +101,83 @@
       "parameters": {
         "jsCode": "const { month, clients } = $('Resultados del mes anterior').first().json;\nconst total = clients.reduce((a, c) => a + c.total, 0);\nconst lineas = clients.map(c => '• ' + c.cliente + ': ' + c.total.toLocaleString('es-ES') + ' € (' + c.citas_asistidas + ' consultas)').join('\\n');\nreturn [{ json: { month, total, lineas } }];"
       },
-      "id": "92ac4ab6-c7b5-4f3c-bfc1-abe7b798fff2",
+      "id": "fbe6ce71-8de5-435b-aad0-f1b2701c51c9",
       "name": "Total facturación",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1100,
+        1320,
         300
       ],
       "executeOnce": true
     },
     {
       "parameters": {
-        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
-        "text": "=💶 <b>Facturación {{ $json.month }}</b>: {{ $json.total.toLocaleString('es-ES') }} € + IVA\n{{ $json.lineas }}\n{{ $env.APP_URL }}/facturacion?mes={{ $json.month }}",
+        "chatId": "={{ $('Config').first().json.TELEGRAM_CHAT_ID }}",
+        "text": "=💶 <b>Facturación {{ $json.month }}</b>: {{ $json.total.toLocaleString('es-ES') }} € + IVA\n{{ $json.lineas }}\n{{ $('Config').first().json.APP_URL }}/facturacion?mes={{ $json.month }}",
         "additionalFields": {
           "parse_mode": "HTML",
           "appendAttribution": false
         }
       },
-      "id": "0e180fdb-8fe8-4794-ad53-c7afaf86af6a",
+      "id": "ecaf9e01-71c7-40fc-b1b7-abc2ae45178a",
       "name": "Resumen al dueño",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        1320,
+        1540,
         300
       ],
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6071423d-b491-4821-bdee-0dcfe768c416",
+              "name": "APP_URL",
+              "value": "https://app.tudominio.com",
+              "type": "string"
+            },
+            {
+              "id": "7d5688b0-6879-4949-a391-1cdd5bba2104",
+              "name": "EMAIL_FROM",
+              "value": "Leads Hunters <hola@tudominio.com>",
+              "type": "string"
+            },
+            {
+              "id": "c78a28a2-b256-4b28-87a1-ff84a4673c00",
+              "name": "LH_API_KEY",
+              "value": "PEGA_AQUI_LA_N8N_API_KEY_DE_LA_APP",
+              "type": "string"
+            },
+            {
+              "id": "d9347ef9-87e0-4338-b8e9-d66f188989e3",
+              "name": "LH_API_URL",
+              "value": "https://app.tudominio.com",
+              "type": "string"
+            },
+            {
+              "id": "336b18ac-5d6e-4067-8370-4d7573038d30",
+              "name": "TELEGRAM_CHAT_ID",
+              "value": "PEGA_AQUI_TU_CHAT_ID",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6edbe4b0-5a8a-42f3-a3d0-c8ba3d93ba1c",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        300
+      ]
     }
   ],
   "connections": {
@@ -136,7 +185,7 @@
       "main": [
         [
           {
-            "node": "Resultados del mes anterior",
+            "node": "Config",
             "type": "main",
             "index": 0
           }
@@ -181,6 +230,17 @@
         [
           {
             "node": "Resumen al dueño",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Resultados del mes anterior",
             "type": "main",
             "index": 0
           }

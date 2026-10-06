@@ -8,8 +8,8 @@
         "height": 300,
         "color": 4
       },
-      "id": "759f6bc1-5154-4461-8d88-44b177d48391",
-      "name": "Nota 4375",
+      "id": "d38cdbe3-eb1d-47a5-a628-5c8da2c8520c",
+      "name": "Nota 3baf",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
@@ -24,7 +24,7 @@
         "responseMode": "onReceived",
         "options": {}
       },
-      "id": "e33d1c58-89ad-4d28-bfc3-975a637d4be1",
+      "id": "656c55ee-a887-4c55-a1ea-5e8f5be3a466",
       "name": "Eventos de la app",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -32,18 +32,18 @@
         220,
         400
       ],
-      "webhookId": "c4b3d6af-bd47-4d70-b6df-3e848ecb901a"
+      "webhookId": "fa01ba59-53b5-4017-ab9d-70d9b5780f4a"
     },
     {
       "parameters": {
-        "jsCode": "const h = $input.first().json.headers || {};\nconst b = $input.first().json.body || {};\nif (h['x-api-key'] !== $env.LH_API_KEY) return [];\nreturn [{ json: { event_id: b.id, kind: b.kind, ...b.payload } }];"
+        "jsCode": "const h = $input.first().json.headers || {};\nconst b = $input.first().json.body || {};\nif (h['x-api-key'] !== $('Config').first().json.LH_API_KEY) return [];\nreturn [{ json: { event_id: b.id, kind: b.kind, ...b.payload } }];"
       },
-      "id": "ac846fdb-69fe-4b6d-b04e-bd016bd562ca",
+      "id": "18bac8e1-04d0-4393-87b7-222d925c4e3c",
       "name": "Comprobar clave",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        440,
+        660,
         400
       ]
     },
@@ -61,7 +61,7 @@
                 },
                 "conditions": [
                   {
-                    "id": "a1fb367d-0c51-4314-98df-392b36442d18",
+                    "id": "0181cb47-e105-4571-8f7d-0a2cbcc0ddb5",
                     "leftValue": "={{ $json.kind }}",
                     "rightValue": "lead.nuevo",
                     "operator": {
@@ -85,7 +85,7 @@
                 },
                 "conditions": [
                   {
-                    "id": "4094e61f-aa4b-43f6-8542-c562b65fa12d",
+                    "id": "4d01b71f-0a3c-4b65-9327-f8878c762e86",
                     "leftValue": "={{ $json.kind }}",
                     "rightValue": "cita.agendada",
                     "operator": {
@@ -109,7 +109,7 @@
                 },
                 "conditions": [
                   {
-                    "id": "8379cd45-c61d-4b4e-8d7d-287f1966b7ce",
+                    "id": "536b4dc6-2a5a-42b7-8149-3bd1d8689767",
                     "leftValue": "={{ $json.kind }}",
                     "rightValue": "cita.asistida",
                     "operator": {
@@ -133,7 +133,7 @@
                 },
                 "conditions": [
                   {
-                    "id": "191c0760-5b33-440a-a482-7a0dadfb0ff7",
+                    "id": "930087af-f933-4a1d-b5d3-ec910f846cf0",
                     "leftValue": "={{ $json.kind }}",
                     "rightValue": "cita.no_asistio",
                     "operator": {
@@ -157,7 +157,7 @@
                 },
                 "conditions": [
                   {
-                    "id": "3c2eb7cd-f206-4eb2-87a1-25b47600d5ec",
+                    "id": "348c0468-d938-4645-abbf-e8832783de3c",
                     "leftValue": "={{ $json.kind }}",
                     "rightValue": "prospecto.cliente",
                     "operator": {
@@ -175,37 +175,37 @@
         },
         "options": {}
       },
-      "id": "c754ed9d-e77b-4e37-b910-52b91e91e861",
+      "id": "1c5b4110-0627-4276-8d7d-fd11518fd145",
       "name": "Tipo de evento",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        660,
+        880,
         400
       ]
     },
     {
       "parameters": {
-        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
-        "text": "=🔥 <b>Nuevo lead · {{ $json.cliente }}</b>\n{{ $json.nombre }} · {{ $json.telefono }}\nDeuda: {{ $json.deuda ? $json.deuda.toLocaleString('es-ES') + ' €' : '¿?' }} · Acreedores: {{ $json.acreedores ?? '¿?' }} · {{ $json.cualificacion }}\nOrigen: {{ $json.origen }} {{ $json.campana || '' }}\n👉 Llama YA: {{ $env.APP_URL }}/cola",
+        "chatId": "={{ $('Config').first().json.TELEGRAM_CHAT_ID }}",
+        "text": "=🔥 <b>Nuevo lead · {{ $json.cliente }}</b>\n{{ $json.nombre }} · {{ $json.telefono }}\nDeuda: {{ $json.deuda ? $json.deuda.toLocaleString('es-ES') + ' €' : '¿?' }} · Acreedores: {{ $json.acreedores ?? '¿?' }} · {{ $json.cualificacion }}\nOrigen: {{ $json.origen }} {{ $json.campana || '' }}\n👉 Llama YA: {{ $('Config').first().json.APP_URL }}/cola",
         "additionalFields": {
           "parse_mode": "HTML",
           "appendAttribution": false
         }
       },
-      "id": "51555525-55d2-4365-a4f8-02f2ea61fc87",
+      "id": "1cff6059-9282-485f-9170-d0e34769c4ef",
       "name": "🔥 Nuevo lead al equipo",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        940,
+        1160,
         160
       ],
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.EMAIL_FROM }}",
+        "fromEmail": "={{ $('Config').first().json.EMAIL_FROM }}",
         "toEmail": "={{ $json.cliente_email }}",
         "subject": "=Nueva consulta: {{ $json.lead_nombre }} · {{ new Date($json.scheduled_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', dateStyle: 'full', timeStyle: 'short' }) }}",
         "emailFormat": "html",
@@ -214,12 +214,12 @@
           "appendAttribution": false
         }
       },
-      "id": "64d2745c-94fe-4b23-8fee-f697071c060e",
+      "id": "22661b56-2390-4cc1-982d-31f9535e877a",
       "name": "Email al despacho",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        940,
+        1160,
         340
       ],
       "onError": "continueRegularOutput"
@@ -235,7 +235,7 @@
           },
           "conditions": [
             {
-              "id": "b76bebba-4d80-4c7f-b48e-3f0ddd9c5598",
+              "id": "3b0c35bc-5cbe-4687-b34d-62bc5c59dbbd",
               "leftValue": "={{ !!$('Tipo de evento').item.json.lead_email }}",
               "rightValue": "",
               "operator": {
@@ -249,18 +249,18 @@
         },
         "options": {}
       },
-      "id": "c1c44c81-a7b3-44dc-bcf1-acf4987b021b",
+      "id": "32e4070d-8b64-495b-944d-d82569b12992",
       "name": "¿El lead tiene email?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1160,
+        1380,
         340
       ]
     },
     {
       "parameters": {
-        "fromEmail": "={{ $env.EMAIL_FROM }}",
+        "fromEmail": "={{ $('Config').first().json.EMAIL_FROM }}",
         "toEmail": "={{ $('Tipo de evento').item.json.lead_email }}",
         "subject": "=Tu consulta con {{ $('Tipo de evento').item.json.cliente }} está confirmada",
         "emailFormat": "html",
@@ -269,29 +269,29 @@
           "appendAttribution": false
         }
       },
-      "id": "d870d705-6dc9-411c-9c6f-d5dfaa7354c2",
+      "id": "43016ee6-4a10-4ce4-9d64-8135dbe7f1d8",
       "name": "Email de confirmación al lead",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        1380,
+        1600,
         280
       ],
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "from": "={{ $env.TWILIO_FROM }}",
+        "from": "={{ $('Config').first().json.TWILIO_FROM }}",
         "to": "={{ $('Tipo de evento').item.json.lead_telefono }}",
         "message": "=Hola, tu consulta con {{ $('Tipo de evento').item.json.cliente }} es el {{ new Date($('Tipo de evento').item.json.scheduled_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) }}. Te llamará un abogado especialista.",
         "options": {}
       },
-      "id": "40d0dbc3-f2b5-45d1-ab04-f71c86ca81b9",
+      "id": "17af97da-3174-47fe-afac-42b077501b58",
       "name": "SMS al lead (opcional)",
       "type": "n8n-nodes-base.twilio",
       "typeVersion": 1,
       "position": [
-        1380,
+        1600,
         460
       ],
       "disabled": true,
@@ -299,60 +299,109 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "chatId": "={{ $('Config').first().json.TELEGRAM_CHAT_ID }}",
         "text": "=✅ Consulta realizada · {{ $json.cliente }} · {{ $json.lead_nombre }} (confirmó: {{ $json.confirmed_by || 'equipo' }})",
         "additionalFields": {
           "parse_mode": "HTML",
           "appendAttribution": false
         }
       },
-      "id": "5e7a74df-54c6-48e3-ad13-83a03cdf1a78",
+      "id": "c04f2971-1a39-440a-89fd-06b1f05cffba",
       "name": "✅ Consulta realizada",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        940,
+        1160,
         540
       ],
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
-        "text": "=❌ No se presentó · {{ $json.cliente }} · {{ $json.lead_nombre }} · {{ $json.lead_telefono }}\nIntenta reagendar: {{ $env.APP_URL }}/leads/{{ $json.lead_id }}",
+        "chatId": "={{ $('Config').first().json.TELEGRAM_CHAT_ID }}",
+        "text": "=❌ No se presentó · {{ $json.cliente }} · {{ $json.lead_nombre }} · {{ $json.lead_telefono }}\nIntenta reagendar: {{ $('Config').first().json.APP_URL }}/leads/{{ $json.lead_id }}",
         "additionalFields": {
           "parse_mode": "HTML",
           "appendAttribution": false
         }
       },
-      "id": "ae1865ad-e817-4209-9f74-53bbb2563535",
+      "id": "989de027-3f6f-4ba4-b337-3f17185c279b",
       "name": "❌ No se presentó",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        940,
+        1160,
         700
       ],
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
-        "text": "=🎉 <b>Nuevo cliente:</b> {{ $json.nombre }}\nCompleta su ficha: {{ $env.APP_URL }}/clientes/{{ $json.client_id }}",
+        "chatId": "={{ $('Config').first().json.TELEGRAM_CHAT_ID }}",
+        "text": "=🎉 <b>Nuevo cliente:</b> {{ $json.nombre }}\nCompleta su ficha: {{ $('Config').first().json.APP_URL }}/clientes/{{ $json.client_id }}",
         "additionalFields": {
           "parse_mode": "HTML",
           "appendAttribution": false
         }
       },
-      "id": "1010d57f-0d94-4dd9-bb9e-641f571bc669",
+      "id": "525a48a2-ee65-4171-a6b4-d6871cdd869d",
       "name": "🎉 Nuevo cliente",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
       "position": [
-        940,
+        1160,
         860
       ],
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7b9e9446-a5c0-41a0-8080-802b485e75a8",
+              "name": "APP_URL",
+              "value": "https://app.tudominio.com",
+              "type": "string"
+            },
+            {
+              "id": "fef9773b-ecf2-4dbf-90f2-a222c58ad7fe",
+              "name": "EMAIL_FROM",
+              "value": "Leads Hunters <hola@tudominio.com>",
+              "type": "string"
+            },
+            {
+              "id": "33e68524-dc8d-4763-a421-a2b7b4fa7aae",
+              "name": "LH_API_KEY",
+              "value": "PEGA_AQUI_LA_N8N_API_KEY_DE_LA_APP",
+              "type": "string"
+            },
+            {
+              "id": "bbc656de-c8d3-441f-98ba-b49fad23adff",
+              "name": "TELEGRAM_CHAT_ID",
+              "value": "PEGA_AQUI_TU_CHAT_ID",
+              "type": "string"
+            },
+            {
+              "id": "5219709b-22bc-420a-b50c-e6d90cb9a7fc",
+              "name": "TWILIO_FROM",
+              "value": "+34000000000",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "91ef97b7-f8f8-4c45-b69b-d43ef5ab3afd",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        400
+      ]
     }
   ],
   "connections": {
@@ -360,7 +409,7 @@
       "main": [
         [
           {
-            "node": "Comprobar clave",
+            "node": "Config",
             "type": "main",
             "index": 0
           }
@@ -438,6 +487,17 @@
         [
           {
             "node": "Email de confirmación al lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Comprobar clave",
             "type": "main",
             "index": 0
           }

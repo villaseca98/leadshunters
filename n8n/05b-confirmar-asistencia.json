@@ -1,0 +1,194 @@
+{
+  "name": "05b · Confirmación de asistencia por el despacho",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 05b · Confirmación de asistencia\nCada día a las 20:00 manda a cada despacho un email con las consultas ya pasadas que siguen sin confirmar (sin confirmar no se facturan).",
+        "width": 540,
+        "height": 140,
+        "color": 4
+      },
+      "id": "318b4c35-8d28-40b4-aac8-4d0806a127d3",
+      "name": "Nota baf7",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        160,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 20
+            }
+          ]
+        }
+      },
+      "id": "f47d4f5d-9555-48e0-8bcb-4b66ec28aab4",
+      "name": "Cada día 20:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        220,
+        620
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Config').first().json.LH_API_URL }}/api/v1/consultations/unconfirmed",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $('Config').first().json.LH_API_KEY }}"
+            }
+          ]
+        }
+      },
+      "id": "804d0914-c652-4914-9258-f80a4c1e209e",
+      "name": "Consultas pasadas sin confirmar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        620
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Un email por despacho con todas sus consultas pendientes de confirmar\nconst porCliente = {};\nfor (const c of $input.first().json.consultations) {\n  if (!c.cliente_email) continue;\n  (porCliente[c.client_id] ??= { cliente: c.cliente, email: c.cliente_email, consultas: [] }).consultas.push(c);\n}\nreturn Object.values(porCliente).map(x => ({ json: {\n  ...x,\n  filas: x.consultas.map(c => '<li>' + c.lead_nombre + ' · ' + new Date(c.scheduled_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', dateStyle: 'medium', timeStyle: 'short' }) + ' · <a href=\"' + c.enlace_confirmar + '\">confirmar</a></li>').join(''),\n} }));"
+      },
+      "id": "95cc2a95-8ad6-4aee-b71c-84feae213419",
+      "name": "Agrupar por despacho",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        620
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $('Config').first().json.EMAIL_FROM }}",
+        "toEmail": "={{ $json.email }}",
+        "subject": "=¿Se realizaron estas consultas? ({{ $json.consultas.length }})",
+        "emailFormat": "html",
+        "html": "=<div style=\"font-family:Arial,sans-serif;font-size:14px\"><p>Hola,</p>\n<p>Estas consultas ya han pasado y aún no sabemos si se realizaron. Un clic en cada una nos basta:</p>\n<ul>{{ $json.filas }}</ul><p>¡Gracias!</p></div>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "782cc7a5-1079-417f-8a25-96b71c99cb3a",
+      "name": "Pedir confirmación al despacho",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1100,
+        620
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "485467ed-20e5-41b8-bca2-c7eb649f34bf",
+              "name": "EMAIL_FROM",
+              "value": "Leads Hunters <hola@tudominio.com>",
+              "type": "string"
+            },
+            {
+              "id": "65a75dc3-6496-452f-b68b-6219f6e7ada6",
+              "name": "LH_API_KEY",
+              "value": "PEGA_AQUI_LA_N8N_API_KEY_DE_LA_APP",
+              "type": "string"
+            },
+            {
+              "id": "0ebcbd90-5504-4685-9fd5-051646720c87",
+              "name": "LH_API_URL",
+              "value": "https://app.tudominio.com",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d997036d-8fbf-4814-b8bf-207f1e3a9d19",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        620
+      ]
+    }
+  ],
+  "connections": {
+    "Cada día 20:00": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultas pasadas sin confirmar": {
+      "main": [
+        [
+          {
+            "node": "Agrupar por despacho",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agrupar por despacho": {
+      "main": [
+        [
+          {
+            "node": "Pedir confirmación al despacho",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Consultas pasadas sin confirmar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
