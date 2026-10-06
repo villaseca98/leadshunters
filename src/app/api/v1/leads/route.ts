@@ -9,7 +9,7 @@ import { queryOne } from "@/lib/db";
 
 export async function POST(req: Request) {
   const key = apiKeyFrom(req);
-  const master = isMasterKey(key);
+  const master = await isMasterKey(key);
   const client = master ? null : await clientFromKey(key);
   if (!master && !client) return unauthorized();
 

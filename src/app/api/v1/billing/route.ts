@@ -5,7 +5,7 @@ import { billingForMonth } from "@/lib/services/billing";
 import { query } from "@/lib/db";
 
 export async function GET(req: Request) {
-  if (!isMasterKey(apiKeyFrom(req))) return unauthorized();
+  if (!(await isMasterKey(apiKeyFrom(req)))) return unauthorized();
   const u = new URL(req.url).searchParams;
   const month = u.get("month") ?? (() => {
     const d = new Date();

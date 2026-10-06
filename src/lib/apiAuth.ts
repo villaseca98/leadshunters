@@ -2,6 +2,7 @@ import "server-only";
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { queryOne } from "./db";
+import { secretSetting } from "./settings";
 
 /** Clave maestra para n8n: cabecera `x-api-key` o `Authorization: Bearer ...` */
 export function apiKeyFrom(req: Request): string | null {
@@ -18,9 +19,10 @@ function safeEq(a: string, b: string) {
   return x.length === y.length && timingSafeEqual(x, y);
 }
 
-export function isMasterKey(key: string | null) {
-  const master = process.env.N8N_API_KEY;
-  return !!key && !!master && master.length >= 16 && safeEq(key, master);
+export async function isMasterKey(key: string | null) {
+  if (!key) return false;
+  const master = await secretSetting("N8N_API_KEY");
+  return master.length >= 16 && safeEq(key, master);
 }
 
 export function unauthorized() {

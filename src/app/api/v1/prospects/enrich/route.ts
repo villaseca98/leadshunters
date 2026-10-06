@@ -21,7 +21,7 @@ const Schema = z.object({
 });
 
 export async function POST(req: Request) {
-  if (!isMasterKey(apiKeyFrom(req))) return unauthorized();
+  if (!(await isMasterKey(apiKeyFrom(req)))) return unauthorized();
   const parsed = Schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return bad(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
   const { id: rawId, place_id, html, ...rest } = parsed.data;

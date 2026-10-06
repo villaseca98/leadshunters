@@ -4,7 +4,7 @@ import { apiKeyFrom, isMasterKey, unauthorized } from "@/lib/apiAuth";
 import { query } from "@/lib/db";
 
 export async function GET(req: Request) {
-  if (!isMasterKey(apiKeyFrom(req))) return unauthorized();
+  if (!(await isMasterKey(apiKeyFrom(req)))) return unauthorized();
   const limit = Math.min(Number(new URL(req.url).searchParams.get("limit") ?? 25), 200);
   const rows = await query(
     `SELECT id, name, website, instagram, facebook, city FROM prospects

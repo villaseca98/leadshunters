@@ -5,7 +5,7 @@ import { query } from "@/lib/db";
 import { setConsultationStatus } from "@/lib/services/leads";
 
 export async function POST(req: Request, ctx: RouteContext<"/api/v1/consultations/[id]">) {
-  if (!isMasterKey(apiKeyFrom(req))) return unauthorized();
+  if (!(await isMasterKey(apiKeyFrom(req)))) return unauthorized();
   const { id } = await ctx.params;
   const body = (await req.json().catch(() => ({}))) as { reminder_sent?: boolean; status?: string };
   if (body.reminder_sent) await query("UPDATE consultations SET reminder_sent_at = now() WHERE id = $1", [id]);

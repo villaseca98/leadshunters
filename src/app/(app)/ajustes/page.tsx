@@ -3,17 +3,19 @@ import { query } from "@/lib/db";
 import { Badge, Card, Field, PageHeader, Table, Td, btn, input } from "@/components/ui";
 import { createUser, toggleUser } from "./actions";
 import { appUrl } from "@/lib/appUrl";
+import { isFromEnv, secretSetting } from "@/lib/settings";
 
 export default async function Ajustes() {
   const me = await requireUser();
   const users = await query<{ id: string; name: string; email: string; role: string; active: boolean }>("SELECT id, name, email, role, active FROM users ORDER BY created_at");
   const pending = await query<{ n: number }>("SELECT count(*)::int n FROM events WHERE delivered_at IS NULL");
   const base = appUrl() || "http://localhost:3000";
+  const apiKey = me.role === "admin" ? await secretSetting("N8N_API_KEY") : null;
   const checks: [string, boolean, string][] = [
-    ["N8N_API_KEY", !!process.env.N8N_API_KEY && process.env.N8N_API_KEY.length >= 16, "Clave que usa n8n para llamar a la API"],
+    ["N8N_API_KEY", true, isFromEnv("N8N_API_KEY") ? "Clave que usa n8n para llamar a la API" : "Clave que usa n8n para llamar a la API (generada por la app)"],
     ["N8N_EVENTS_WEBHOOK_URL", !!process.env.N8N_EVENTS_WEBHOOK_URL, "Webhook de n8n que recibe eventos (lead nuevo, cita agendada…)"],
     ["APP_URL", !!appUrl(), "URL pública de la app (enlaces de confirmación para los despachos)"],
-    ["SESSION_SECRET", !!process.env.SESSION_SECRET, "Firma de las sesiones"],
+    ["SESSION_SECRET", true, isFromEnv("SESSION_SECRET") ? "Firma de las sesiones" : "Firma de las sesiones (generada por la app)"],
   ];
   const endpoints = [
     ["POST", "/api/v1/prospects", "Alta de despachos desde Apify (Google Maps)"],
@@ -46,7 +48,11 @@ export default async function Ajustes() {
           </ul>
         </Card>
         <Card title="API para n8n">
-          <p className="mb-3 text-xs text-slate-500">Todas las llamadas llevan la cabecera <code>x-api-key: N8N_API_KEY</code>. Base: <code>{base}</code></p>
+          <p className="mb-3 text-xs text-slate-500">Todas las llamadas llevan la cabecera <code>x-api-key</code>. Copia estos dos datos en el nodo <b>Config</b> de cada flujo de n8n.</p>
+          <dl className="mb-4 space-y-2 text-xs">
+            <div><dt className="text-slate-500">Dirección de la app (LH_API_URL)</dt><dd className="mt-0.5 select-all break-all rounded-lg bg-slate-50 px-3 py-2 font-mono text-ink">{base}</dd></div>
+            {apiKey && <div><dt className="text-slate-500">Clave de la API (N8N_API_KEY)</dt><dd className="mt-0.5 select-all break-all rounded-lg bg-slate-50 px-3 py-2 font-mono text-ink">{apiKey}</dd></div>}
+          </dl>
           <ul className="space-y-1.5 text-xs">
             {endpoints.map(([m, p, d]) => (
               <li key={p} className="flex gap-2">

@@ -5,7 +5,7 @@ import { fromApifyItem, upsertProspect } from "@/lib/services/prospects";
 import { query } from "@/lib/db";
 
 export async function POST(req: Request) {
-  if (!isMasterKey(apiKeyFrom(req))) return unauthorized();
+  if (!(await isMasterKey(apiKeyFrom(req)))) return unauthorized();
   let body: unknown;
   try {
     body = await req.json();
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
 
 // GET /api/v1/prospects?status=a_llamar&min_score=60&limit=50 — para exportar a Sheets o CRM
 export async function GET(req: Request) {
-  if (!isMasterKey(apiKeyFrom(req))) return unauthorized();
+  if (!(await isMasterKey(apiKeyFrom(req)))) return unauthorized();
   const u = new URL(req.url).searchParams;
   const rows = await query(
     `SELECT id, name, city, province, phone, email, website, score, score_tier, status, call_hooks, created_at

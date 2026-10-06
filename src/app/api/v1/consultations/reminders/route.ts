@@ -4,7 +4,7 @@ import { apiKeyFrom, isMasterKey, unauthorized } from "@/lib/apiAuth";
 import { query } from "@/lib/db";
 
 export async function GET(req: Request) {
-  if (!isMasterKey(apiKeyFrom(req))) return unauthorized();
+  if (!(await isMasterKey(apiKeyFrom(req)))) return unauthorized();
   const hours = Math.min(Number(new URL(req.url).searchParams.get("hours") ?? 24), 168);
   const rows = await query(
     `SELECT co.id, co.scheduled_at, co.mode, l.full_name AS lead_nombre, l.phone AS lead_telefono, l.email AS lead_email,

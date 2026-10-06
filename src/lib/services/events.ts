@@ -1,5 +1,6 @@
 import "server-only";
 import { query } from "../db";
+import { secretSetting } from "../settings";
 
 export type EventKind =
   | "lead.nuevo"
@@ -21,7 +22,7 @@ export async function emitEvent(kind: EventKind, payload: Record<string, unknown
   try {
     const res = await fetch(url, {
       method: "POST",
-      headers: { "content-type": "application/json", "x-api-key": process.env.N8N_API_KEY ?? "" },
+      headers: { "content-type": "application/json", "x-api-key": await secretSetting("N8N_API_KEY") },
       body: JSON.stringify({ id: ev.id, kind, payload, sent_at: new Date().toISOString() }),
       signal: AbortSignal.timeout(5000),
     });

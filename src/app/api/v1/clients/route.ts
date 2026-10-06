@@ -4,7 +4,7 @@ import { apiKeyFrom, isMasterKey, unauthorized } from "@/lib/apiAuth";
 import { query } from "@/lib/db";
 
 export async function GET(req: Request) {
-  if (!isMasterKey(apiKeyFrom(req))) return unauthorized();
+  if (!(await isMasterKey(apiKeyFrom(req)))) return unauthorized();
   const rows = await query("SELECT id, name, status, notify_email, provinces FROM clients ORDER BY name");
   return NextResponse.json({ ok: true, clients: rows });
 }
