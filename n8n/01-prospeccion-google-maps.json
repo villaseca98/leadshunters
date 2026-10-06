@@ -8,8 +8,8 @@
         "height": 280,
         "color": 4
       },
-      "id": "5ae2292c-3f7e-4cf8-b6c7-6eb93d34b109",
-      "name": "Nota b4ff",
+      "id": "0fc6b5cb-81af-4db1-af16-fb27269d3f7c",
+      "name": "Nota 05ab",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
@@ -19,7 +19,7 @@
     },
     {
       "parameters": {},
-      "id": "b6981839-95b5-4cc4-8c97-cb5fd2e65cf3",
+      "id": "ac7a5af4-3750-4af5-9e19-19e683a515ac",
       "name": "Lanzar a mano",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
@@ -43,7 +43,7 @@
           ]
         }
       },
-      "id": "5aabff39-aaf7-4bf6-ad60-293b544ca6a1",
+      "id": "51b20af8-482c-4a9d-bd6c-95f9e63cf4c4",
       "name": "Cada lunes 7:00",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -57,25 +57,25 @@
         "assignments": {
           "assignments": [
             {
-              "id": "26ffe7e0-e6a4-4c09-be87-9b5cf57e7b1e",
+              "id": "7899cd21-da46-4c60-a091-51f42d75b0e6",
               "name": "busquedas",
               "type": "array",
               "value": "[\"abogados segunda oportunidad\", \"abogado ley de segunda oportunidad\", \"abogados cancelar deudas\", \"abogado concurso de acreedores persona física\"]"
             },
             {
-              "id": "2a6bdc1f-8e5d-4ffb-a731-6f54f8c13913",
+              "id": "eb8b39dd-b450-44dc-a671-095f41298269",
               "name": "ciudades",
               "type": "array",
               "value": "[\"Madrid\", \"Barcelona\", \"Valencia\", \"Sevilla\", \"Málaga\", \"Alicante\", \"Murcia\", \"Zaragoza\", \"Bilbao\", \"Palma\"]"
             },
             {
-              "id": "7a39ed1a-16d0-4306-a354-f402deabce08",
+              "id": "bd65bc5b-76c2-46f4-a522-af6cbd8f9373",
               "name": "maxPorBusqueda",
               "type": "number",
               "value": 30
             },
             {
-              "id": "ba4b405b-5f12-4e9d-875c-809927ddaddd",
+              "id": "34dfccec-def8-4108-ae01-442d07b15181",
               "name": "analizarInstagram",
               "type": "boolean",
               "value": true
@@ -84,7 +84,7 @@
         },
         "options": {}
       },
-      "id": "c942f3a8-811b-476a-9e37-c21393ba0acf",
+      "id": "22cd2a4a-ce32-49f5-a89a-760429d17b68",
       "name": "Configuración",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -97,7 +97,7 @@
       "parameters": {
         "jsCode": "// Combina cada búsqueda con cada ciudad: \"abogados segunda oportunidad Valencia\"\nconst c = $input.first().json;\nconst busquedas = [];\nfor (const ciudad of c.ciudades) for (const b of c.busquedas) busquedas.push(`${b} ${ciudad}`);\nreturn [{ json: {\n  searchStringsArray: busquedas,\n  maxCrawledPlacesPerSearch: c.maxPorBusqueda,\n  language: \"es\",\n  countryCode: \"es\",\n  skipClosedPlaces: true,\n  scrapeContacts: true,\n  scrapePlaceDetailPage: false,\n} }];"
       },
-      "id": "89f175af-23e5-49d6-9fcd-e7d01f926774",
+      "id": "521cd4e8-0a06-4436-a8d2-7193578424cb",
       "name": "Preparar búsquedas",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -109,15 +109,15 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://api.apify.com/v2/acts/compass~crawler-google-places/run-sync-get-dataset-items?token={{ $('Config').first().json.APIFY_TOKEN }}&timeout=900",
+        "url": "=https://api.apify.com/v2/acts/compass~crawler-google-places/runs?token={{ $('Config').first().json.APIFY_TOKEN }}",
         "options": {
-          "timeout": 900000
+          "timeout": 60000
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json) }}"
       },
-      "id": "b773576e-5272-474d-9798-f2fb19b09623",
+      "id": "95ffcffa-b34f-459a-83d5-f8237f8f40a2",
       "name": "Apify · Google Maps",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -128,9 +128,77 @@
     },
     {
       "parameters": {
+        "method": "GET",
+        "url": "=https://api.apify.com/v2/actor-runs/{{ $json.data.id }}?token={{ $('Config').first().json.APIFY_TOKEN }}&waitForFinish=60",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "id": "f0bcd4be-c227-426a-97dc-87b0cb20e65b",
+      "name": "Apify · Google Maps · esperar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0a92f5d3-15b5-4dba-9518-0554266e4c19",
+              "leftValue": "={{ ['READY', 'RUNNING'].includes($json.data?.status) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c850d1b7-73bd-435b-81f8-052cb6c13420",
+      "name": "Apify · Google Maps · ¿sigue?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1540,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.apify.com/v2/datasets/{{ $json.data.defaultDatasetId }}/items?token={{ $('Config').first().json.APIFY_TOKEN }}&clean=true",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "07203fd0-b195-4ef1-94da-3b3be432f586",
+      "name": "Apify · Google Maps · resultados",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        300
+      ]
+    },
+    {
+      "parameters": {
         "jsCode": "// Manda todos los despachos a la app en una sola llamada (la app limpia, deduplica y puntúa)\nconst items = $input.all().map(i => i.json).filter(x => x && (x.title || x.name));\nreturn [{ json: { items, search_term: $('Configuración').first().json.busquedas.join(' | ') } }];"
       },
-      "id": "dc707e28-0262-4abe-a443-5dbbd8083454",
+      "id": "4c8aa2fb-e914-4455-bf20-787b94441bdc",
       "name": "Agrupar resultados",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -159,7 +227,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json) }}"
       },
-      "id": "61a1ce80-c783-469c-bcf2-cb2bafa8487c",
+      "id": "20598ea5-1cd7-4715-a3f4-9e41abe16060",
       "name": "Enviar despachos a la app",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -192,7 +260,7 @@
           ]
         }
       },
-      "id": "d594c463-cd87-45aa-9a33-30df9ab718c4",
+      "id": "199c87ce-47f3-47e9-95f2-49c9cab9403c",
       "name": "Despachos sin analizar",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -205,7 +273,7 @@
       "parameters": {
         "jsCode": "return $input.first().json.prospects.map(p => ({ json: p }));"
       },
-      "id": "b56065a6-3809-4e84-84d0-756b2d6d273f",
+      "id": "f3108162-4d8c-4d62-91f9-864fcc3da29c",
       "name": "Separar despachos",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -242,7 +310,7 @@
           ]
         }
       },
-      "id": "ae516a6f-a2a5-4972-9000-14d53c3cbcf2",
+      "id": "e6597ddf-b345-4056-a7c2-2e4f166541f7",
       "name": "Descargar web",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -294,7 +362,7 @@
           ]
         }
       },
-      "id": "63604233-1a50-4ce0-bf9a-15ae8fe6f31a",
+      "id": "5257714a-0390-4ebb-9b0b-6522aefc43eb",
       "name": "Meta · Biblioteca de anuncios",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -309,7 +377,7 @@
       "parameters": {
         "jsCode": "// Une, para cada despacho, la web descargada y los anuncios encontrados en Meta.\n// La app analiza el HTML (redes, email, formulario, WhatsApp, píxel, si habla de Segunda Oportunidad).\nconst quitarAcentos = s => (s || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\nconst palabras = s => quitarAcentos(s).split(/[^a-z0-9]+/).filter(w => w.length > 3 && !['abogados','abogado','despacho','bufete','asociados'].includes(w));\n\nreturn $input.all().map((it, i) => {\n  const p = $('Separar despachos').all()[i].json;\n  const webItem = $('Descargar web').all()[i]?.json ?? {};\n  const html = typeof webItem.html === 'string' ? webItem.html.slice(0, 400000) : (typeof webItem.data === 'string' ? webItem.data.slice(0, 400000) : null);\n\n  const out = { id: p.id };\n  if (p.website && html) out.html = html;\n\n  // Anuncios: nos quedamos con los de páginas cuyo nombre se parece al del despacho\n  const ads = Array.isArray(it.json.data) ? it.json.data : null;\n  if (ads) {\n    const claves = palabras(p.name);\n    const suyos = ads.filter(a => {\n      const pn = quitarAcentos(a.page_name);\n      return claves.length ? claves.some(w => pn.includes(w)) : false;\n    });\n    out.meta_ads_active = suyos.length > 0;\n    out.meta_ads_count = suyos.length;\n    out.meta_ads_lso = suyos.some(a => /segunda oportunidad|deuda|insolven|concurso/i.test((a.ad_creative_bodies || []).join(' ')));\n  }\n  return { json: out };\n});"
       },
-      "id": "524e650a-69a3-465f-9764-8047fd48f2a8",
+      "id": "6069cc62-d52b-4209-892c-748e2d48eead",
       "name": "Juntar análisis",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -338,7 +406,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json) }}"
       },
-      "id": "c232fcd2-5500-4a6f-8a26-1206c2ac968f",
+      "id": "b0d4db63-e313-4385-bc17-024503dfc39f",
       "name": "Enviar análisis a la app",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -352,7 +420,7 @@
       "parameters": {
         "jsCode": "// Junta los usuarios de Instagram (de Google Maps o detectados en la web) en una sola llamada a Apify\nif (!$('Configuración').first().json.analizarInstagram) return [{ json: { usuarios: [], porUsuario: {} } }];\nconst usuarioDe = (url) => {\n  const m = (url || '').match(/instagram\\.com\\/([A-Za-z0-9_.]+)/i);\n  if (!m) return null;\n  const u = m[1].toLowerCase().replace(/\\.$/, '');\n  return ['p', 'reel', 'reels', 'explore', 'stories', 'accounts'].includes(u) ? null : u;\n};\nconst porUsuario = {};\n$('Separar despachos').all().forEach((it, i) => {\n  const detectado = $('Enviar análisis a la app').all()[i]?.json?.detected?.instagram;\n  const u = usuarioDe(it.json.instagram) || usuarioDe(detectado);\n  if (u) porUsuario[u] = it.json.id;\n});\nreturn [{ json: { usuarios: Object.keys(porUsuario), porUsuario } }];"
       },
-      "id": "5d409e6d-553b-4f70-96aa-feb29998ceb0",
+      "id": "d43ea6b5-56d6-43ca-b783-5ae55a49dd91",
       "name": "Usuarios de Instagram",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -372,7 +440,7 @@
           },
           "conditions": [
             {
-              "id": "2f951a2f-d434-4f93-871e-63ed94cc0506",
+              "id": "128dede0-4e9b-4f35-9e3b-27deb33270b8",
               "leftValue": "={{ $json.usuarios.length > 0 }}",
               "rightValue": "",
               "operator": {
@@ -386,7 +454,7 @@
         },
         "options": {}
       },
-      "id": "de9c15bb-f3c5-4cd8-b06d-eeb2b632df62",
+      "id": "5ce69b04-f9ab-4cd1-85ec-98de91d8a49e",
       "name": "¿Hay Instagram?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -398,15 +466,15 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://api.apify.com/v2/acts/apify~instagram-profile-scraper/run-sync-get-dataset-items?token={{ $('Config').first().json.APIFY_TOKEN }}&timeout=600",
+        "url": "=https://api.apify.com/v2/acts/apify~instagram-profile-scraper/runs?token={{ $('Config').first().json.APIFY_TOKEN }}",
         "options": {
-          "timeout": 600000
+          "timeout": 60000
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ usernames: $json.usuarios }) }}"
       },
-      "id": "32b00e0f-6ba7-40c8-86b2-d28d9672fc84",
+      "id": "52412ec3-02f6-40f6-8c82-9a10b8214462",
       "name": "Apify · Perfiles de Instagram",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -418,9 +486,79 @@
     },
     {
       "parameters": {
+        "method": "GET",
+        "url": "=https://api.apify.com/v2/actor-runs/{{ $json.data.id }}?token={{ $('Config').first().json.APIFY_TOKEN }}&waitForFinish=60",
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "id": "753ecb47-1098-494f-930d-9853b03c4e3d",
+      "name": "Apify · Perfiles de Instagram · esperar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3740,
+        380
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "bdc138fe-94c5-4770-b4c8-81a20d03ae45",
+              "leftValue": "={{ ['READY', 'RUNNING'].includes($json.data?.status) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "beb4fa38-7f4f-446c-86d2-7b6ce738c4a6",
+      "name": "Apify · Perfiles de Instagram · ¿sigue?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3960,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.apify.com/v2/datasets/{{ $json.data.defaultDatasetId }}/items?token={{ $('Config').first().json.APIFY_TOKEN }}&clean=true",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "053862e8-bb30-4877-b82c-e59a9625bce5",
+      "name": "Apify · Perfiles de Instagram · resultados",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4180,
+        200
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
         "jsCode": "const porUsuario = $('Usuarios de Instagram').first().json.porUsuario;\nconst hoy = Date.now();\nreturn $input.all()\n  .map(i => i.json)\n  .filter(p => p && p.username && porUsuario[p.username.toLowerCase()])\n  .map(p => {\n    const ultima = (p.latestPosts || []).map(x => x.timestamp).filter(Boolean).sort().at(-1);\n    return { json: {\n      id: porUsuario[p.username.toLowerCase()],\n      instagram: 'https://www.instagram.com/' + p.username,\n      instagram_followers: p.followersCount ?? null,\n      instagram_days_since_post: ultima ? Math.round((hoy - Date.parse(ultima)) / 864e5) : null,\n    } };\n  });"
       },
-      "id": "5f985e1a-dc9b-4b0b-8adf-ecb71935b1d6",
+      "id": "bc7a8e4a-ab4b-438e-bf46-5e03553a5c9a",
       "name": "Datos de Instagram",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -447,7 +585,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json) }}"
       },
-      "id": "57737fa2-9b41-484b-92c4-72254d77d428",
+      "id": "63e6b600-c414-401b-a686-0a350ac51e15",
       "name": "Enviar Instagram a la app",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -461,7 +599,7 @@
       "parameters": {
         "jsCode": "const r = $('Enviar despachos a la app').first().json;\nreturn [{ json: { nuevos: r.created, actualizados: r.updated, descartados: r.skipped, analizados: $('Separar despachos').all().length } }];"
       },
-      "id": "e83e5d3d-8db3-45a9-ad4e-5d9d04482e81",
+      "id": "1b76c427-7ad9-4342-899e-6bad3db14a4f",
       "name": "Resumen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -493,7 +631,7 @@
           ]
         }
       },
-      "id": "c9b5ce44-c931-4e1f-9f27-1e65db6ec985",
+      "id": "01b3ad28-3449-4ba4-81ea-21b83b963d59",
       "name": "Avisar por WhatsApp",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -510,43 +648,43 @@
         "assignments": {
           "assignments": [
             {
-              "id": "a02e4127-6001-4577-88fe-ed0e6b8968bc",
+              "id": "0d061bdf-f271-4a26-a18b-993e213793e4",
               "name": "APIFY_TOKEN",
               "value": "PEGA_AQUI_TU_TOKEN_DE_APIFY",
               "type": "string"
             },
             {
-              "id": "7e48130b-f1aa-4ad0-b825-eea14ef26448",
+              "id": "c2c01b11-b929-4bed-8198-cfe03b05ea0c",
               "name": "APP_URL",
               "value": "https://app.tudominio.com",
               "type": "string"
             },
             {
-              "id": "b2581d58-b24a-474a-b7f2-8b64ed0bbcc3",
+              "id": "d83d3f33-55ee-41e5-bc46-01b3772f2664",
               "name": "LH_API_KEY",
               "value": "PEGA_AQUI_LA_N8N_API_KEY_DE_LA_APP",
               "type": "string"
             },
             {
-              "id": "63715475-5c74-4859-8895-1bfb9026fb07",
+              "id": "7cfbe9b2-d281-4bb0-9ae4-3af15a7f2a62",
               "name": "LH_API_URL",
               "value": "https://app.tudominio.com",
               "type": "string"
             },
             {
-              "id": "ddd2569c-009a-4b8f-870e-3579b82d813e",
+              "id": "f5d3a0e2-ec49-4937-be04-49d37fd5de9e",
               "name": "META_ADS_LIBRARY_TOKEN",
               "value": "PEGA_AQUI_TU_TOKEN_DE_META",
               "type": "string"
             },
             {
-              "id": "de61527c-f815-4ac9-bcab-13fc4b38e000",
+              "id": "8c75c66c-0090-413e-a51a-dcb8ba896238",
               "name": "WHATSAPP_APIKEY",
               "value": "PEGA_AQUI_TU_APIKEY_DE_CALLMEBOT",
               "type": "string"
             },
             {
-              "id": "d6cfb185-a093-4f0a-b4a8-6e59ed2c91a7",
+              "id": "f7ecd952-5430-4e7e-b1a0-4046df4fa86f",
               "name": "WHATSAPP_PHONE",
               "value": "+34600000000",
               "type": "string"
@@ -555,7 +693,7 @@
         },
         "options": {}
       },
-      "id": "229c8c8a-4214-4f3d-8bd6-576d4f634820",
+      "id": "c9ad2531-320c-48ea-aa27-20d0a82806c5",
       "name": "Config",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -611,6 +749,46 @@
       ]
     },
     "Apify · Google Maps": {
+      "main": [
+        [
+          {
+            "node": "Apify · Google Maps · esperar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify · Google Maps · esperar": {
+      "main": [
+        [
+          {
+            "node": "Apify · Google Maps · ¿sigue?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify · Google Maps · ¿sigue?": {
+      "main": [
+        [
+          {
+            "node": "Apify · Google Maps · esperar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Apify · Google Maps · resultados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify · Google Maps · resultados": {
       "main": [
         [
           {
@@ -739,6 +917,46 @@
       ]
     },
     "Apify · Perfiles de Instagram": {
+      "main": [
+        [
+          {
+            "node": "Apify · Perfiles de Instagram · esperar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify · Perfiles de Instagram · esperar": {
+      "main": [
+        [
+          {
+            "node": "Apify · Perfiles de Instagram · ¿sigue?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify · Perfiles de Instagram · ¿sigue?": {
+      "main": [
+        [
+          {
+            "node": "Apify · Perfiles de Instagram · esperar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Apify · Perfiles de Instagram · resultados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify · Perfiles de Instagram · resultados": {
       "main": [
         [
           {

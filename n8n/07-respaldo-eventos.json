@@ -8,8 +8,8 @@
         "height": 150,
         "color": 4
       },
-      "id": "1d4d5675-287c-4f9f-b11c-cbe269ca94ff",
-      "name": "Nota 06ee",
+      "id": "0cb3faa4-8cc3-4ff6-82fa-fb9ea8e3db42",
+      "name": "Nota e914",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
@@ -28,7 +28,7 @@
           ]
         }
       },
-      "id": "99b59054-daaa-432c-824f-0a3df279abb9",
+      "id": "f18405c0-14ec-40d5-97b3-0e0828266249",
       "name": "Cada 10 minutos",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -61,7 +61,7 @@
           ]
         }
       },
-      "id": "54c6b5b6-2fa4-40ca-b1b8-cea3be333aca",
+      "id": "41468f00-1e03-4aac-a909-5d3a807473ea",
       "name": "Eventos pendientes",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -74,7 +74,7 @@
       "parameters": {
         "jsCode": "// Solo reenviamos eventos con más de 2 minutos (los recientes los está entregando la app)\nconst limite = Date.now() - 2 * 60 * 1000;\nreturn $input.first().json.events.filter(e => Date.parse(e.created_at) < limite).map(e => ({ json: e }));"
       },
-      "id": "8999df09-3c8f-479e-ae2f-1b49fb8b0ae7",
+      "id": "dd9df78e-53a9-456b-805b-11660b6ff638",
       "name": "Separar eventos",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -101,7 +101,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ id: $json.id, kind: $json.kind, payload: $json.payload, sent_at: new Date().toISOString() }) }}"
       },
-      "id": "6f5311a0-4f91-454f-b80f-11bab5e69921",
+      "id": "e7a42d60-955b-40e6-84b7-68ce1f1ede69",
       "name": "Reenviar al flujo 04",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -115,7 +115,7 @@
       "parameters": {
         "jsCode": "const ids = $('Separar eventos').all().map(i => i.json.id);\nreturn ids.length ? [{ json: { ids } }] : [];"
       },
-      "id": "92dd247e-7d99-4f9e-a833-82d68fa447cd",
+      "id": "8f65f282-2a93-4490-b3a7-db26668f5e0a",
       "name": "IDs entregados",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -143,7 +143,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json) }}"
       },
-      "id": "c69b9adf-23d4-484b-8cc6-7c7af7d4b879",
+      "id": "c23921ad-6878-48a0-8ecc-1ec49e7784d0",
       "name": "Marcar como entregados",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -159,19 +159,19 @@
         "assignments": {
           "assignments": [
             {
-              "id": "caba62c0-3dc3-47a1-83a5-ab6a683e3a9e",
+              "id": "6a07055c-3e3c-47bb-8bc1-c492b0f93c1d",
               "name": "LH_API_KEY",
               "value": "PEGA_AQUI_LA_N8N_API_KEY_DE_LA_APP",
               "type": "string"
             },
             {
-              "id": "f6b8f64b-72d0-415a-90c1-0fb3cb004e78",
+              "id": "69a2859a-99ca-40f7-8c6d-aa48a832676c",
               "name": "LH_API_URL",
               "value": "https://app.tudominio.com",
               "type": "string"
             },
             {
-              "id": "277f193b-3f79-439a-bbb9-0b8158e50716",
+              "id": "0d71d81c-db68-4c70-9d05-ff713c4cccd2",
               "name": "N8N_EVENTS_WEBHOOK_URL",
               "value": "https://TU-N8N/webhook/leads-hunters-eventos",
               "type": "string"
@@ -180,7 +180,7 @@
         },
         "options": {}
       },
-      "id": "d7fbe2b2-6ed6-4e1f-b3b2-0f9b05432852",
+      "id": "ee690c7b-4bee-42ff-8d95-30e47d4f0f35",
       "name": "Config",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,

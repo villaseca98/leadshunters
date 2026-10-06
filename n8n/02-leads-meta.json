@@ -8,8 +8,8 @@
         "height": 220,
         "color": 4
       },
-      "id": "fc6a1c56-3f7b-409f-a0a0-39f5fdee3265",
-      "name": "Nota 65e6",
+      "id": "594d997d-ae10-418a-8d9a-fbe704e5857e",
+      "name": "Nota a1c2",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
@@ -32,7 +32,7 @@
         },
         "options": {}
       },
-      "id": "be84af3d-ec1f-4717-ac9c-43bfbcc1f603",
+      "id": "eaa1711d-e198-42a9-a009-49e29e307696",
       "name": "Meta · Nuevo lead",
       "type": "n8n-nodes-base.facebookLeadAdsTrigger",
       "typeVersion": 1,
@@ -40,13 +40,13 @@
         220,
         300
       ],
-      "webhookId": "7fd79bba-be35-4386-ba23-d135b49532d9"
+      "webhookId": "864a734f-0d8f-40dc-bbe1-25ef4b2693ae"
     },
     {
       "parameters": {
         "jsCode": "// Convierte el lead de Meta al formato de la app. Las preguntas del formulario se mandan tal cual\n// en \"answers\": la app reconoce deuda, acreedores, ingresos, provincia, etc. por palabras clave.\nreturn $input.all().map(({ json: l }) => {\n  let answers = {};\n  if (Array.isArray(l.field_data)) for (const f of l.field_data) answers[f.name] = Array.isArray(f.values) ? f.values.join(', ') : f.values;\n  else if (l.data && typeof l.data === 'object') answers = { ...l.data };\n  else for (const [k, v] of Object.entries(l)) if (typeof v !== 'object' && !/^[A-Z0-9_]+$/.test(k)) answers[k] = v; // sin los campos del nodo Config\n  const formId = l.form?.id ?? l.form_id ?? null;\n  return { json: {\n    source: 'meta',\n    form_id: formId ? String(formId) : undefined,\n    external_id: String(l.id ?? l.leadgen_id ?? ''),\n    campaign: l.campaign?.name ?? l.campaign_name ?? null,\n    ad_name: l.ad?.name ?? l.ad_name ?? null,\n    consent_at: l.created_time ?? new Date().toISOString(),\n    consent_text: 'Formulario de Meta Lead Ads' + (l.form?.name ? ' «' + l.form.name + '»' : ''),\n    answers,\n  } };\n});"
       },
-      "id": "f7524932-f3c5-4556-af29-4e89f90b8354",
+      "id": "fc50ca79-cabc-47e7-9f7f-9bae7bdb64fa",
       "name": "Preparar lead",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -75,7 +75,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json) }}"
       },
-      "id": "f2b9790e-cb68-436b-b892-caa73e08731c",
+      "id": "af12d3a9-09b4-4351-a90d-d82b025b5552",
       "name": "Enviar lead a la app",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -108,7 +108,7 @@
           ]
         }
       },
-      "id": "f5034658-bf40-4701-8f12-04e3eeba7795",
+      "id": "89af3356-5350-46da-b372-a0056d971e83",
       "name": "Avisar si falla",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -125,25 +125,25 @@
         "assignments": {
           "assignments": [
             {
-              "id": "a1866bca-b301-4a93-8043-d7721d797287",
+              "id": "8aba3702-e487-45d1-83ad-db92c7c293f3",
               "name": "LH_API_KEY",
               "value": "PEGA_AQUI_LA_N8N_API_KEY_DE_LA_APP",
               "type": "string"
             },
             {
-              "id": "aec11b34-5eff-4311-9802-48ef2c813e3d",
+              "id": "54d9eb2b-5972-41b6-91a2-7357911779d7",
               "name": "LH_API_URL",
               "value": "https://app.tudominio.com",
               "type": "string"
             },
             {
-              "id": "e2b96732-e46f-4c8d-a270-ebadbd1f8cbf",
+              "id": "f27a2789-6960-4281-91ff-e77d17b4ee92",
               "name": "WHATSAPP_APIKEY",
               "value": "PEGA_AQUI_TU_APIKEY_DE_CALLMEBOT",
               "type": "string"
             },
             {
-              "id": "cd83f401-f317-4f2a-b245-8ac705eb5d69",
+              "id": "4198f631-8415-42da-9dfe-9979d8b190db",
               "name": "WHATSAPP_PHONE",
               "value": "+34600000000",
               "type": "string"
@@ -152,7 +152,7 @@
         },
         "options": {}
       },
-      "id": "fc9934ad-298e-4871-a9e1-6ea9b47ade95",
+      "id": "b2a17a30-58cf-4600-b386-cec73f432cbf",
       "name": "Config",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,

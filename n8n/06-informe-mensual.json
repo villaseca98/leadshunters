@@ -8,8 +8,8 @@
         "height": 160,
         "color": 4
       },
-      "id": "13c39ecf-01a5-4763-86f8-10b33817f574",
-      "name": "Nota 7e58",
+      "id": "35618ff1-ed96-48c8-9391-9dd94d55d9e7",
+      "name": "Nota 0fc5",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
@@ -30,7 +30,7 @@
           ]
         }
       },
-      "id": "6e0572ff-e180-4e06-8b45-92dcf6a6aa3e",
+      "id": "0f451ea0-4289-49d9-99bb-aa5412844207",
       "name": "Día 1 a las 9:00",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -54,7 +54,7 @@
           ]
         }
       },
-      "id": "9ebe5bed-e2cd-44b6-91cc-e147b90190ad",
+      "id": "72bf5cc6-76c0-43d2-8fa7-7931b75b7fa8",
       "name": "Resultados del mes anterior",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -67,7 +67,7 @@
       "parameters": {
         "jsCode": "const { month, clients } = $input.first().json;\nconst eur = n => (n ?? 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });\nconst [y, m] = month.split('-').map(Number);\nconst mes = new Date(Date.UTC(y, m - 1, 15)).toLocaleDateString('es-ES', { month: 'long', year: 'numeric', timeZone: 'UTC' });\nreturn clients.filter(c => c.email).map(c => ({ json: {\n  ...c, mes,\n  html: `<div style=\"font-family:Arial,sans-serif;font-size:14px;color:#0f172a\">\n<h2>Resultados de ${mes} · ${c.cliente}</h2>\n<table style=\"border-collapse:collapse\">\n<tr><td style=\"padding:6px 16px 6px 0;color:#64748b\">Personas interesadas (leads)</td><td><b>${c.leads}</b></td></tr>\n<tr><td style=\"padding:6px 16px 6px 0;color:#64748b\">Cualificadas para la LSO</td><td><b>${c.leads_cualificados}</b></td></tr>\n<tr><td style=\"padding:6px 16px 6px 0;color:#64748b\">Consultas agendadas</td><td><b>${c.citas_agendadas}</b></td></tr>\n<tr><td style=\"padding:6px 16px 6px 0;color:#64748b\">Consultas realizadas</td><td><b>${c.citas_asistidas}</b></td></tr>\n</table>\n<h3 style=\"margin-top:20px\">Importe del mes (sin IVA)</h3>\n<p>Cuota de marketing: ${eur(c.importe_fijo)}<br>Consultas realizadas: ${c.consultas_facturables} × ${eur(c.price_per_consultation)} = ${eur(c.importe_variable)}<br>\n<b>Total: ${eur(c.total)}</b></p>\n<p style=\"color:#64748b;font-size:12px\">Servicio de marketing y captación. No es un porcentaje de vuestros honorarios.</p></div>`,\n} }));"
       },
-      "id": "608e86df-9e44-48fa-8782-9debcb16b98c",
+      "id": "7547f4cb-55c7-499e-b223-f2f1a45bc5f6",
       "name": "Informe por cliente",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -87,7 +87,7 @@
           "appendAttribution": false
         }
       },
-      "id": "f5afba55-31bd-46ed-9093-1b7e57fa1c0a",
+      "id": "b6134a91-88a0-4a0f-8fa5-7b35b692c41c",
       "name": "Enviar informe",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -101,7 +101,7 @@
       "parameters": {
         "jsCode": "const { month, clients } = $('Resultados del mes anterior').first().json;\nconst total = clients.reduce((a, c) => a + c.total, 0);\nconst lineas = clients.map(c => '• ' + c.cliente + ': ' + c.total.toLocaleString('es-ES') + ' € (' + c.citas_asistidas + ' consultas)').join('\\n');\nreturn [{ json: { month, total, lineas } }];"
       },
-      "id": "02faef76-b6f2-484a-9ed5-5b63bf02aa9e",
+      "id": "2a9f682d-ada9-440a-8903-82a418e97cdc",
       "name": "Total facturación",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -134,7 +134,7 @@
           ]
         }
       },
-      "id": "ef615410-b142-42c7-8fa7-736bf4e94b74",
+      "id": "feb36c59-24f1-422a-9ea9-cdb87b1bbdea",
       "name": "Resumen al dueño",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -151,37 +151,37 @@
         "assignments": {
           "assignments": [
             {
-              "id": "5f35eccb-8e87-418c-9757-64d9921e0477",
+              "id": "8b7dab4c-47ad-4a7f-b99b-d3f00d277901",
               "name": "APP_URL",
               "value": "https://app.tudominio.com",
               "type": "string"
             },
             {
-              "id": "b1b134aa-b20c-4b9c-8904-a3f02abc720f",
+              "id": "69563369-57da-4b9b-96e4-0ed0a69900e2",
               "name": "EMAIL_FROM",
               "value": "Leads Hunters <hola@tudominio.com>",
               "type": "string"
             },
             {
-              "id": "826347c6-ed91-4ad5-9b52-da843fec18ab",
+              "id": "e241bb67-05c9-4e3f-9732-3a6eb341f204",
               "name": "LH_API_KEY",
               "value": "PEGA_AQUI_LA_N8N_API_KEY_DE_LA_APP",
               "type": "string"
             },
             {
-              "id": "5c0e554a-8b66-4ac9-8163-e16b456849e2",
+              "id": "18a0aacd-3be4-44f3-81a6-cd76e0534efc",
               "name": "LH_API_URL",
               "value": "https://app.tudominio.com",
               "type": "string"
             },
             {
-              "id": "5c9d07fd-634d-482d-a773-87003c7dc435",
+              "id": "281946cc-7a2f-4b20-b91c-44afaf8b0b28",
               "name": "WHATSAPP_APIKEY",
               "value": "PEGA_AQUI_TU_APIKEY_DE_CALLMEBOT",
               "type": "string"
             },
             {
-              "id": "1df1d8ae-c377-450c-83d1-c0cd8b7422b5",
+              "id": "bad6c1b4-6670-44bb-945d-60637864e7df",
               "name": "WHATSAPP_PHONE",
               "value": "+34600000000",
               "type": "string"
@@ -190,7 +190,7 @@
         },
         "options": {}
       },
-      "id": "758b832a-c9da-42b7-94cd-42ffd0adf25b",
+      "id": "75ae8254-674a-4530-be7f-df51caf2e748",
       "name": "Config",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,

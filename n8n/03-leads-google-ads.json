@@ -8,8 +8,8 @@
         "height": 240,
         "color": 4
       },
-      "id": "af901a1e-ae55-46a5-b2c8-b79c87af912c",
-      "name": "Nota 1193",
+      "id": "9f80fba1-5a78-477a-aafd-0b0210b4b7c9",
+      "name": "Nota ed62",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
@@ -24,7 +24,7 @@
         "responseMode": "onReceived",
         "options": {}
       },
-      "id": "5925d41e-5638-4322-b5fb-1f4e8d7cc7ca",
+      "id": "0a8b0291-4325-4647-b615-12189c460986",
       "name": "Webhook Google Ads",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -32,13 +32,13 @@
         220,
         300
       ],
-      "webhookId": "2aebf014-d420-46c9-826c-f6903256281b"
+      "webhookId": "5239ff18-625d-4c41-b8c0-22537a8d68ee"
     },
     {
       "parameters": {
         "jsCode": "// Formato de Google: { lead_id, form_id, campaign_id, google_key, is_test, user_column_data: [{column_id, column_name, string_value}] }\nconst b = $input.first().json.body ?? $input.first().json;\nif (!$('Config').first().json.GOOGLE_ADS_WEBHOOK_KEY || b.google_key !== $('Config').first().json.GOOGLE_ADS_WEBHOOK_KEY) {\n  return [{ json: { valido: false, motivo: 'google_key incorrecta' } }];\n}\nconst nombres = { FULL_NAME: 'full_name', FIRST_NAME: 'first_name', LAST_NAME: 'last_name', PHONE_NUMBER: 'phone', EMAIL: 'email', POSTAL_CODE: 'codigo_postal', CITY: 'ciudad', REGION: 'provincia' };\nconst answers = {};\nfor (const c of b.user_column_data || []) {\n  const k = nombres[c.column_id] || c.column_name || c.column_id;\n  answers[k] = c.string_value;\n}\nreturn [{ json: {\n  valido: true,\n  lead: {\n    source: 'google',\n    form_id: String(b.form_id ?? ''),\n    external_id: String(b.lead_id ?? ''),\n    campaign: b.campaign_id ? 'Google Ads ' + b.campaign_id : null,\n    consent_text: 'Formulario de cliente potencial de Google Ads' + (b.is_test ? ' (PRUEBA)' : ''),\n    answers,\n  },\n} }];"
       },
-      "id": "2eaf19ea-fd63-46e6-b28f-4982b2c528e4",
+      "id": "2a564b60-8752-4d56-94d7-c353176a9602",
       "name": "Validar y preparar",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -58,7 +58,7 @@
           },
           "conditions": [
             {
-              "id": "4efa991d-e033-444d-9fec-a327b2003e46",
+              "id": "0e600d74-d4f8-4496-803c-d03d678f7817",
               "leftValue": "={{ $json.valido }}",
               "rightValue": "",
               "operator": {
@@ -72,7 +72,7 @@
         },
         "options": {}
       },
-      "id": "238cfc03-60bc-400b-965d-5176891900c9",
+      "id": "53d6434c-1540-4ace-9b09-f7ece74067ef",
       "name": "¿Clave correcta?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -101,7 +101,7 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify($json.lead) }}"
       },
-      "id": "c2fa5388-79cf-48aa-bac9-d0f943e60a58",
+      "id": "17cce5da-cfb9-417d-a5d2-42575c67da4a",
       "name": "Enviar lead a la app",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -134,7 +134,7 @@
           ]
         }
       },
-      "id": "162f1bb5-c9ac-4e9b-8b2a-58a2579492af",
+      "id": "04bc5de0-ac1b-4c19-8987-0ff86396d7fb",
       "name": "Avisar si falla",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -151,31 +151,31 @@
         "assignments": {
           "assignments": [
             {
-              "id": "8eb463ee-3d6f-4e7d-ab53-ffcad21e098c",
+              "id": "19d28366-b018-45b9-ab6c-78001434874e",
               "name": "GOOGLE_ADS_WEBHOOK_KEY",
               "value": "PEGA_AQUI_UNA_CLAVE_SECRETA",
               "type": "string"
             },
             {
-              "id": "110e11cf-4b5f-4532-b184-c674a179b384",
+              "id": "9610d72c-f8eb-49aa-a9f8-34425b05b9b0",
               "name": "LH_API_KEY",
               "value": "PEGA_AQUI_LA_N8N_API_KEY_DE_LA_APP",
               "type": "string"
             },
             {
-              "id": "b079db72-7228-4aed-8095-9f5b79585569",
+              "id": "187e5274-2d37-4cac-a9d0-5622e35962c8",
               "name": "LH_API_URL",
               "value": "https://app.tudominio.com",
               "type": "string"
             },
             {
-              "id": "fcb9a8e5-e7ce-45ef-829d-c636317c916c",
+              "id": "d6b23347-6f74-4bd0-8945-0c7b653d9595",
               "name": "WHATSAPP_APIKEY",
               "value": "PEGA_AQUI_TU_APIKEY_DE_CALLMEBOT",
               "type": "string"
             },
             {
-              "id": "5fa46a59-bc51-4ec5-85c3-8bc58bc39649",
+              "id": "9af1eed9-b9ce-4607-aa4e-14db12226ef8",
               "name": "WHATSAPP_PHONE",
               "value": "+34600000000",
               "type": "string"
@@ -184,7 +184,7 @@
         },
         "options": {}
       },
-      "id": "e33e07e0-aeb1-4b79-b0d7-25fcd1c2cfc3",
+      "id": "b98ecd6d-eb92-44ba-a033-c52ab18a6d3b",
       "name": "Config",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,

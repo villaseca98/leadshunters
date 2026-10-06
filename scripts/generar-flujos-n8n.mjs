@@ -37,6 +37,40 @@ function http(name, position, { method = "GET", url, body, query, headers = true
   return node(name, "n8n-nodes-base.httpRequest", 4.2, position, p, extra);
 }
 
+/**
+ * Lanza un actor de Apify sin esperar (la llamada síncrona corta a los 300 s) y consulta
+ * cada minuto hasta que termina; después descarga los resultados (un item por resultado).
+ * Devuelve los nodos y las conexiones internas: entrada = `${name}`, salida = `${name} · resultados`.
+ */
+function apifyRun(name, actor, body, [x, y], extra = {}) {
+  const start = http(name, [x, y], {
+    method: "POST",
+    url: `=https://api.apify.com/v2/acts/${actor}/runs?token={{ $env.APIFY_TOKEN }}`,
+    headers: false,
+    body,
+    timeout: 60000,
+    ...extra,
+  });
+  const poll = http(`${name} · esperar`, [x + 220, y + 180], {
+    url: "=https://api.apify.com/v2/actor-runs/{{ $json.data.id }}?token={{ $env.APIFY_TOKEN }}&waitForFinish=60",
+    headers: false,
+    timeout: 90000,
+    ...extra,
+  });
+  const running = ifNode(`${name} · ¿sigue?`, [x + 440, y + 180], "={{ ['READY', 'RUNNING'].includes($json.data?.status) }}");
+  const items = http(`${name} · resultados`, [x + 660, y], {
+    url: "=https://api.apify.com/v2/datasets/{{ $json.data.defaultDatasetId }}/items?token={{ $env.APIFY_TOKEN }}&clean=true",
+    headers: false,
+    timeout: 120000,
+    ...extra,
+  });
+  return {
+    nodes: [start, poll, running, items],
+    links: [[name, poll.name], [poll.name, running.name], [running.name, poll.name, 0], [running.name, items.name, 1]],
+    out: items.name,
+  };
+}
+
 const code = (name, position, jsCode, mode) =>
   node(name, "n8n-nodes-base.code", 2, position, mode ? { mode, jsCode } : { jsCode });
 
@@ -195,13 +229,7 @@ return [{ json: {
   scrapePlaceDetailPage: false,
 } }];`);
 
-  const apify = http("Apify · Google Maps", [880, 300], {
-    method: "POST",
-    url: "=https://api.apify.com/v2/acts/compass~crawler-google-places/run-sync-get-dataset-items?token={{ $env.APIFY_TOKEN }}&timeout=900",
-    headers: false,
-    body: "={{ JSON.stringify($json) }}",
-    timeout: 900000,
-  });
+  const apify = apifyRun("Apify · Google Maps", "compass~crawler-google-places", "={{ JSON.stringify($json) }}", [880, 300]);
 
   const group = code("Agrupar resultados", [1100, 300], `// Manda todos los despachos a la app en una sola llamada (la app limpia, deduplica y puntúa)
 const items = $input.all().map(i => i.json).filter(x => x && (x.title || x.name));
@@ -294,14 +322,7 @@ return [{ json: { usuarios: Object.keys(porUsuario), porUsuario } }];`);
 
   const hasIg = ifNode("¿Hay Instagram?", [3080, 300], "={{ $json.usuarios.length > 0 }}");
 
-  const igApify = http("Apify · Perfiles de Instagram", [3300, 200], {
-    method: "POST",
-    url: "=https://api.apify.com/v2/acts/apify~instagram-profile-scraper/run-sync-get-dataset-items?token={{ $env.APIFY_TOKEN }}&timeout=600",
-    headers: false,
-    body: "={{ JSON.stringify({ usernames: $json.usuarios }) }}",
-    timeout: 600000,
-    onError: "continueRegularOutput",
-  });
+  const igApify = apifyRun("Apify · Perfiles de Instagram", "apify~instagram-profile-scraper", "={{ JSON.stringify({ usernames: $json.usuarios }) }}", [3300, 200], { onError: "continueRegularOutput" });
 
   const igMap = code("Datos de Instagram", [3520, 200], `const porUsuario = $('Usuarios de Instagram').first().json.porUsuario;
 const hoy = Date.now();
@@ -340,15 +361,15 @@ return [{ json: { nuevos: r.created, actualizados: r.updated, descartados: r.ski
   );
 
   save("01-prospeccion-google-maps.json", workflow("01 · Prospección de despachos (Google Maps + Meta + Instagram)",
-    [note, manual, sched, cfg, prep, apify, group, send, pending, split, web, ads, result, enrich, igUsers, hasIg, igApify, igMap, igSend, summary, tg],
+    [note, manual, sched, cfg, prep, ...apify.nodes, group, send, pending, split, web, ads, result, enrich, igUsers, hasIg, ...igApify.nodes, igMap, igSend, summary, tg],
     [
       ["Lanzar a mano", "Configuración"], ["Cada lunes 7:00", "Configuración"], ["Configuración", "Preparar búsquedas"],
-      ["Preparar búsquedas", "Apify · Google Maps"], ["Apify · Google Maps", "Agrupar resultados"], ["Agrupar resultados", "Enviar despachos a la app"],
+      ["Preparar búsquedas", "Apify · Google Maps"], ...apify.links, [apify.out, "Agrupar resultados"], ["Agrupar resultados", "Enviar despachos a la app"],
       ["Enviar despachos a la app", "Despachos sin analizar"], ["Despachos sin analizar", "Separar despachos"], ["Separar despachos", "Descargar web"],
       ["Descargar web", "Meta · Biblioteca de anuncios"], ["Meta · Biblioteca de anuncios", "Juntar análisis"], ["Juntar análisis", "Enviar análisis a la app"],
       ["Enviar análisis a la app", "Usuarios de Instagram"], ["Usuarios de Instagram", "¿Hay Instagram?"],
       ["¿Hay Instagram?", "Apify · Perfiles de Instagram", 0], ["¿Hay Instagram?", "Resumen", 1],
-      ["Apify · Perfiles de Instagram", "Datos de Instagram"], ["Datos de Instagram", "Enviar Instagram a la app"], ["Enviar Instagram a la app", "Resumen"],
+      ...igApify.links, [igApify.out, "Datos de Instagram"], ["Datos de Instagram", "Enviar Instagram a la app"], ["Enviar Instagram a la app", "Resumen"],
       ["Resumen", "Avisar por WhatsApp"],
     ],
   ));
