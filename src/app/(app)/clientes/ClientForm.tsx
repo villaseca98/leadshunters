@@ -37,8 +37,8 @@ export function ClientForm({ action, c, submit }: { action: (fd: FormData) => vo
           </Field>
         </div>
         <div className="grid gap-3 sm:grid-cols-4">
-          <Field label="Fijo mensual (€)"><input name="monthly_fee" type="number" step="0.01" defaultValue={c?.monthly_fee ?? 500} className={input} /></Field>
-          <Field label="Por consulta realizada (€)" hint="Recomendado 30-50 €"><input name="price_per_consultation" type="number" step="0.01" defaultValue={c?.price_per_consultation ?? 40} className={input} /></Field>
+          <Field label="Fijo mensual (€)"><input name="monthly_fee" type="number" step="0.01" defaultValue={c?.monthly_fee ?? 400} className={input} /></Field>
+          <Field label="Por consulta realizada (€)" hint="Recomendado 25-35 €"><input name="price_per_consultation" type="number" step="0.01" defaultValue={c?.price_per_consultation ?? 35} className={input} /></Field>
           <Field label="Tope de consultas/mes" hint="Opcional"><input name="max_billable_per_month" type="number" defaultValue={c?.max_billable_per_month ?? ""} className={input} /></Field>
           <Field label="Inicio del servicio"><input name="started_at" type="date" defaultValue={c?.started_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10)} className={input} /></Field>
         </div>

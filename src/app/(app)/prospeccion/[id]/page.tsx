@@ -95,7 +95,7 @@ export default async function ProspectPage(props: PageProps<"/prospeccion/[id]">
                 <li>«Hola, ¿hablo con el responsable del despacho? Soy [nombre], de Leads Hunters. Trabajamos solo con despachos de Segunda Oportunidad.»</li>
                 <li>«Una pregunta rápida: ¿cuántas consultas de clientes con deudas os entran al mes y quién las llama?»</li>
                 <li>Usa un gancho de arriba. «Los leads de deudas se enfrían en minutos: nosotros los llamamos en menos de 5 minutos y os pasamos solo consultas cualificadas (deuda, acreedores, ingresos).»</li>
-                <li>«Cobramos 500 € al mes fijos más 30-50 € por cada consulta cualificada que se realiza. Es un servicio de marketing: nunca un porcentaje de vuestros honorarios.»</li>
+                <li>«Cobramos desde 400 € al mes fijos más 25-35 € por cada consulta cualificada que se realiza. Es un servicio de marketing: nunca un porcentaje de vuestros honorarios.»</li>
                 <li>Cierre: «¿Os viene bien una videollamada de 15 minutos el [día] para enseñaros cómo funciona?»</li>
               </ol>
             </details>

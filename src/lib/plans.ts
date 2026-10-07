@@ -6,8 +6,8 @@ export type PlanId = "esencial" | "completo" | "premium";
 export const PLANS: Record<PlanId, { name: string; fee: number; perConsultation: number; exclusive: boolean; features: string[] }> = {
   esencial: {
     name: "Esencial",
-    fee: 500,
-    perConsultation: 40,
+    fee: 400,
+    perConsultation: 35,
     exclusive: false,
     features: [
       "Anuncios en Meta (Facebook e Instagram) desde la página del despacho",
@@ -18,8 +18,8 @@ export const PLANS: Record<PlanId, { name: string; fee: number; perConsultation:
   },
   completo: {
     name: "Completo",
-    fee: 900,
-    perConsultation: 35,
+    fee: 750,
+    perConsultation: 30,
     exclusive: false,
     features: [
       "Todo lo del plan Esencial",
@@ -32,8 +32,8 @@ export const PLANS: Record<PlanId, { name: string; fee: number; perConsultation:
   },
   premium: {
     name: "Premium",
-    fee: 1400,
-    perConsultation: 30,
+    fee: 1100,
+    perConsultation: 25,
     exclusive: true,
     features: [
       "Todo lo del plan Completo",

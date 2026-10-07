@@ -51,7 +51,7 @@ export default async function Facturacion(props: PageProps<"/facturacion">) {
       )}
       <Card className="mt-6" title="Cómo se factura">
         <ul className="list-disc space-y-1 pl-5 text-sm text-slate-600">
-          <li>Cada despacho paga la <b>cuota fija de su plan</b>: Esencial 500 €, Completo 900 € o Premium 1.400 € al mes. La inversión en anuncios la paga aparte, directamente a Meta y Google.</li>
+          <li>Cada despacho paga la <b>cuota fija de su plan</b>: Esencial 400 €, Completo 750 € o Premium 1.100 € al mes. La inversión en anuncios la paga aparte, directamente a Meta y Google.</li>
           <li>Además paga <b>por cada consulta cualificada que se realiza</b> (40, 35 o 30 € según el plan). Las que no se presentan o se cancelan no se cobran, y tampoco las de leads que llamamos más tarde de 5 minutos en horario de atención (garantía).</li>
           <li>Es un <b>servicio de marketing</b>: nunca se factura un porcentaje de los honorarios del despacho (código deontológico de la abogacía).</li>
           <li>El justificante CSV lista cada consulta con fecha, deuda y quién confirmó la asistencia (equipo o despacho).</li>

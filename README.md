@@ -9,7 +9,7 @@
 Herramienta para montar el servicio de captación para **despachos de abogados de Ley de Segunda Oportunidad**:
 
 1. **Captar despachos (venta B2B).** Busca despachos en Google Maps, analiza su web, si anuncian en Meta y su Instagram, y los puntúa de 0 a 100 para saber a quién llamar primero. Pantalla de llamada con ganchos y guion.
-2. **Dar el servicio a tus clientes.** Los leads de Meta y Google Ads entran solos, se cualifican (deuda, acreedores, ingresos…), aparecen en una **cola de llamadas** para contactarlos en menos de 5 minutos, se agenda la consulta con el despacho y se factura **500 € fijos + 30-50 € por consulta realizada**.
+2. **Dar el servicio a tus clientes.** Los leads de Meta y Google Ads entran solos, se cualifican (deuda, acreedores, ingresos…), aparecen en una **cola de llamadas** para contactarlos en menos de 5 minutos, se agenda la consulta con el despacho y se factura **desde 400 € fijos + 25-35 € por consulta realizada**.
 
 Todo en español, se instala en tu propio servidor con Docker.
 
