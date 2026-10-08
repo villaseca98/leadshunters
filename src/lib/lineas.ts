@@ -27,6 +27,8 @@ export type Line = {
   kind: "despachos" | "generica";
   keywords: string[];
   fields: LineField[];
+  /** campos de la ficha de sus clientes (comercializadora, kWp, dominio…) */
+  client_fields: LineField[];
   priority_a: number;
   priority_b: number;
   consent_text: string;
@@ -66,7 +68,8 @@ export function readField(f: LineField, raw: unknown): string | null {
   if (f.type === "select") {
     const opts = f.options ?? [];
     const opt = opts.find((o) => norm(o.label) === s || norm(o.value) === s) ?? (/^\d{1,2}$/.test(s) ? opts[Number(s) - 1] : undefined)
-      ?? opts.find((o) => s.length >= 3 && (norm(o.label).includes(s) || s.includes(norm(o.label))));
+      ?? opts.find((o) => s.length >= 3 && (norm(o.label).includes(s) || s.includes(norm(o.label))))
+      ?? nearestNumeric(opts, raw);
     return opt ? opt.value : String(raw).trim().slice(0, 200);
   }
   if (f.type === "bool") {
@@ -78,6 +81,13 @@ export function readField(f: LineField, raw: unknown): string | null {
     return n == null ? null : String(n);
   }
   return String(raw).trim().slice(0, 500);
+}
+
+/** Un importe ("130", 130) en una pregunta de tramos con valores numéricos (40, 75, 150…): el tramo más cercano. */
+function nearestNumeric(opts: FieldOption[], raw: unknown): FieldOption | undefined {
+  const n = parseMoney(raw);
+  if (n == null || !opts.length || !opts.every((o) => /^-?\d+(\.\d+)?$/.test(o.value))) return undefined;
+  return opts.reduce((a, b) => (Math.abs(Number(b.value) - n) < Math.abs(Number(a.value) - n) ? b : a));
 }
 
 /** Campos comunes a todas las líneas: no van a "data". */

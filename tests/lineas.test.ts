@@ -40,6 +40,9 @@ test("respuestas de botones: texto, valor o número", () => {
   assert.equal(readField(factura, "Entre 100 y 200 €"), "150");
   assert.equal(readField(factura, "3"), "150");
   assert.equal(readField(factura, "250"), "250");
+  // un importe de un formulario web cae en el tramo más cercano
+  assert.equal(readField(factura, "130"), "150");
+  assert.equal(readField(factura, 480), "250");
   assert.equal(readField(placas.fields[2], "Sí"), "si");
   assert.equal(readField(placas.fields[1], "casa"), "casa_o_chalet");
 });

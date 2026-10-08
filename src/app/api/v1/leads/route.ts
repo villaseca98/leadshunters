@@ -7,6 +7,39 @@ import { NextResponse } from "next/server";
 import { apiKeyFrom, bad, clientFromKey, isMasterKey, unauthorized } from "@/lib/apiAuth";
 import { ingestLead, type LeadInput } from "@/lib/services/leads";
 import { queryOne } from "@/lib/db";
+import { extractData, type Line } from "@/lib/lineas";
+import { resolveLine, submitLineLead } from "@/lib/services/lines";
+
+/** Lead del formulario web de una empresa (Recorta, MewHub…) en su línea. Los datos de energía se pasan a las preguntas de la línea. */
+async function webLineLead(b: Record<string, unknown>, line: Line) {
+  const s = (k: string) => (b[k] == null ? undefined : String(b[k]));
+  const energy = (b.energy && typeof b.energy === "object" ? b.energy : {}) as Record<string, unknown>;
+  const roof = s("roof") ?? (energy.roof as string | undefined);
+  const mapped: Record<string, unknown> = {
+    ...energy,
+    ...b,
+    factura: b.factura ?? b.monthly_bill ?? energy.monthly_bill,
+    compania: b.compania ?? b.current_supplier ?? energy.current_supplier,
+    tipo_cliente: b.tipo_cliente ?? (b.business_type || energy.business_type ? "negocio" : undefined),
+    propietario: b.propietario ?? (roof ? (/propi/.test(roof) ? "si" : "no") : undefined),
+  };
+  for (const k of ["energy", "answers", "client_id", "client_key", "form_id", "source", "external_id", "full_name", "phone", "email", "province", "consent_text", "consent_at", "consent", "monthly_bill", "current_supplier", "roof"]) delete mapped[k];
+  const r = await submitLineLead({
+    line,
+    full_name: s("full_name") ?? "",
+    phone: s("phone") ?? "",
+    email: s("email") ?? null,
+    province: s("province") ?? null,
+    data: extractData(line.fields, mapped),
+    // el formulario web solo se envía con la casilla de consentimiento marcada
+    consent: b.consent !== false,
+    channel: s("source") === "web" || !s("source") ? "web" : s("source")!,
+    campaign: s("campaign") ?? `web-${line.slug}`,
+    raw: b,
+  });
+  if (!r.ok) return bad(r.error);
+  return NextResponse.json({ ok: true, linea: line.slug, empresa: line.company_name, id: r.id, duplicate: r.duplicate, prioridad: r.priority }, { status: r.duplicate ? 200 : 201 });
+}
 
 export async function POST(req: Request) {
   const key = apiKeyFrom(req);
@@ -28,7 +61,12 @@ export async function POST(req: Request) {
        LIMIT 1`,
       [String(body.form_id)],
     ))?.id ?? null;
-    if (!clientId) return bad(`Ningún cliente tiene asignado el formulario ${body.form_id}. Añádelo en la ficha del cliente.`, 404);
+    if (!clientId) {
+      // formularios de las webs de las empresas (recorta-luz, recorta-placas, mewhub-web…): entran como leads de su línea
+      const line = await resolveLine(body.form_id);
+      if (line && line.kind !== "despachos") return webLineLead(body as Record<string, unknown>, line);
+      return bad(`Ningún cliente ni línea tiene el formulario ${body.form_id}. Añádelo en la ficha del cliente o como palabra clave de la línea.`, 404);
+    }
   }
   if (!clientId) return bad("Falta client_id, client_key o form_id para saber de qué despacho es el lead");
   if (!body.full_name && !body.phone && !body.answers) return bad("El lead no trae nombre, teléfono ni respuestas");

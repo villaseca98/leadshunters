@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { query, queryOne } from "@/lib/db";
 import { parseMoney } from "@/lib/normalize";
+import { readField } from "@/lib/lineas";
+import { getLine } from "@/lib/services/lines";
 
 function parse(formData: FormData) {
   const g = (k: string) => String(formData.get(k) ?? "").trim();
@@ -42,11 +44,21 @@ export async function updateLineClient(id: string, formData: FormData) {
   await requireAdmin();
   const d = parse(formData);
   if (!d.name) return;
+  // campos propios de la línea (comercializadora, kWp, dominio…)
+  const cur = await queryOne<{ line_id: string; data: Record<string, string> }>("SELECT line_id, data FROM line_clients WHERE id = $1", [id]);
+  if (!cur) return;
+  const line = await getLine(cur.line_id);
+  const data = { ...cur.data };
+  for (const f of line?.client_fields ?? []) {
+    const v = readField(f, String(formData.get(`c_${f.key}`) ?? "").trim());
+    if (v == null) delete data[f.key];
+    else data[f.key] = v;
+  }
   await query(
     `UPDATE line_clients SET name = $2, contact_name = $3, contact_phone = $4, contact_email = $5, status = $6,
-       monthly_fee = $7, price_per_showup = $8, price_per_sale = $9, notes = $10, started_at = coalesce($11::date, started_at)
+       monthly_fee = $7, price_per_showup = $8, price_per_sale = $9, notes = $10, started_at = coalesce($11::date, started_at), data = $12
      WHERE id = $1`,
-    [id, d.name, d.contact_name, d.contact_phone, d.contact_email, d.status, d.monthly_fee, d.price_per_showup, d.price_per_sale, d.notes, d.started_at],
+    [id, d.name, d.contact_name, d.contact_phone, d.contact_email, d.status, d.monthly_fee, d.price_per_showup, d.price_per_sale, d.notes, d.started_at, JSON.stringify(data)],
   );
   revalidatePath(`/clientes/l/${id}`);
   revalidatePath("/clientes");

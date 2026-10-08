@@ -35,8 +35,8 @@ export const SECTIONS = [
     tabs: [{ href: "/clientes", label: "Clientes" }, { href: "/facturacion", label: "Facturación" }],
   },
   {
-    href: "/prospeccion", label: "Captar clientes", hint: "Despachos a los que vender", icon: IconTarget,
-    tabs: [{ href: "/prospeccion", label: "Despachos" }, { href: "/prospeccion/llamar", label: "Llamar" }],
+    href: "/captar", label: "Captar clientes", hint: "Por empresa y línea: despachos, Recorta, MewHub…", icon: IconTarget,
+    tabs: [{ href: "/captar", label: "Por empresa y línea" }, { href: "/prospeccion", label: "Despachos" }, { href: "/prospeccion/llamar", label: "Llamar despachos" }],
   },
   { href: "/informes", label: "Informes", hint: "Qué mejorar en cada línea", icon: IconChart, tabs: [{ href: "/informes", label: "Informes" }] },
   {

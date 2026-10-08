@@ -5,7 +5,7 @@ import { displayValue, LOST_REASONS, PRIORITY, statusMap } from "@/lib/lineas";
 import { getLine, getLines } from "@/lib/services/lines";
 import { dateTime, eur, telHref, waHref } from "@/lib/format";
 import { A, Card, Field, PageHeader, StatusBadge, btn, input } from "@/components/ui";
-import { changeLineStatus, eraseLineLead, toggleShowup, updateLineLead } from "../actions";
+import { changeLineStatus, convertLineLead, eraseLineLead, toggleShowup, updateLineLead } from "../actions";
 
 export default async function LineLeadPage(props: PageProps<"/lineas/[id]">) {
   const { id } = await props.params;
@@ -101,7 +101,7 @@ export default async function LineLeadPage(props: PageProps<"/lineas/[id]">) {
                   {lines.map((x) => <option key={x.id} value={x.id}>{x.emoji} {x.name} · {x.company_name}</option>)}
                 </select>
               </Field>
-              <Field label="Cliente (quién te paga este lead)">
+              <Field label="Cliente (si ya lo es)">
                 <select name="client_id" defaultValue={l.client_id ?? ""} className={input}>
                   <option value="">Sin cliente</option>
                   {clients.map((c) => <option key={c.id} value={c.id}>{c.name}{c.status !== "activo" ? ` (${c.status})` : ""}</option>)}
@@ -138,7 +138,14 @@ export default async function LineLeadPage(props: PageProps<"/lineas/[id]">) {
         </div>
 
         <div className="space-y-4 xl:space-y-6">
-          {myClient && <A href={`/clientes/l/${myClient.id}`}>Cliente: {myClient.name} →</A>}
+          {myClient ? (
+            <A href={`/clientes/l/${myClient.id}`}>Ya es cliente: {myClient.name} →</A>
+          ) : (
+            <form action={convertLineLead.bind(null, id)}>
+              <button className={`${btn.success} w-full`}>Convertir en cliente</button>
+              <p className="mt-1.5 text-xs text-slate-500">Crea su ficha en Clientes con sus datos y lo marca como {line.won_label.toLowerCase()}.</p>
+            </form>
+          )}
           <Card title={`Prioridad ${l.priority} · ${l.priority_points} puntos`}>
             <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
               {l.priority_reasons.map((r, i) => <li key={i}>{r}</li>)}
