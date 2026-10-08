@@ -1,7 +1,8 @@
 import { requireUser } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { Badge, Card, Field, PageHeader, Table, Td, btn, input } from "@/components/ui";
-import { createUser, saveContact, toggleUser } from "./actions";
+import { createUser, saveAiKey, saveContact, toggleUser } from "./actions";
+import { anthropicKey } from "@/lib/services/clientAi";
 import { appUrl } from "@/lib/appUrl";
 import { contactInfo, isFromEnv, secretSetting } from "@/lib/settings";
 
@@ -12,10 +13,12 @@ export default async function Ajustes() {
   const base = appUrl() || "http://localhost:3000";
   const apiKey = me.role === "admin" ? await secretSetting("N8N_API_KEY") : null;
   const contact = await contactInfo();
+  const aiKey = await anthropicKey();
   const checks: [string, boolean, string][] = [
     ["N8N_API_KEY", true, isFromEnv("N8N_API_KEY") ? "Clave que usa n8n para llamar a la API" : "Clave que usa n8n para llamar a la API (generada por la app)"],
     ["N8N_EVENTS_WEBHOOK_URL", !!process.env.N8N_EVENTS_WEBHOOK_URL, "Webhook de n8n que recibe eventos (lead nuevo, cita agendada…)"],
     ["APP_URL", !!appUrl(), "URL pública de la app (enlaces de confirmación para los despachos)"],
+    ["ANTHROPIC_API_KEY", !!aiKey, "Clave de Claude para el asistente IA de cada cliente (informes, métricas y pasos)"],
     ["SESSION_SECRET", true, isFromEnv("SESSION_SECRET") ? "Firma de las sesiones" : "Firma de las sesiones (generada por la app)"],
   ];
   const endpoints = [
@@ -64,6 +67,20 @@ export default async function Ajustes() {
             ))}
           </ul>
         </Card>
+        {me.role === "admin" && (
+          <section id="ia" className="lg:col-span-2">
+            <Card title="Asistente IA de clientes">
+              <p className="mb-3 text-xs text-slate-500">
+                El chat de cada cliente usa Claude. Pega aquí tu clave de la API de Anthropic (empieza por <code>sk-ant-</code>; se crea en console.anthropic.com › API keys).
+                {process.env.ANTHROPIC_API_KEY ? " Ahora se usa la de las variables de Vercel." : aiKey ? ` Guardada: …${aiKey.slice(-4)}.` : " Todavía no hay ninguna."}
+              </p>
+              <form action={saveAiKey} className="flex flex-col gap-2 sm:flex-row">
+                <input name="key" type="password" autoComplete="off" placeholder="sk-ant-…" className={input} />
+                <button className={btn.primary}>Guardar clave</button>
+              </form>
+            </Card>
+          </section>
+        )}
         <Card title="Tus datos públicos" className="lg:col-span-2">
           <p className="mb-3 text-xs text-slate-500">Nombre, teléfono y email salen en la auditoría que envías a cada despacho. La marca y el titular salen en el test para particulares (/test) y en su política de privacidad.</p>
           <form action={saveContact} className="grid gap-3 sm:grid-cols-4">

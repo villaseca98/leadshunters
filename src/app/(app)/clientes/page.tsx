@@ -74,7 +74,7 @@ export default async function Clientes(props: PageProps<"/clientes">) {
                 </Table>
               </div>
             )}
-            {rows.length === 0 && web.length > 0 ? null : rows.length === 0 ? <Empty>Sin clientes en {line.name}. Convierte un lead en cliente desde su ficha o añádelo abajo.</Empty> : (
+            {rows.length === 0 && web.length > 0 ? null : rows.length === 0 ? <Empty>{line.fields.length || line.keywords.length ? `Sin clientes en ${line.name}. Convierte un lead en cliente desde su ficha o añádelo abajo.` : `Sin clientes en ${line.name}. Añádelos abajo: es la línea libre para negocios que no impulsas todavía.`}</Empty> : (
               <Table head={["Cliente", "Estado", "Condiciones", "Leads mes", "Show-ups", line.won_label, "Marcadores", "Facturación mes"]}>
                 {rows.map((r) => (
                   <tr key={r.client_id} className="hover:bg-slate-50">
@@ -95,7 +95,8 @@ export default async function Clientes(props: PageProps<"/clientes">) {
       })}
 
       {user?.role === "admin" && lines.length > 0 && (
-        <Card className="mt-8" title="Nuevo cliente de otra línea">
+        <section id="nuevo" className="mt-8"><Card title="Nuevo cliente de otra línea">
+          <p className="mb-3 text-xs text-slate-500">Al crearlo se abre su ficha con el asistente IA: le cuentas el caso y te monta condiciones, marcadores, métricas e informes.</p>
           <form action={createLineClient} className="grid gap-3 sm:grid-cols-3 sm:items-end">
             <Field label="Línea">
               <select name="line_id" required className={input}>
@@ -108,7 +109,7 @@ export default async function Clientes(props: PageProps<"/clientes">) {
             <Field label="€ por venta"><input name="price_per_sale" inputMode="decimal" placeholder="0 = importe de cada lead" className={input} /></Field>
             <button className={btn.primary}>Crear cliente</button>
           </form>
-        </Card>
+        </Card></section>
       )}
     </>
   );

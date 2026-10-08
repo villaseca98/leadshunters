@@ -14,6 +14,8 @@ import { ReactivateForm } from "./ReactivateForm";
 import { despachoBilling, markersFor } from "@/lib/services/clientMetrics";
 import { ClientMetrics } from "@/components/ClientMetrics";
 import { VERTICALS, isEnergy } from "@/lib/energy";
+import { ClientAi } from "@/components/ClientAi";
+import { aiState, anthropicKey, clientReports } from "@/lib/services/clientAi";
 
 export default async function ClientePage(props: PageProps<"/clientes/[id]">) {
   const { id } = await props.params;
@@ -25,7 +27,7 @@ export default async function ClientePage(props: PageProps<"/clientes/[id]">) {
   const month = currentMonth();
   const [b] = await billingForMonth(month, id);
   const mes = typeof sp.mes === "string" && /^\d{4}-\d{2}$/.test(sp.mes) ? sp.mes : month;
-  const [[mb], markers] = await Promise.all([despachoBilling(mes, id), markersFor("despacho", id, mes)]);
+  const [[mb], markers, ai, reports, key] = await Promise.all([despachoBilling(mes, id), markersFor("despacho", id, mes), aiState("despacho", id), clientReports("despacho", id), anthropicKey()]);
   const consults = await query<{ id: string; scheduled_at: string; status: string; full_name: string; lead_id: string }>(
     `SELECT co.id, co.scheduled_at, co.status, l.full_name, l.id AS lead_id FROM consultations co JOIN leads l ON l.id = co.lead_id
       WHERE co.client_id = $1 ORDER BY co.scheduled_at DESC LIMIT 15`,
@@ -73,11 +75,6 @@ document.getElementById('lh-form').onsubmit = async (e) => {
           </>
         }
       />
-      {sp.nuevo && (
-        <p className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          ¡Nuevo cliente! Revisa sus condiciones, añade los IDs de sus formularios de Meta/Google y el email para avisos.
-        </p>
-      )}
 
       <div className="lh-rail -mx-4 mb-5 flex gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:grid md:grid-cols-5 md:gap-4 md:overflow-visible md:px-0">
         <Stat label="Leads" value={b?.leads ?? 0} hint={monthLabel(month)} />
@@ -89,6 +86,7 @@ document.getElementById('lh-form').onsubmit = async (e) => {
 
       <div className="grid gap-4 xl:grid-cols-3 xl:gap-6">
         <div className="space-y-4 xl:col-span-2 xl:space-y-6">
+          <ClientAi kind="despacho" clientId={id} messages={ai.messages} plan={ai.plan} reports={reports} month={mes} monthName={monthLabel(mes)} hasKey={!!key} fresh={!!sp.nuevo} />
           <ClientMetrics
             kind="despacho"
             clientId={id}
