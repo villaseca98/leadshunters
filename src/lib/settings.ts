@@ -44,7 +44,7 @@ export async function contactInfo(): Promise<Contact> {
   const s = Object.fromEntries(rows.map((r) => [r.key, r.value]));
   const admin = await queryOne<{ name: string; email: string }>("SELECT name, email FROM users WHERE role = 'admin' AND active ORDER BY created_at LIMIT 1");
   return { name: s.CONTACT_NAME || admin?.name || "Leads Hunters", phone: s.CONTACT_PHONE || "", email: s.CONTACT_EMAIL || admin?.email || "",
-    brand: s.CONSUMER_BRAND || "Tu Segunda Oportunidad", legal: s.LEGAL_HOLDER || "" };
+    brand: s.CONSUMER_BRAND || "Mi Cuenta Nueva", legal: s.LEGAL_HOLDER || "" };
 }
 
 export async function saveContactInfo(c: Contact) {

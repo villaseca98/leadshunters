@@ -12,7 +12,7 @@ export async function generateMetadata(props: PageProps<"/test/[codigo]">): Prom
   const firm = await clientByTestCode((await props.params).codigo);
   return {
     title: firm ? `¿Puedo cancelar mis deudas? Consulta gratuita · ${firm.name}` : "Test",
-    description: "Responde 6 preguntas y descubre en 1 minuto si puedes acogerte a la Ley de Segunda Oportunidad.",
+    description: "Responde unas preguntas y descubre en 2 minutos si tu caso encaja con la Ley de Segunda Oportunidad.",
   };
 }
 

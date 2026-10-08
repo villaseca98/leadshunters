@@ -6,7 +6,7 @@ import { sendTest } from "./actions";
 const field =
   "block min-h-12 w-full rounded-2xl border-0 bg-white px-4 text-base text-ink ring-1 ring-slate-200 placeholder:text-slate-400 focus:ring-2 focus:ring-blaze focus:outline-none";
 
-export function TestForm({ questions, provinces, consentText, utm, code, privacyHref = "/privacidad" }: { questions: Question[]; provinces: string[]; consentText: string; utm: Record<string, string>; code?: string; privacyHref?: string }) {
+export function TestForm({ questions, provinces, consentText, utm, code, privacyHref = "/privacidad", privacyNote }: { questions: Question[]; provinces: string[]; consentText: string; utm: Record<string, string>; code?: string; privacyHref?: string; privacyNote?: string }) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<Partial<TestAnswers>>({});
   const [error, setError] = useState("");
@@ -25,7 +25,7 @@ export function TestForm({ questions, provinces, consentText, utm, code, privacy
         </div>
         <div className="rounded-[1.75rem] bg-white p-5 text-[15px] leading-relaxed text-slate-700 ring-1 ring-slate-200">
           <div className="font-semibold text-ink">¿Y ahora qué?</div>
-          <p className="mt-1">Te llamaremos en unos minutos (de lunes a sábado, de 9 a 21 h) para revisar tu caso y, si encaja, darte una consulta gratuita con un abogado especialista de tu provincia.</p>
+          <p className="mt-1">Te llamaremos en unos minutos (de lunes a sábado, de 9 a 21 h) para revisar tu caso y, si encaja, que un abogado colegiado lo estudie contigo en una consulta gratuita.</p>
           <p className="mt-2 text-sm text-slate-500">Ten a mano un resumen de lo que debes y a quién.</p>
         </div>
       </section>
@@ -77,7 +77,7 @@ export function TestForm({ questions, provinces, consentText, utm, code, privacy
       {step === 0 && (
         <div className="mt-6">
           <h1 className="font-display text-3xl font-semibold leading-tight">¿Puedes cancelar tus deudas?</h1>
-          <p className="mt-2 text-[15px] text-slate-600">6 preguntas, 1 minuto. Gratis y sin compromiso.</p>
+          <p className="mt-2 text-[15px] text-slate-600">{questions.length} preguntas, 2 minutos. Gratis y sin compromiso.</p>
         </div>
       )}
 
@@ -101,7 +101,7 @@ export function TestForm({ questions, provinces, consentText, utm, code, privacy
       ) : (
         <form action={submit} className="mt-6 space-y-3">
           <h2 className="text-xl font-semibold leading-snug">¿Dónde te enviamos el resultado?</h2>
-          <p className="text-sm text-slate-500">Lo ves al momento y un especialista te llama para revisarlo contigo.</p>
+          <p className="text-sm text-slate-500">Lo ves al momento y te llamamos para revisarlo contigo.</p>
           <input name="full_name" autoComplete="name" required placeholder="Nombre" className={field} />
           <input name="phone" type="tel" inputMode="tel" autoComplete="tel" required placeholder="Teléfono móvil" className={field} />
           <input name="email" type="email" autoComplete="email" placeholder="Email (opcional)" className={field} />
@@ -118,6 +118,11 @@ export function TestForm({ questions, provinces, consentText, utm, code, privacy
             <input type="checkbox" name="marketing_ok" value="1" className="mt-0.5 size-5 shrink-0 accent-[var(--color-blaze)]" />
             <span>Quiero recibir avisos y consejos sobre mis deudas por WhatsApp (opcional).</span>
           </label>
+          {privacyNote && (
+            <p className="px-1 text-xs leading-relaxed text-slate-500">
+              {privacyNote} <a href={privacyHref} target="_blank" className="underline">Más información</a>
+            </p>
+          )}
           {error && <p className="rounded-2xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
           <button disabled={pending} className="min-h-14 w-full rounded-full bg-blaze px-6 text-base font-semibold text-blaze-ink disabled:opacity-60">
             {pending ? "Calculando…" : "Ver mi resultado"}

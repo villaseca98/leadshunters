@@ -91,11 +91,19 @@ test("auditoría: solo marca lo comprobado", async () => {
 
 test("test de particulares: resultado y origen", async () => {
   const { evaluateTest, sourceFromUtm, answersToFields } = await import("../src/lib/lsoTest");
-  const base = { debt: "22000", creditors: "3", income: "1250", employment: "asalariado", home: "no", blockers: "ninguna" };
+  const base = { debt: "22000", creditors: "3", can_pay: "no", public_debt: "nada", special_debt: "ninguna", income: "1250", employment: "asalariado", home: "no", blockers: "ninguna" };
   assert.equal(evaluateTest(base).kind, "apto");
   assert.equal(evaluateTest({ ...base, creditors: "1" }).kind, "revisar");
   assert.equal(evaluateTest({ ...base, debt: "5000" }).kind, "revisar");
-  assert.equal(evaluateTest({ ...base, blockers: "lso_previa" }).kind, "no_apto");
+  assert.equal(evaluateTest({ ...base, blockers: "lso_2" }).kind, "no_apto");
+  assert.equal(evaluateTest({ ...base, blockers: "lso_5" }).kind, "revisar");
+  assert.equal(evaluateTest({ ...base, blockers: "condena" }).kind, "no_apto");
+  assert.equal(evaluateTest({ ...base, blockers: "sancion" }).kind, "revisar");
+  assert.equal(evaluateTest({ ...base, can_pay: "si" }).kind, "revisar");
+  assert.equal(evaluateTest({ ...base, public_debt: "casi_todo" }).kind, "revisar");
+  assert.match(evaluateTest({ ...base, special_debt: "alimentos" }).text, /pensión de alimentos no se cancela/);
+  assert.equal(answersToFields({ ...base, blockers: "lso_2" }).prior_lso, true);
+  assert.equal(answersToFields({ ...base, blockers: "lso_5" }).prior_lso, null);
   assert.equal(answersToFields({ ...base, income: "0" }).monthly_income, 0);
   assert.equal(answersToFields(base).owns_home, false);
   assert.equal(sourceFromUtm("Instagram"), "meta");

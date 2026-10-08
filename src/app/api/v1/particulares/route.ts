@@ -1,15 +1,16 @@
 // POST /api/v1/particulares — entrada desde ManyChat (mensajes directos de Instagram/Facebook) u otro bot.
 // Mismo test que /test: reparte la persona al despacho de su provincia o la deja en "Test particulares".
 // Cabecera x-api-key: la clave de n8n de Ajustes.
-// Body: { full_name, phone, province, email?, debt, creditors, income, employment, home, blockers, consent: true,
+// Body: { full_name, phone, province, email?, debt, creditors, can_pay?, public_debt?, special_debt?, income, employment, home, blockers, consent: true,
 //         marketing_ok?, canal?: "instagram", campana? }  · las respuestas valen el código, el texto del botón o el número de opción.
-//         También admite los nombres en español: nombre, telefono, provincia, deuda, acreedores, ingresos, situacion, vivienda, impedimentos, acepto.
+//         También admite los nombres en español: nombre, telefono, provincia, deuda, acreedores, puede_pagar, deuda_publica, deuda_especial,
+//         ingresos, situacion, vivienda, impedimentos, acepto.
 // Otras empresas y líneas (Recorta luz, placas… ver Empresas y líneas en la app): añade "linea": "<slug, nombre o palabra clave>".
 //         Body: { linea, nombre, telefono, provincia?, email?, acepto: "si", canal?, campana?, ...las preguntas de esa línea }
 //         Cualquier otro campo que mande ManyChat se guarda también en el lead. Sin "linea" (o "despachos") es el test de deudas.
 import { NextResponse } from "next/server";
 import { apiKeyFrom, bad, isMasterKey, unauthorized } from "@/lib/apiAuth";
-import { QUESTIONS, type TestAnswers } from "@/lib/lsoTest";
+import { LEGACY_VALUES, OPTIONAL_ANSWERS, QUESTIONS, type TestAnswers } from "@/lib/lsoTest";
 import { submitTest } from "@/lib/services/testLeads";
 import { extractData } from "@/lib/lineas";
 import { resolveLine, submitLineLead } from "@/lib/services/lines";
@@ -32,14 +33,16 @@ export async function POST(req: Request) {
   // Nombres en español (campos de ManyChat) como alias
   const ALIAS: Record<string, string> = {
     nombre: "full_name", telefono: "phone", movil: "phone", provincia: "province", correo: "email",
-    deuda: "debt", acreedores: "creditors", ingresos: "income", situacion: "employment", vivienda: "home", impedimentos: "blockers",
+    deuda: "debt", acreedores: "creditors", puede_pagar: "can_pay", deuda_publica: "public_debt", deuda_especial: "special_debt", ingresos: "income", situacion: "employment", vivienda: "home", impedimentos: "blockers",
     acepto: "consent", consentimiento: "consent",
   };
   for (const [k, v] of Object.entries(ALIAS)) if (b[v] == null && b[k] != null) b[v] = b[k];
 
   const answers = {} as TestAnswers;
   for (const q of QUESTIONS) {
-    const v = norm(b[q.id]);
+    if (b[q.id] == null && OPTIONAL_ANSWERS.includes(q.id)) continue;
+    const raw = norm(b[q.id]);
+    const v = LEGACY_VALUES[q.id]?.[raw] ?? raw;
     // vale el código, el texto del botón o el número de la opción (1, 2, 3...)
     const opt = q.options.find((o) => norm(o.value) === v || norm(o.label) === v) ?? (/^\d$/.test(v) ? q.options[Number(v) - 1] : undefined);
     if (!opt) return bad(`Respuesta no válida en "${q.id}". Opciones: ${q.options.map((o) => o.value).join(", ")}`);
