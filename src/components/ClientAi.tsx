@@ -13,7 +13,7 @@ const button = "inline-flex min-h-11 items-center justify-center gap-2 rounded-x
  * Asistente IA del cliente: le cuentas el caso y deja montadas sus condiciones, marcadores y plan;
  * cada mes genera el informe con la evolución y los pasos a seguir.
  */
-export function ClientAi({ kind, clientId, messages, plan, reports, month, monthName, hasKey, fresh }: {
+export function ClientAi({ kind, clientId, messages, plan, reports, month, monthName, hasKey, fresh, notice }: {
   kind: "despacho" | "linea";
   clientId: string;
   messages: AiMessage[];
@@ -23,6 +23,8 @@ export function ClientAi({ kind, clientId, messages, plan, reports, month, month
   monthName: string;
   hasKey: boolean;
   fresh?: boolean;
+  /** error de la IA al crear el cliente (el mensaje queda guardado para reenviarlo) */
+  notice?: string;
 }) {
   const [chat, send, sending] = useActionState<AiFormState, FormData>(async (prev, fd) => {
     const r = await askClientAi(kind, clientId, prev, fd);
@@ -47,9 +49,10 @@ export function ClientAi({ kind, clientId, messages, plan, reports, month, month
       </header>
 
       <div className="p-4 sm:p-5">
+        {notice && hasKey && <p className="mb-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800">{notice} Tu mensaje está guardado: escribe «hazlo» abajo para que lo vuelva a intentar.</p>}
         {!hasKey && (
           <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
-            Para que la IA funcione falta la clave de Claude. <Link href="/ajustes#ia" className="font-semibold underline">Pégala en Ajustes</Link>.
+            {messages.length ? "Tu mensaje está guardado, pero la IA aún no puede responder: falta la clave de Claude." : "Para que la IA funcione falta la clave de Claude."} <Link href="/ajustes#ia" className="font-semibold underline">Pégala en Ajustes</Link>.
           </p>
         )}
 

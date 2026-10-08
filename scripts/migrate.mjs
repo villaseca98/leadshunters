@@ -13,7 +13,14 @@ async function main() {
     console.warn("⚠ Sin DATABASE_URL: no se aplican migraciones. Conecta la base de datos y vuelve a desplegar.");
     return;
   }
+  if (process.env.VERCEL_ENV === "preview") {
+    // las previsualizaciones de ramas comparten la base de datos de producción: solo migra el despliegue de producción
+    console.warn("⚠ Despliegue de previsualización: no se aplican migraciones.");
+    return;
+  }
   await client.connect();
+  // si dos despliegues migran a la vez, el segundo espera al primero en vez de fallar
+  await client.query("SELECT pg_advisory_lock(727001)");
   await client.query(`CREATE TABLE IF NOT EXISTS schema_migrations (name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())`);
   const done = new Set((await client.query("SELECT name FROM schema_migrations")).rows.map((r) => r.name));
   const files = (await readdir(dir)).filter((f) => f.endsWith(".sql")).sort();

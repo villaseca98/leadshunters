@@ -158,7 +158,7 @@ export async function chatTurn(kind: ClientKind, id: string, text: string): Prom
         content: `Así está ahora el cliente en la app:\n${ctx.text}\n\nPlan actual: ${state.plan ? JSON.stringify(state.plan) : "ninguno todavía"}\nCondiciones que puedes poner: ${ctx.conditions.join(", ")} (en euros; comision_pct en %).${ctx.fields.length ? `\nCampos de su ficha: ${ctx.fields.map((f) => `${f.key} (${f.label})`).join(", ")}.` : ""}`,
       },
       { role: "assistant", content: "Entendido. Cuéntame el caso." },
-      ...history.slice(-21).map((m) => ({ role: m.role, content: m.text })),
+      ...merged(history.slice(-21)),
     ],
   });
   if (res.stop_reason === "refusal") return { error: "La IA no ha querido responder a eso. Reformúlalo." };
@@ -173,6 +173,40 @@ export async function chatTurn(kind: ClientKind, id: string, text: string): Prom
     [kind, id, JSON.stringify(messages), out.plan ? JSON.stringify(out.plan) : null],
   );
   return {};
+}
+
+/** La API quiere turnos alternos: junta mensajes seguidos del mismo lado (p. ej. uno que se quedó sin respuesta). */
+function merged(list: AiMessage[]) {
+  const out: { role: "user" | "assistant"; content: string }[] = [];
+  for (const m of list) {
+    const last = out[out.length - 1];
+    if (last && last.role === m.role) last.content += `\n\n${m.text}`;
+    else out.push({ role: m.role, content: m.text });
+  }
+  while (out[0]?.role === "assistant") out.shift();
+  return out;
+}
+
+/**
+ * Lo que escribes en la caja de la IA al crear el cliente. Si la IA responde, queda montado;
+ * si no (falta la clave, error), el mensaje se guarda igualmente y se ve en el chat para reenviarlo.
+ */
+export async function firstMessage(kind: ClientKind, id: string, text: string): Promise<string | null> {
+  const t = text.trim().slice(0, 4000);
+  if (!t) return null;
+  let error: string | null = null;
+  try {
+    error = (await chatTurn(kind, id, t)).error ?? null;
+  } catch (e) {
+    error = aiError(e);
+  }
+  if (error) {
+    await query(
+      `INSERT INTO client_ai(client_kind, client_id, messages) VALUES ($1, $2, $3) ON CONFLICT (client_kind, client_id) DO NOTHING`,
+      [kind, id, JSON.stringify([{ role: "user", text: t, at: new Date().toISOString() }])],
+    );
+  }
+  return error;
 }
 
 type Out = z.infer<ReturnType<typeof schemaFor>>;
