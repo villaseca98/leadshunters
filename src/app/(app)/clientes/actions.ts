@@ -10,8 +10,19 @@ function parse(formData: FormData) {
   const g = (k: string) => String(formData.get(k) ?? "").trim();
   const num = (k: string, d: number | null) => (g(k) === "" ? d : Number(g(k).replace(",", ".")));
   const list = (k: string) => g(k).split(/[,\n;]/).map((s) => s.trim()).filter(Boolean);
-  const plan = g("plan") in PLANS ? PLANS[g("plan") as PlanId] : null;
+  const vertical = ["luz", "placas"].includes(g("vertical")) ? g("vertical") : "lso";
+  // Los planes son de despachos; luz y placas siempre van con precios propios
+  const plan = vertical === "lso" && g("plan") in PLANS ? PLANS[g("plan") as PlanId] : null;
+  const energy = vertical !== "lso";
   return {
+    vertical,
+    brand: g("brand") || null,
+    web_form_ids: list("web_form_ids"),
+    price_per_lead: energy ? num("price_per_lead", null) : null,
+    price_per_sale: energy ? num("price_per_sale", null) : null,
+    sale_commission_pct: energy ? num("sale_commission_pct", null) : null,
+    min_monthly_bill: energy ? num("min_monthly_bill", null) : null,
+    accept_hours: Math.max(1, Math.round(num("accept_hours", 72) ?? 72)),
     plan: plan ? g("plan") : "personalizado",
     name: g("name"),
     contact_name: g("contact_name") || null,
@@ -21,8 +32,8 @@ function parse(formData: FormData) {
     city: g("city") || null,
     provinces: list("provinces").map((p) => matchProvince(p) ?? p),
     status: ["activo", "pausado", "baja"].includes(g("status")) ? g("status") : "activo",
-    monthly_fee: plan ? plan.fee : num("monthly_fee", 500),
-    price_per_consultation: plan ? plan.perConsultation : num("price_per_consultation", 40),
+    monthly_fee: plan ? plan.fee : energy ? num("monthly_fee_energia", 0) : num("monthly_fee", 500),
+    price_per_consultation: plan ? plan.perConsultation : energy ? 0 : num("price_per_consultation", 40),
     max_billable_per_month: num("max_billable_per_month", null),
     min_debt: num("min_debt", 8000),
     min_creditors: num("min_creditors", 2),
@@ -40,14 +51,15 @@ const COLS = [
   "plan", "name", "contact_name", "contact_phone", "contact_email", "notify_email", "city", "provinces", "status", "monthly_fee",
   "price_per_consultation", "max_billable_per_month", "min_debt", "min_creditors", "calendar_url", "meta_form_ids",
   "google_form_ids", "started_at", "notes", "ad_spend_month", "google_review_url",
+  "vertical", "brand", "web_form_ids", "price_per_lead", "price_per_sale", "sale_commission_pct", "min_monthly_bill", "accept_hours",
 ] as const;
 
 /** Premium = exclusividad: ningún otro cliente activo con Premium en la misma provincia. */
 async function checkExclusivity(d: ReturnType<typeof parse>, id: string | null) {
-  if (d.status !== "activo") return;
+  if (d.status !== "activo" || d.vertical !== "lso") return; // la exclusividad provincial es solo de despachos
   const clash = await queryOne<{ name: string; provinces: string[] }>(
     `SELECT name, provinces FROM clients
-      WHERE status = 'activo' AND ($1::uuid IS NULL OR id <> $1)
+      WHERE status = 'activo' AND vertical = 'lso' AND ($1::uuid IS NULL OR id <> $1)
         AND ((plan = 'premium' AND (provinces && $2::text[] OR cardinality(provinces) = 0))
           OR ($3 = 'premium' AND (provinces && $2::text[] OR cardinality($2::text[]) = 0)))
       LIMIT 1`,

@@ -11,7 +11,9 @@ export type EventKind =
   | "cita.cancelada"
   | "prospecto.cliente"
   | "prospecto.vio_auditoria"
-  | "test.sin_despacho";
+  | "test.sin_despacho"
+  | "oportunidad.nueva"
+  | "oportunidad.etapa";
 
 /**
  * Guarda el evento (outbox) y lo envía a n8n si hay N8N_EVENTS_WEBHOOK_URL.

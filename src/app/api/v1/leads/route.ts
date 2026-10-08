@@ -1,6 +1,7 @@
 // POST /api/v1/leads — entrada de leads de Meta Lead Ads, Google Ads o webs de los despachos.
 // Autenticación: clave maestra de n8n (y entonces hace falta client_id) o la api_key del propio cliente.
-// Body: { client_id?, source, external_id?, campaign?, full_name?, phone?, email?, province?, debt_amount?, ...,
+// Body: { client_id?, form_id?, source, external_id?, campaign?, full_name?, phone?, email?, province?, debt_amount?, ...,
+//         luz/placas: monthly_bill?, tariff?, business_type?, postal_code?, roof?, daytime_share?, energy?: {...},
 //         answers?: { "¿Cuánto debes en total?": "Entre 10.000 y 30.000 €", ... } }
 import { NextResponse } from "next/server";
 import { apiKeyFrom, bad, clientFromKey, isMasterKey, unauthorized } from "@/lib/apiAuth";
@@ -19,8 +20,14 @@ export async function POST(req: Request) {
   let clientId = client?.id ?? body.client_id ?? null;
   if (!clientId && body.client_key) clientId = (await clientFromKey(body.client_key))?.id ?? null;
   if (!clientId && body.form_id) {
-    const col = body.source === "google" ? "google_form_ids" : "meta_form_ids";
-    clientId = (await queryOne<{ id: string }>(`SELECT id FROM clients WHERE $1 = ANY(${col})`, [String(body.form_id)]))?.id ?? null;
+    // Busca primero en la columna del origen y, si no, en cualquiera (formularios web propios como recorta-luz)
+    const col = body.source === "google" ? "google_form_ids" : body.source === "web" ? "web_form_ids" : "meta_form_ids";
+    clientId = (await queryOne<{ id: string }>(
+      `SELECT id FROM clients WHERE $1 = ANY(${col})
+       UNION ALL SELECT id FROM clients WHERE $1 = ANY(web_form_ids) OR $1 = ANY(meta_form_ids) OR $1 = ANY(google_form_ids)
+       LIMIT 1`,
+      [String(body.form_id)],
+    ))?.id ?? null;
     if (!clientId) return bad(`Ningún cliente tiene asignado el formulario ${body.form_id}. Añádelo en la ficha del cliente.`, 404);
   }
   if (!clientId) return bad("Falta client_id, client_key o form_id para saber de qué despacho es el lead");
