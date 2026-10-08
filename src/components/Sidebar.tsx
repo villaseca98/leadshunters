@@ -19,29 +19,57 @@ export function Logo({ className = "", dark = false }: { className?: string; dar
   );
 }
 
-const MAIN = [
-  { href: "/", label: "Inicio", icon: IconHome },
-  { href: "/leads", label: "Leads", icon: IconPeople },
-  { href: "/prospeccion", label: "Despachos", icon: IconTarget },
-];
-const MORE = [
-  { href: "/lineas", label: "Otras líneas", hint: "Recorta (luz, placas) y demás empresas" },
-  { href: "/informes", label: "Informes", hint: "Todas las líneas: qué mejorar" },
-  { href: "/negocios", label: "Empresas y líneas", hint: "Crear líneas, preguntas y ManyChat" },
-  { href: "/particulares", label: "Test particulares", hint: "Captación propia con consentimiento" },
-  { href: "/citas", label: "Consultas", hint: "Agenda y asistencia" },
-  { href: "/clientes", label: "Clientes", hint: "Despachos que pagan" },
-  { href: "/facturacion", label: "Facturación", hint: "Cuota + consultas" },
-  { href: "/prospeccion/llamar", label: "Llamar despachos", hint: "Venta B2B, el siguiente mejor" },
-  { href: "/ajustes", label: "Ajustes", hint: "Usuarios, n8n e integraciones" },
-];
+/**
+ * Menú unificado: pocas secciones y, dentro de cada una, pestañas (y la línea o empresa como filtro).
+ * Todas las empresas y líneas (despachos, Recorta luz y placas…) comparten las mismas secciones.
+ */
+export const SECTIONS = [
+  { href: "/", label: "Inicio", hint: "Resumen del día", icon: IconHome, tabs: [{ href: "/", label: "Inicio" }] },
+  { href: "/cola", label: "Cazar", hint: "Cola de llamadas", icon: IconBolt, tabs: [{ href: "/cola", label: "Despachos" }, { href: "/lineas/cola", label: "Otras líneas" }] },
+  {
+    href: "/leads", label: "Leads", hint: "Todas las líneas, consultas y test", icon: IconPeople,
+    tabs: [{ href: "/leads", label: "Leads", also: ["/lineas"] }, { href: "/citas", label: "Consultas" }, { href: "/particulares", label: "Test particulares" }],
+  },
+  {
+    href: "/clientes", label: "Clientes", hint: "Métricas y facturación", icon: IconWallet,
+    tabs: [{ href: "/clientes", label: "Clientes" }, { href: "/facturacion", label: "Facturación" }],
+  },
+  {
+    href: "/prospeccion", label: "Captar clientes", hint: "Despachos a los que vender", icon: IconTarget,
+    tabs: [{ href: "/prospeccion", label: "Despachos" }, { href: "/prospeccion/llamar", label: "Llamar" }],
+  },
+  { href: "/informes", label: "Informes", hint: "Qué mejorar en cada línea", icon: IconChart, tabs: [{ href: "/informes", label: "Informes" }] },
+  {
+    href: "/ajustes", label: "Ajustes", hint: "Empresas, líneas e integraciones", icon: IconCog,
+    tabs: [{ href: "/ajustes", label: "Ajustes" }, { href: "/negocios", label: "Empresas y líneas" }],
+  },
+] as const;
+
+type Tab = { href: string; label: string; also?: readonly string[] };
+const under = (path: string, href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(`${href}/`));
+
+/** La pestaña que corresponde a la ruta: la coincidencia más larga gana (/lineas/cola es Cazar, no Leads). */
+export function activeTab(path: string): { section: (typeof SECTIONS)[number]; tab: Tab } | null {
+  let best: { section: (typeof SECTIONS)[number]; tab: Tab; len: number } | null = null;
+  for (const section of SECTIONS) {
+    for (const tab of section.tabs as readonly Tab[]) {
+      for (const h of [tab.href, ...(tab.also ?? [])]) {
+        if (under(path, h) && (!best || h.length > best.len)) best = { section, tab, len: h.length };
+      }
+    }
+  }
+  return best;
+}
 
 export function Sidebar({ user, queueCount }: { user: { name: string; role: string }; queueCount: number }) {
   const path = usePathname();
   const [sheet, setSheet] = useState(false);
-  const isActive = (href: string) =>
-    href === "/" ? path === "/" : href === "/prospeccion" ? path === "/prospeccion" || /^\/prospeccion\/(?!llamar)/.test(path) : path.startsWith(href);
-  const moreActive = MORE.some((m) => isActive(m.href));
+  const current = activeTab(path)?.section.href;
+  const isActive = (href: string) => current === href;
+  const DOCK = ["/", "/leads", "/clientes"];
+  const more = SECTIONS.filter((s) => !DOCK.includes(s.href) && s.href !== "/cola");
+  const moreActive = more.some((m) => isActive(m.href));
+  const sec = (href: string) => SECTIONS.find((s) => s.href === href)!;
 
   return (
     <>
@@ -60,8 +88,8 @@ export function Sidebar({ user, queueCount }: { user: { name: string; role: stri
         aria-label="Navegación principal"
       >
         <div className="relative grid grid-cols-5 items-end rounded-[1.75rem] bg-ink px-2 pb-2 pt-2 text-white shadow-[0_12px_40px_-12px_rgb(0_0_0/0.55)]">
-          <DockItem href={MAIN[0].href} label={MAIN[0].label} active={isActive("/")} Icon={MAIN[0].icon} />
-          <DockItem href={MAIN[1].href} label={MAIN[1].label} active={isActive("/leads")} Icon={MAIN[1].icon} />
+          <DockItem href="/" label="Inicio" active={isActive("/")} Icon={sec("/").icon} />
+          <DockItem href="/leads" label="Leads" active={isActive("/leads")} Icon={sec("/leads").icon} />
           <Link
             href="/cola"
             className="relative -mt-8 flex flex-col items-center gap-1"
@@ -75,7 +103,7 @@ export function Sidebar({ user, queueCount }: { user: { name: string; role: stri
             )}
             <span className={`text-[11px] font-semibold ${isActive("/cola") ? "text-blaze" : "text-white/80"}`}>Cazar</span>
           </Link>
-          <DockItem href={MAIN[2].href} label={MAIN[2].label} active={isActive("/prospeccion")} Icon={MAIN[2].icon} />
+          <DockItem href="/clientes" label="Clientes" active={isActive("/clientes")} Icon={sec("/clientes").icon} />
           <button onClick={() => setSheet(true)} className={`flex flex-col items-center gap-1 rounded-2xl py-1.5 ${moreActive ? "text-blaze" : "text-white/70"}`}>
             <IconGrid className="size-6" />
             <span className="text-[11px] font-semibold">Más</span>
@@ -96,12 +124,15 @@ export function Sidebar({ user, queueCount }: { user: { name: string; role: stri
               </div>
               <form action="/logout" method="post"><button className="rounded-full px-3 py-2 text-sm font-medium text-slate-600 ring-1 ring-slate-300">Salir</button></form>
             </div>
-            <ul className="grid grid-cols-2 gap-2">
-              {MORE.map((m) => (
+            <ul className="grid gap-2">
+              {more.map((m) => (
                 <li key={m.href}>
-                  <Link href={m.href} onClick={() => setSheet(false)} className={`block h-full rounded-2xl p-3.5 ${isActive(m.href) ? "bg-ink text-white" : "bg-white text-ink"}`}>
-                    <div className="font-semibold">{m.label}</div>
-                    <div className={`mt-0.5 text-xs ${isActive(m.href) ? "text-white/70" : "text-slate-500"}`}>{m.hint}</div>
+                  <Link href={m.href} onClick={() => setSheet(false)} className={`flex items-center gap-3 rounded-2xl p-3.5 ${isActive(m.href) ? "bg-ink text-white" : "bg-white text-ink"}`}>
+                    <m.icon className="size-6 shrink-0" />
+                    <span>
+                      <span className="block font-semibold">{m.label}</span>
+                      <span className={`block text-xs ${isActive(m.href) ? "text-white/70" : "text-slate-500"}`}>{m.hint}</span>
+                    </span>
                   </Link>
                 </li>
               ))}
@@ -121,15 +152,15 @@ export function Sidebar({ user, queueCount }: { user: { name: string; role: stri
           </span>
           <span className="text-white/40 transition group-hover:translate-x-0.5 group-hover:text-white">→</span>
         </Link>
-        <nav className="mt-6 space-y-0.5 text-sm">
-          {[...MAIN, ...MORE].map((n) => (
+        <nav className="mt-6 space-y-1 text-sm">
+          {SECTIONS.filter((s) => s.href !== "/cola").map((n) => (
             <Link
               key={n.href}
               href={n.href}
-              className={`flex items-center justify-between rounded-full px-3 py-2 font-medium ${isActive(n.href) ? "bg-white text-ink ring-1 ring-slate-200" : "text-slate-600 hover:bg-white/60 hover:text-ink"}`}
+              className={`flex items-center gap-3 rounded-full px-3 py-2.5 font-medium ${isActive(n.href) ? "bg-white text-ink ring-1 ring-slate-200" : "text-slate-600 hover:bg-white/60 hover:text-ink"}`}
             >
-              {n.label}
-              {isActive(n.href) && <span className="size-1.5 rounded-full bg-blaze" />}
+              <n.icon className={`size-5 ${isActive(n.href) ? "text-blaze" : "text-slate-400"}`} />
+              <span className="flex-1">{n.label}</span>
             </Link>
           ))}
         </nav>
@@ -143,6 +174,26 @@ export function Sidebar({ user, queueCount }: { user: { name: string; role: stri
         </div>
       </aside>
     </>
+  );
+}
+
+/** Pestañas de la sección actual (Leads · Consultas · Test, Clientes · Facturación…). */
+export function SectionTabs() {
+  const path = usePathname();
+  const a = activeTab(path);
+  if (!a || a.section.tabs.length < 2) return null;
+  return (
+    <div className="lh-rail -mx-4 mb-4 flex gap-1 overflow-x-auto border-b border-slate-200 px-4 sm:mx-0 sm:px-0">
+      {(a.section.tabs as readonly Tab[]).map((t) => (
+        <Link
+          key={t.href}
+          href={t.href}
+          className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-semibold ${t === a.tab ? "border-blaze text-ink" : "border-transparent text-slate-500 hover:text-ink"}`}
+        >
+          {t.label}
+        </Link>
+      ))}
+    </div>
   );
 }
 
@@ -164,6 +215,15 @@ function IconPeople({ className }: { className?: string }) {
 }
 function IconTarget({ className }: { className?: string }) {
   return <svg viewBox="0 0 24 24" className={className} {...sv}><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="4" /><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4" /></svg>;
+}
+function IconWallet({ className }: { className?: string }) {
+  return <svg viewBox="0 0 24 24" className={className} {...sv}><rect x="3" y="6" width="18" height="13" rx="2.5" /><path d="M3 10h18M16 14.5h2" /></svg>;
+}
+function IconChart({ className }: { className?: string }) {
+  return <svg viewBox="0 0 24 24" className={className} {...sv}><path d="M4 20V10M10 20V4M16 20v-7M21 20H3" /></svg>;
+}
+function IconCog({ className }: { className?: string }) {
+  return <svg viewBox="0 0 24 24" className={className} {...sv}><circle cx="12" cy="12" r="3" /><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" /></svg>;
 }
 function IconGrid({ className }: { className?: string }) {
   return <svg viewBox="0 0 24 24" className={className} {...sv}><rect x="3.5" y="3.5" width="7" height="7" rx="2" /><rect x="13.5" y="3.5" width="7" height="7" rx="2" /><rect x="3.5" y="13.5" width="7" height="7" rx="2" /><rect x="13.5" y="13.5" width="7" height="7" rx="2" /></svg>;
