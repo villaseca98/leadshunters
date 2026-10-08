@@ -8,7 +8,7 @@ export default async function NuevoCliente() {
   return (
     <>
       <PageHeader title="Nuevo cliente" subtitle="Un despacho que ya ha firmado. Si viene de Prospección, usa «Convertir en cliente» en su ficha." />
-      <Card><ClientForm action={createClient} submit="Crear cliente" /></Card>
+      <Card><ClientForm action={createClient} submit="Crear cliente" ai /></Card>
     </>
   );
 }

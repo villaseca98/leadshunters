@@ -6,6 +6,7 @@ import { query, queryOne } from "@/lib/db";
 import { parseMoney } from "@/lib/normalize";
 import { readField } from "@/lib/lineas";
 import { getLine } from "@/lib/services/lines";
+import { firstMessage } from "@/lib/services/clientAi";
 
 function parse(formData: FormData) {
   const g = (k: string) => String(formData.get(k) ?? "").trim();
@@ -36,8 +37,9 @@ export async function createLineClient(formData: FormData) {
     [lineId, d.name, d.contact_name, d.contact_phone, d.contact_email, d.status, d.monthly_fee, d.price_per_showup, d.price_per_sale, d.notes, d.started_at],
   );
   if (!row) redirect("/clientes?error=L%C3%ADnea%20no%20v%C3%A1lida");
+  const aiError = await firstMessage("linea", row.id, String(formData.get("ia") ?? ""));
   revalidatePath("/clientes");
-  redirect(`/clientes/l/${row.id}?nuevo=1`);
+  redirect(`/clientes/l/${row.id}?nuevo=1${aiError ? `&ia=${encodeURIComponent(aiError)}` : ""}`);
 }
 
 export async function updateLineClient(id: string, formData: FormData) {

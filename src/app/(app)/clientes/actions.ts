@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/auth";
 import { query, queryOne } from "@/lib/db";
 import { matchProvince } from "@/lib/normalize";
 import { PLANS, type PlanId } from "@/lib/plans";
+import { firstMessage } from "@/lib/services/clientAi";
 
 function parse(formData: FormData) {
   const g = (k: string) => String(formData.get(k) ?? "").trim();
@@ -76,7 +77,8 @@ export async function createClient(formData: FormData) {
     `INSERT INTO clients(${COLS.join(",")}) VALUES (${COLS.map((_, i) => `$${i + 1}`).join(",")}) RETURNING id`,
     COLS.map((c) => d[c]),
   );
-  redirect(`/clientes/${row!.id}?nuevo=1`);
+  const aiError = await firstMessage("despacho", row!.id, String(formData.get("ia") ?? ""));
+  redirect(`/clientes/${row!.id}?nuevo=1${aiError ? `&ia=${encodeURIComponent(aiError)}` : ""}`);
 }
 
 export async function updateClient(id: string, formData: FormData) {

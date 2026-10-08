@@ -1,4 +1,5 @@
 import { Field, btn, input } from "@/components/ui";
+import { AiCaseField, CreateButton } from "@/components/AiCaseField";
 import { PLANS, PLAN_IDS } from "@/lib/plans";
 
 export type ClientData = {
@@ -17,10 +18,11 @@ form.cliente:not(:has(select[name=vertical] option[value=lso]:checked)) .solo-ls
 form.cliente:not(:has(select[name=vertical] option[value=placas]:checked)) .solo-placas { display: none; }
 form.cliente:not(:has(select[name=vertical] option[value=luz]:checked)) .solo-luz { display: none; }`;
 
-export function ClientForm({ action, c, submit }: { action: (fd: FormData) => void; c?: Partial<ClientData>; submit: string }) {
+export function ClientForm({ action, c, submit, ai }: { action: (fd: FormData) => void; c?: Partial<ClientData>; submit: string; ai?: boolean }) {
   return (
     <form action={action} className="cliente space-y-6">
       <style>{SWITCH_CSS}</style>
+      {ai && <AiCaseField />}
       <div className="grid gap-3 sm:grid-cols-3">
         <Field label="Línea de negocio" hint="Despacho LSO: citas. Luz y placas: oportunidades y comisiones">
           <select name="vertical" defaultValue={c?.vertical ?? "lso"} className={input}>
@@ -114,7 +116,7 @@ export function ClientForm({ action, c, submit }: { action: (fd: FormData) => vo
       </div>
 
       <Field label="Notas"><textarea name="notes" rows={3} defaultValue={c?.notes ?? ""} className={input} /></Field>
-      <button className={btn.primary}>{submit}</button>
+      {ai ? <CreateButton className={btn.primary}>{submit}</CreateButton> : <button className={btn.primary}>{submit}</button>}
     </form>
   );
 }

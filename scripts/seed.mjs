@@ -8,6 +8,7 @@ const email = (process.env.ADMIN_EMAIL ?? "admin@leadshunters.local").toLowerCas
 const password = process.env.ADMIN_PASSWORD;
 
 async function main() {
+  if (process.env.VERCEL_ENV === "preview") return; // la previsualización no toca la base de datos de producción
   await db.connect();
   if (!password || password.length < 8) {
     console.error("Define ADMIN_PASSWORD (mínimo 8 caracteres) en el .env");

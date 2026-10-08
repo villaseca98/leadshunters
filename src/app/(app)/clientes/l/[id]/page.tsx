@@ -52,7 +52,7 @@ export default async function LineClientPage(props: PageProps<"/clientes/l/[id]"
 
       <div className="grid gap-4 xl:grid-cols-3 xl:gap-6">
         <div className="space-y-4 xl:col-span-2 xl:space-y-6">
-          <ClientAi kind="linea" clientId={id} messages={ai.messages} plan={ai.plan} reports={reports} month={mes} monthName={monthLabel(mes)} hasKey={!!key} fresh={!!sp.nuevo} />
+          <ClientAi kind="linea" clientId={id} messages={ai.messages} plan={ai.plan} reports={reports} month={mes} monthName={monthLabel(mes)} hasKey={!!key} fresh={!!sp.nuevo} notice={typeof sp.ia === "string" ? sp.ia : undefined} />
           <ClientMetrics
             kind="linea"
             clientId={id}

@@ -8,6 +8,7 @@ import { despachoBilling, lineClientBilling } from "@/lib/services/clientMetrics
 import { getLines } from "@/lib/services/lines";
 import { A, Badge, Card, Empty, Field, PageHeader, Table, Td, btn, input } from "@/components/ui";
 import { createLineClient } from "./lineActions";
+import { AiCaseField, CreateButton } from "@/components/AiCaseField";
 
 export default async function Clientes(props: PageProps<"/clientes">) {
   const sp = await props.searchParams;
@@ -96,8 +97,8 @@ export default async function Clientes(props: PageProps<"/clientes">) {
 
       {user?.role === "admin" && lines.length > 0 && (
         <section id="nuevo" className="mt-8"><Card title="Nuevo cliente de otra línea">
-          <p className="mb-3 text-xs text-slate-500">Al crearlo se abre su ficha con el asistente IA: le cuentas el caso y te monta condiciones, marcadores, métricas e informes.</p>
           <form action={createLineClient} className="grid gap-3 sm:grid-cols-3 sm:items-end">
+            <div className="sm:col-span-3"><AiCaseField /></div>
             <Field label="Línea">
               <select name="line_id" required className={input}>
                 {lines.map((l) => <option key={l.id} value={l.id}>{l.emoji} {l.name} · {l.company_name}</option>)}
@@ -107,7 +108,7 @@ export default async function Clientes(props: PageProps<"/clientes">) {
             <Field label="Fijo €/mes"><input name="monthly_fee" inputMode="decimal" placeholder="0" className={input} /></Field>
             <Field label="€ por show-up"><input name="price_per_showup" inputMode="decimal" placeholder="0" className={input} /></Field>
             <Field label="€ por venta"><input name="price_per_sale" inputMode="decimal" placeholder="0 = importe de cada lead" className={input} /></Field>
-            <button className={btn.primary}>Crear cliente</button>
+            <CreateButton className={btn.primary}>Crear cliente</CreateButton>
           </form>
         </Card></section>
       )}
