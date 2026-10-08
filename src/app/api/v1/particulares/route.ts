@@ -4,10 +4,15 @@
 // Body: { full_name, phone, province, email?, debt, creditors, income, employment, home, blockers, consent: true,
 //         marketing_ok?, canal?: "instagram", campana? }  · las respuestas valen el código, el texto del botón o el número de opción.
 //         También admite los nombres en español: nombre, telefono, provincia, deuda, acreedores, ingresos, situacion, vivienda, impedimentos, acepto.
+// Otras empresas y líneas (Recorta luz, placas… ver Empresas y líneas en la app): añade "linea": "<slug, nombre o palabra clave>".
+//         Body: { linea, nombre, telefono, provincia?, email?, acepto: "si", canal?, campana?, ...las preguntas de esa línea }
+//         Cualquier otro campo que mande ManyChat se guarda también en el lead. Sin "linea" (o "despachos") es el test de deudas.
 import { NextResponse } from "next/server";
 import { apiKeyFrom, bad, isMasterKey, unauthorized } from "@/lib/apiAuth";
 import { QUESTIONS, type TestAnswers } from "@/lib/lsoTest";
 import { submitTest } from "@/lib/services/testLeads";
+import { extractData } from "@/lib/lineas";
+import { resolveLine, submitLineLead } from "@/lib/services/lines";
 
 const norm = (s: unknown) => String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 const yes = (v: unknown) => v === true || ["si", "sí", "true", "1", "acepto", "yes"].includes(norm(v));
@@ -16,6 +21,13 @@ export async function POST(req: Request) {
   if (!(await isMasterKey(apiKeyFrom(req)))) return unauthorized();
   const b = (await req.json().catch(() => null)) as Record<string, unknown> | null;
   if (!b || typeof b !== "object") return bad("JSON no válido");
+
+  const lineaRaw = b.linea ?? b.vertical ?? b.linea_negocio ?? b.interes;
+  if (lineaRaw != null && String(lineaRaw).trim() !== "") {
+    const line = await resolveLine(lineaRaw);
+    if (!line) return bad(`Línea no encontrada: "${String(lineaRaw).slice(0, 60)}". Créala en la app, en Empresas y líneas.`, 404);
+    if (line.kind !== "despachos") return otraLinea(b, line);
+  }
 
   // Nombres en español (campos de ManyChat) como alias
   const ALIAS: Record<string, string> = {
@@ -46,4 +58,31 @@ export async function POST(req: Request) {
   });
   if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 422 });
   return NextResponse.json({ ok: true, resultado: r.verdict.kind, titulo: r.verdict.title, texto: r.verdict.text }, { status: 201 });
+}
+
+/** Lead de cualquier otra línea (Recorta luz, placas…): no pasa por el test de deudas ni va a ningún despacho. */
+async function otraLinea(b: Record<string, unknown>, line: NonNullable<Awaited<ReturnType<typeof resolveLine>>>) {
+  const pick = (...keys: string[]) => keys.map((k) => b[k]).find((v) => v != null && String(v).trim() !== "");
+  const nombre = String(pick("nombre", "full_name", "name") ?? [b.first_name, b.last_name].filter(Boolean).join(" ")).trim();
+  const canal = String(b.canal ?? "instagram");
+  const r = await submitLineLead({
+    line,
+    full_name: nombre,
+    phone: String(pick("telefono", "phone", "movil", "phone_number") ?? ""),
+    email: (pick("email", "correo") as string | undefined) ?? null,
+    province: (pick("provincia", "province") as string | undefined) ?? null,
+    data: extractData(line.fields, b),
+    consent: yes(pick("acepto", "consent", "consentimiento")),
+    marketing_ok: yes(b.marketing_ok),
+    channel: canal,
+    campaign: b.campana ? String(b.campana) : null,
+    utm: { utm_source: canal, utm_medium: "dm" },
+    raw: b,
+  });
+  if (!r.ok) return NextResponse.json({ ok: false, error: r.error }, { status: 422 });
+  const first = nombre.split(/\s+/)[0] || "";
+  return NextResponse.json({
+    ok: true, id: r.id, empresa: line.company_name, linea: line.slug, prioridad: r.priority, duplicado: r.duplicate, resultado: "recibido",
+    titulo: `¡Recibido${first ? `, ${first}` : ""}!`, texto: line.thanks_text,
+  }, { status: r.duplicate ? 200 : 201 });
 }

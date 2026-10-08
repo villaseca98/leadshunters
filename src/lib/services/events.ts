@@ -12,6 +12,7 @@ export type EventKind =
   | "prospecto.cliente"
   | "prospecto.vio_auditoria"
   | "test.sin_despacho"
+  | "linea.lead_nuevo"
   | "oportunidad.nueva"
   | "oportunidad.etapa";
 

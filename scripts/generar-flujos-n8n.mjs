@@ -494,7 +494,7 @@ return [{ json: { event_id: b.id, kind: b.kind, ...b.payload } }];`);
     outputKey: key,
   });
   const sw = node("Tipo de evento", "n8n-nodes-base.switch", 3.2, [660, 400], {
-    rules: { values: ["lead.nuevo", "cita.agendada", "cita.asistida", "cita.no_asistio", "prospecto.cliente", "prospecto.vio_auditoria", "test.sin_despacho"].map(rule) },
+    rules: { values: ["lead.nuevo", "cita.agendada", "cita.asistida", "cita.no_asistio", "prospecto.cliente", "prospecto.vio_auditoria", "test.sin_despacho", "linea.lead_nuevo"].map(rule) },
     options: {},
   });
 
@@ -554,7 +554,9 @@ return [{ json: { event_id: b.id, kind: b.kind, ...b.payload } }];`);
     "=👀 *{{ $json.nombre }}* ({{ $json.ciudad || '' }}) está viendo tu auditoría ahora mismo.\nLlámale ya: {{ $json.telefono || 'sin teléfono' }}\n{{ $json.enlace }}");
   const tgPool = whatsapp("🙋 Persona sin despacho", [940, 1180],
     "=🙋 *{{ $json.nombre }}* ({{ $json.provincia }}) ha hecho el test: {{ $json.resultado === 'apto' ? 'cumple' : 'hay que revisar' }}, deuda {{ $json.deuda ? $json.deuda.toLocaleString('es-ES') + ' €' : '¿?' }}, {{ $json.acreedores }} acreedores.\nNo tienes despacho en {{ $json.provincia }}: ya son {{ $json.en_provincia_30d }} este mes. Llámale y ofrece el caso a un despacho de allí.\n{{ $('Config').first().json.APP_URL }}/particulares");
-  [tgLead, tgDone, tgNo, tgClient, tgAudit, tgPool].forEach((n) => (n.onError = "continueRegularOutput"));
+  const tgEnergy = whatsapp("⚡ Lead de otra línea", [940, 1340],
+    "=⚡ *{{ $json.linea_nombre }}* ({{ $json.empresa }}) · prioridad {{ $json.prioridad }}\n{{ $json.nombre }} · {{ $json.telefono }} · {{ $json.provincia || '' }}\n{{ ($json.motivos || []).slice(0, 3).join(' · ') }}\n{{ $json.canal }} {{ $json.campana || '' }}\n👉 {{ $('Config').first().json.APP_URL }}/lineas/{{ $json.id }}");
+  [tgLead, tgDone, tgNo, tgClient, tgAudit, tgPool, tgEnergy].forEach((n) => (n.onError = "continueRegularOutput"));
 
   // Reseña en Google (despachos con enlace de reseña): email al lead tras la consulta realizada
   const D = "$('Tipo de evento').item.json";
@@ -575,17 +577,18 @@ return [{ json: { event_id: b.id, kind: b.kind, ...b.payload } }];`);
   markReview.onError = "continueRegularOutput";
 
   const note = sticky(
-    "## 04 · Eventos de la app\nLa app llama a este webhook en cada evento (`N8N_EVENTS_WEBHOOK_URL`).\n- **lead.nuevo** → WhatsApp al equipo para llamar en < 5 min\n- **cita.agendada** → email al despacho con el resumen + enlace para confirmar asistencia, y confirmación al lead (email; SMS con Twilio si lo activas)\n- **cita.asistida / no_asistio** → aviso; si el despacho tiene enlace de reseña, email al lead pidiendo su opinión en Google\n- **prospecto.cliente** → aviso de nuevo cliente\n- **prospecto.vio_auditoria** → WhatsApp para llamar al despacho mientras mira su auditoría\n- **test.sin_despacho** → alguien hizo el test en una provincia sin despacho cliente\n\nActiva el flujo para que la URL de producción funcione.",
+    "## 04 · Eventos de la app\nLa app llama a este webhook en cada evento (`N8N_EVENTS_WEBHOOK_URL`).\n- **lead.nuevo** → WhatsApp al equipo para llamar en < 5 min\n- **cita.agendada** → email al despacho con el resumen + enlace para confirmar asistencia, y confirmación al lead (email; SMS con Twilio si lo activas)\n- **cita.asistida / no_asistio** → aviso; si el despacho tiene enlace de reseña, email al lead pidiendo su opinión en Google\n- **prospecto.cliente** → aviso de nuevo cliente\n- **prospecto.vio_auditoria** → WhatsApp para llamar al despacho mientras mira su auditoría\n- **test.sin_despacho** → alguien hizo el test en una provincia sin despacho cliente\n- **linea.lead_nuevo** → lead de otra empresa o línea (Recorta luz, placas…) entrado por Instagram\n\nActiva el flujo para que la URL de producción funcione.",
     [160, -40], 560, 300, 4,
   );
 
   save("04-eventos-app.json", workflow("04 · Eventos de la app (avisos y emails)",
-    [note, hook, check, sw, tgLead, mailClient, hasLeadEmail, mailLead, sms, tgDone, wantsReview, mailReview, markReview, tgNo, tgClient, tgAudit, tgPool],
+    [note, hook, check, sw, tgLead, mailClient, hasLeadEmail, mailLead, sms, tgDone, wantsReview, mailReview, markReview, tgNo, tgClient, tgAudit, tgPool, tgEnergy],
     [
       ["Eventos de la app", "Comprobar clave"], ["Comprobar clave", "Tipo de evento"],
       ["Tipo de evento", "🔥 Nuevo lead al equipo", 0], ["Tipo de evento", "Email al despacho", 1], ["Tipo de evento", "✅ Consulta realizada", 2],
       ["Tipo de evento", "❌ No se presentó", 3], ["Tipo de evento", "🎉 Nuevo cliente", 4],
       ["Tipo de evento", "👀 Están viendo la auditoría", 5], ["Tipo de evento", "🙋 Persona sin despacho", 6],
+      ["Tipo de evento", "⚡ Lead de otra línea", 7],
       ["Email al despacho", "¿El lead tiene email?"], ["¿El lead tiene email?", "Email de confirmación al lead", 0],
       ["Email al despacho", "SMS al lead (opcional)"],
       ["✅ Consulta realizada", "¿Pedir reseña?"], ["¿Pedir reseña?", "⭐ Pedir reseña al lead", 0], ["⭐ Pedir reseña al lead", "Marcar reseña pedida"],

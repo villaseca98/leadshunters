@@ -2,6 +2,7 @@ import Link from "next/link";
 import { query } from "@/lib/db";
 import { LEAD_STATUS, QUALIFICATION, SOURCE } from "@/lib/labels";
 import { dateTime, eur } from "@/lib/format";
+import { VerticalTabs } from "@/components/VerticalTabs";
 import { A, Empty, Filters, PageHeader, Pager, StatusBadge, Table, Td, btn, input } from "@/components/ui";
 
 const PER_PAGE = 50;
@@ -19,6 +20,7 @@ export default async function Leads(props: PageProps<"/leads">) {
   if (status) add("l.status = ?", status);
   if (qual) add("l.qualification_status = ?", qual);
   if (source) add("l.source = ?", source);
+  if (["lso", "luz", "placas"].includes(str("vertical"))) add("l.vertical = ?", str("vertical"));
   const w = where.length ? `WHERE ${where.join(" AND ")}` : "";
   const [{ total }] = await query<{ total: number }>(`SELECT count(*)::int total FROM leads l ${w}`, params);
   const rows = await query<{
@@ -49,6 +51,7 @@ export default async function Leads(props: PageProps<"/leads">) {
           </>
         }
       />
+      <VerticalTabs active={["luz", "placas"].includes(str("vertical")) ? `web-${str("vertical")}` : "despachos"} />
       <Filters active={[client, status, qual, source].filter(Boolean).length}>
       <form className="grid grid-cols-2 gap-2 md:grid-cols-6">
         <input name="q" defaultValue={q} placeholder="Nombre, teléfono, email…" className={`${input} col-span-2`} />
