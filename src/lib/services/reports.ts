@@ -1,7 +1,8 @@
 import "server-only";
 import { query, queryOne } from "../db";
-import type { EnergyVertical } from "../energia";
+import type { Line } from "../lineas";
 import { billingForMonth } from "./billing";
+import { getLines } from "./lines";
 
 export type Breakdown = { key: string; leads: number; won: number };
 
@@ -12,14 +13,14 @@ export type DespachosReport = {
   campaigns: Breakdown[]; provinces: Breakdown[];
 };
 
-export type EnergyReport = {
-  vertical: EnergyVertical; leads: number; prev_leads: number; contactados: number; speed_min: number | null; estudios: number;
+export type LineReport = {
+  line: Pick<Line, "id" | "slug" | "name" | "emoji" | "company_name" | "won_label" | "value_label" | "proposal_label">; leads: number; prev_leads: number; contactados: number; speed_min: number | null; estudios: number;
   contratados: number; contratados_de_mes: number; comision: number; prev_comision: number; sin_llamar_24h: number;
   priority: { key: string; leads: number; won: number }[]; channels: Breakdown[]; campaigns: Breakdown[]; provinces: Breakdown[];
   lost: { key: string; n: number }[];
 };
 
-export type Report = { month: string; despachos: DespachosReport; luz: EnergyReport; placas: EnergyReport; weeks: { week: string; despachos: number; luz: number; placas: number }[] };
+export type Report = { month: string; despachos: DespachosReport; lines: LineReport[]; weeks: { week: string; counts: Record<string, number> }[] };
 
 const range = `($1 || '-01')::date`;
 const stop = `(($1 || '-01')::date + interval '1 month')`;
@@ -62,33 +63,33 @@ async function despachos(month: string): Promise<DespachosReport> {
   };
 }
 
-async function energy(month: string, v: EnergyVertical): Promise<EnergyReport> {
-  const p = [month, v];
-  const base = `FROM energy_leads WHERE vertical = $2 AND created_at >= ${range} AND created_at < ${stop}`;
-  const k = await queryOne<Pick<EnergyReport, "leads" | "prev_leads" | "contactados" | "speed_min" | "estudios" | "contratados" | "contratados_de_mes" | "comision" | "prev_comision" | "sin_llamar_24h">>(
+async function lineReport(month: string, line: Line): Promise<LineReport> {
+  const p = [month, line.id];
+  const base = `FROM line_leads WHERE line_id = $2 AND created_at >= ${range} AND created_at < ${stop}`;
+  const k = await queryOne<Pick<LineReport, "leads" | "prev_leads" | "contactados" | "speed_min" | "estudios" | "contratados" | "contratados_de_mes" | "comision" | "prev_comision" | "sin_llamar_24h">>(
     `SELECT
        (SELECT count(*) ${base})::int leads,
-       (SELECT count(*) FROM energy_leads WHERE vertical = $2 AND created_at >= ${range} - interval '1 month' AND created_at < ${range})::int prev_leads,
+       (SELECT count(*) FROM line_leads WHERE line_id = $2 AND created_at >= ${range} - interval '1 month' AND created_at < ${range})::int prev_leads,
        (SELECT count(*) ${base} AND first_contact_at IS NOT NULL)::int contactados,
        (SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY extract(epoch FROM (first_contact_at - created_at)) / 60) ${base} AND first_contact_at IS NOT NULL) speed_min,
-       (SELECT count(*) ${base} AND status IN ('estudio_enviado','contratado'))::int estudios,
-       (SELECT count(*) FROM energy_leads WHERE vertical = $2 AND converted_at >= ${range} AND converted_at < ${stop})::int contratados,
-       (SELECT count(*) ${base} AND status = 'contratado')::int contratados_de_mes,
-       (SELECT coalesce(sum(commission), 0) FROM energy_leads WHERE vertical = $2 AND converted_at >= ${range} AND converted_at < ${stop}) comision,
-       (SELECT coalesce(sum(commission), 0) FROM energy_leads WHERE vertical = $2 AND converted_at >= ${range} - interval '1 month' AND converted_at < ${range}) prev_comision,
-       (SELECT count(*) FROM energy_leads WHERE vertical = $2 AND status = 'nuevo' AND created_at < now() - interval '24 hours')::int sin_llamar_24h`,
+       (SELECT count(*) ${base} AND status IN ('propuesta','ganado'))::int estudios,
+       (SELECT count(*) FROM line_leads WHERE line_id = $2 AND won_at >= ${range} AND won_at < ${stop})::int contratados,
+       (SELECT count(*) ${base} AND status = 'ganado')::int contratados_de_mes,
+       (SELECT coalesce(sum(value), 0) FROM line_leads WHERE line_id = $2 AND won_at >= ${range} AND won_at < ${stop}) comision,
+       (SELECT coalesce(sum(value), 0) FROM line_leads WHERE line_id = $2 AND won_at >= ${range} - interval '1 month' AND won_at < ${range}) prev_comision,
+       (SELECT count(*) FROM line_leads WHERE line_id = $2 AND status = 'nuevo' AND created_at < now() - interval '24 hours')::int sin_llamar_24h`,
     p,
   );
   const by = (col: string, limit = 8) =>
     query<Breakdown>(
-      `SELECT coalesce(${col}, '—') AS key, count(*)::int leads, count(*) FILTER (WHERE status = 'contratado')::int won
+      `SELECT coalesce(${col}, '—') AS key, count(*)::int leads, count(*) FILTER (WHERE status = 'ganado')::int won
          ${base} GROUP BY 1 ORDER BY leads DESC LIMIT ${limit}`,
       p,
     );
   return {
-    vertical: v,
+    line: { id: line.id, slug: line.slug, name: line.name, emoji: line.emoji, company_name: line.company_name, won_label: line.won_label, value_label: line.value_label, proposal_label: line.proposal_label },
     ...k!,
-    priority: await query(`SELECT priority AS key, count(*)::int leads, count(*) FILTER (WHERE status = 'contratado')::int won ${base} GROUP BY 1 ORDER BY 1`, p),
+    priority: await query(`SELECT priority AS key, count(*)::int leads, count(*) FILTER (WHERE status = 'ganado')::int won ${base} GROUP BY 1 ORDER BY 1`, p),
     channels: await by("channel"),
     campaigns: await by("campaign"),
     provinces: await by("province"),
@@ -98,14 +99,16 @@ async function energy(month: string, v: EnergyVertical): Promise<EnergyReport> {
 
 export async function buildReport(month: string): Promise<Report> {
   if (!/^\d{4}-\d{2}$/.test(month)) throw new Error("Mes no válido (YYYY-MM)");
-  const weeks = await query<{ week: string; despachos: number; luz: number; placas: number }>(
+  const lines = await getLines({ includeDespachos: false });
+  const weeks = await query<{ week: string; counts: Record<string, number> }>(
     `WITH w AS (SELECT generate_series(date_trunc('week', now()) - interval '7 weeks', date_trunc('week', now()), interval '1 week') AS s)
      SELECT to_char(w.s, 'DD/MM') AS week,
-       (SELECT count(*) FROM leads l WHERE l.created_at >= w.s AND l.created_at < w.s + interval '1 week' AND l.status <> 'duplicado')::int despachos,
-       (SELECT count(*) FROM energy_leads e WHERE e.vertical = 'luz' AND e.created_at >= w.s AND e.created_at < w.s + interval '1 week')::int luz,
-       (SELECT count(*) FROM energy_leads e WHERE e.vertical = 'placas' AND e.created_at >= w.s AND e.created_at < w.s + interval '1 week')::int placas
+       jsonb_build_object('despachos', (SELECT count(*) FROM leads l WHERE l.created_at >= w.s AND l.created_at < w.s + interval '1 week' AND l.status <> 'duplicado'))
+       || coalesce((SELECT jsonb_object_agg(bl.slug, (SELECT count(*) FROM line_leads ll WHERE ll.line_id = bl.id AND ll.created_at >= w.s AND ll.created_at < w.s + interval '1 week'))
+                      FROM business_lines bl WHERE bl.kind <> 'despachos' AND bl.active), '{}'::jsonb) AS counts
      FROM w ORDER BY w.s`,
   );
-  return { month, despachos: await despachos(month), luz: await energy(month, "luz"), placas: await energy(month, "placas"), weeks };
+  const lineReports: LineReport[] = [];
+  for (const l of lines) lineReports.push(await lineReport(month, l));
+  return { month, despachos: await despachos(month), lines: lineReports, weeks };
 }
-

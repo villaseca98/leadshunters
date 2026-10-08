@@ -12,7 +12,7 @@ export type EventKind =
   | "prospecto.cliente"
   | "prospecto.vio_auditoria"
   | "test.sin_despacho"
-  | "energia.nuevo";
+  | "linea.lead_nuevo";
 
 /**
  * Guarda el evento (outbox) y lo envía a n8n si hay N8N_EVENTS_WEBHOOK_URL.

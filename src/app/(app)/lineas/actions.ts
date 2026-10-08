@@ -1,0 +1,121 @@
+"use server";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { requireAdmin, requireUser } from "@/lib/auth";
+import { parseCsv } from "@/lib/csv";
+import { query } from "@/lib/db";
+import { extractData, readField, scoreLead } from "@/lib/lineas";
+import { matchProvince, normalizeEmail, normalizePhone, parseMoney } from "@/lib/normalize";
+import { claimNextLineLead, getLine, setLineStatus, submitLineLead } from "@/lib/services/lines";
+
+export async function changeLineStatus(id: string, fromQueue: boolean, formData: FormData) {
+  const user = await requireUser();
+  await setLineStatus(id, String(formData.get("status") ?? ""), {
+    value: parseMoney(formData.get("value")),
+    lost_reason: String(formData.get("lost_reason") ?? "") || null,
+    userId: user.id,
+  });
+  revalidatePath(`/lineas/${id}`);
+  revalidatePath("/lineas");
+  if (fromQueue) await nextInQueue(user.id, String(formData.get("queue_line") ?? ""));
+}
+
+/** Coge el siguiente lead de la cola (de una línea, por su slug, o de todas) y abre su ficha. */
+async function nextInQueue(userId: string, slug: string) {
+  const line = slug ? await getLine(slug) : null;
+  const id = await claimNextLineLead(userId, line?.id ?? null);
+  const q = line ? `linea=${line.slug}` : "";
+  redirect(id ? `/lineas/${id}?cola=${line?.slug ?? "todas"}` : `/lineas/cola?vacia=1${q ? `&${q}` : ""}`);
+}
+
+export async function takeNextLineLead(formData: FormData) {
+  const user = await requireUser();
+  await nextInQueue(user.id, String(formData.get("linea") ?? ""));
+}
+
+/** Datos confirmados al hablar con la persona: recalcula la prioridad con las preguntas de su línea. */
+export async function updateLineLead(id: string, formData: FormData) {
+  await requireUser();
+  const g = (k: string) => String(formData.get(k) ?? "").trim();
+  const cur = await query<{ line_id: string; data: Record<string, string> }>("SELECT line_id, data FROM line_leads WHERE id = $1", [id]);
+  if (!cur[0]) return;
+  const line = await getLine(g("line_id") || cur[0].line_id);
+  if (!line || line.kind === "despachos") return;
+  const data = { ...cur[0].data };
+  for (const f of line.fields) {
+    const v = readField(f, g(`f_${f.key}`));
+    if (v == null) delete data[f.key];
+    else data[f.key] = v;
+  }
+  const pr = scoreLead(line, data);
+  await query(
+    `UPDATE line_leads SET line_id = $2, full_name = coalesce(nullif($3,''), full_name), phone = coalesce($4, phone), email = $5,
+       province = $6, data = $7, notes = nullif($8,''), value = $9, priority = $10, priority_points = $11, priority_reasons = $12, updated_at = now()
+     WHERE id = $1`,
+    [
+      id, line.id, g("full_name"), normalizePhone(g("phone")), normalizeEmail(g("email")), matchProvince(g("province")) ?? (g("province") || null),
+      JSON.stringify(data), g("notes"), parseMoney(g("value")), pr.tier, pr.points, JSON.stringify(pr.reasons),
+    ],
+  );
+  revalidatePath(`/lineas/${id}`);
+}
+
+export async function createLineLead(formData: FormData) {
+  await requireUser();
+  const g = (k: string) => String(formData.get(k) ?? "").trim();
+  const line = await getLine(g("line_id"));
+  if (!line) redirect("/lineas/nuevo?error=Elige%20una%20l%C3%ADnea");
+  const body: Record<string, unknown> = {};
+  for (const f of line.fields) body[f.key] = g(`f_${f.key}`);
+  const r = await submitLineLead({
+    line,
+    full_name: g("full_name"),
+    phone: g("phone"),
+    email: g("email") || null,
+    province: g("province") || null,
+    data: extractData(line.fields, body),
+    consent: formData.get("consent") === "on",
+    channel: g("channel") || "manual",
+    campaign: g("campaign") || null,
+    notes: g("notes") || null,
+  });
+  if (!r.ok) redirect(`/lineas/nuevo?linea=${line.slug}&error=${encodeURIComponent(r.error)}`);
+  redirect(`/lineas/${r.id}`);
+}
+
+/** Reactivación: CSV de contactos antiguos que ya dieron su permiso. Columnas libres: nombre, telefono, provincia, email y las preguntas de la línea. */
+export async function importLineCsv(formData: FormData) {
+  await requireAdmin();
+  const line = await getLine(String(formData.get("line_id") ?? ""));
+  const file = formData.get("file");
+  if (!line || line.kind === "despachos" || !(file instanceof File) || file.size === 0) redirect("/lineas/importar?error=Falta%20la%20l%C3%ADnea%20o%20el%20archivo");
+  if (formData.get("consent") !== "on") redirect("/lineas/importar?error=Confirma%20que%20estas%20personas%20dieron%20su%20permiso");
+  const rows = parseCsv(await file.text()).slice(0, 5000);
+  let ok = 0, dup = 0, bad = 0;
+  for (const r of rows) {
+    const k = Object.fromEntries(Object.entries(r).map(([key, v]) => [key.toLowerCase().trim(), v]));
+    const res = await submitLineLead({
+      line,
+      full_name: k.nombre ?? k.name ?? k.full_name ?? "",
+      phone: k.telefono ?? k["teléfono"] ?? k.phone ?? k.movil ?? "",
+      email: k.email ?? k.correo ?? null,
+      province: k.provincia ?? k.province ?? null,
+      data: extractData(line.fields, k),
+      consent: true,
+      channel: "reactivacion",
+      campaign: String(formData.get("campaign") ?? "") || "reactivacion",
+      reactivation: true,
+    });
+    if (!res.ok) bad++;
+    else if (res.duplicate) dup++;
+    else ok++;
+  }
+  redirect(`/lineas?linea=${line.slug}&importados=${ok}&repetidos=${dup}&errores=${bad}`);
+}
+
+/** Derecho de supresión (RGPD): borra el lead del todo. */
+export async function eraseLineLead(id: string) {
+  await requireAdmin();
+  await query("DELETE FROM line_leads WHERE id = $1", [id]);
+  redirect("/lineas");
+}

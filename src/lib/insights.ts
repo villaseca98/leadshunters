@@ -1,7 +1,8 @@
 // Lecturas automáticas del informe interno: qué va bien, qué falla y dónde poner el foco. Solo para uso propio.
-import type { Breakdown, EnergyReport, Report } from "./services/reports";
+import type { Breakdown, LineReport, Report } from "./services/reports";
 
-export type Insight = { tone: "bad" | "good" | "info"; area: "despachos" | "luz" | "placas" | "general"; text: string };
+/** area: "despachos", "general" o el nombre con emoji de la línea */
+export type Insight = { tone: "bad" | "good" | "info"; area: string; text: string };
 
 const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0);
 const mins = (m: number) => (m < 60 ? `${Math.round(m)} min` : `${(m / 60).toFixed(1)} h`);
@@ -19,29 +20,26 @@ function campaigns(area: Insight["area"], rows: Breakdown[], wonLabel: string, o
   if (best) out.push({ tone: "good", area, text: `Lo que mejor convierte: «${best.key}» (${pct(best.won, best.leads)} % de ${best.leads} leads acaban en ${wonLabel}). Dale más presupuesto o haz más reels así.` });
 }
 
-function energyInsights(r: EnergyReport, out: Insight[]) {
-  const area = r.vertical;
-  const name = r.vertical === "luz" ? "Luz" : "Placas";
+function lineInsights(r: LineReport, out: Insight[]) {
+  const area = `${r.line.emoji} ${r.line.name}`;
+  const name = r.line.name;
+  const won = r.line.won_label.toLowerCase();
   if (r.sin_llamar_24h > 0) out.push({ tone: "bad", area, text: `${r.sin_llamar_24h} ${r.sin_llamar_24h === 1 ? "lead lleva" : "leads llevan"} más de 24 h sin llamar. Pasado un día casi nadie contesta: llámalos hoy.` });
   if (r.leads === 0) {
-    out.push({ tone: "info", area, text: `${name}: sin leads este mes. Publica reels con la palabra clave ${r.vertical === "luz" ? "LUZ" : "PLACAS"} y conecta la automatización de ManyChat.` });
+    out.push({ tone: "info", area, text: `${name}: sin leads este mes. Publica reels con la palabra clave ${r.line.slug.toUpperCase()} y conecta su automatización de ManyChat.` });
     return;
   }
   trend(area, name, r.leads, r.prev_leads, out);
   if (r.speed_min != null && r.speed_min > 60) out.push({ tone: "bad", area, text: `${name}: tardas ${mins(r.speed_min)} de media en el primer contacto. Por debajo de 1 h se cierra bastante más.` });
   if (r.leads >= 5 && pct(r.contactados, r.leads) < 60) out.push({ tone: "bad", area, text: `${name}: solo hablas con el ${pct(r.contactados, r.leads)} % de los leads. Escribe por WhatsApp antes de llamar y prueba a otra hora.` });
   const c = r.priority.find((p) => p.key === "C");
-  if (c && r.leads >= 5 && c.leads / r.leads > 0.4) {
-    out.push({ tone: "info", area, text: r.vertical === "placas"
-      ? `El ${pct(c.leads, r.leads)} % de los leads de placas son de prioridad C (pisos o inquilinos). Añade en ManyChat la pregunta «¿Vives en casa o chalet en propiedad?» antes de pedir el teléfono.`
-      : `El ${pct(c.leads, r.leads)} % de los leads de luz pagan menos de 50 €/mes y apenas ahorran. Enfoca los anuncios a negocios y familias con factura alta.` });
-  }
+  if (c && r.leads >= 5 && c.leads / r.leads > 0.4) out.push({ tone: "info", area, text: `${name}: el ${pct(c.leads, r.leads)} % de los leads son prioridad C. Añade en ManyChat una pregunta que los filtre antes de pedir el teléfono, o cambia el público del anuncio.` });
   const a = r.priority.find((p) => p.key === "A");
-  if (a && a.leads >= 3 && c && c.leads >= 3 && a.won / a.leads > (c.won / c.leads) * 2) out.push({ tone: "good", area, text: `${name}: los de prioridad A cierran ${pct(a.won, a.leads)} % frente al ${pct(c.won, c.leads)} % de los C. Llama siempre primero a los A.` });
-  campaigns(area, r.campaigns, "contrato", out);
+  if (a && a.leads >= 3 && c && c.leads >= 3 && a.won / a.leads > (c.won / c.leads) * 2) out.push({ tone: "good", area, text: `${name}: los de prioridad A cierran el ${pct(a.won, a.leads)} % frente al ${pct(c.won, c.leads)} % de los C. Llama siempre primero a los A.` });
+  campaigns(area, r.campaigns, won, out);
   const lost = r.lost[0];
   if (lost && lost.n >= 3) out.push({ tone: "info", area, text: `${name}: el motivo de descarte más repetido es «${lost.key}» (${lost.n}). Respóndelo en el guion o en un reel.` });
-  if (r.contratados > 0) out.push({ tone: "good", area, text: `${name}: ${r.contratados} ${r.contratados === 1 ? "contrato" : "contratos"} y ${eur(r.comision)} de comisión${r.prev_comision > 0 ? ` (el mes pasado ${eur(r.prev_comision)})` : ""}.` });
+  if (r.contratados > 0) out.push({ tone: "good", area, text: `${name}: ${r.contratados} ${won} y ${eur(r.comision)} de ${r.line.value_label.toLowerCase()}${r.prev_comision > 0 ? ` (el mes pasado ${eur(r.prev_comision)})` : ""}.` });
 }
 
 export function reportInsights(r: Report): Insight[] {
@@ -56,14 +54,12 @@ export function reportInsights(r: Report): Insight[] {
   if (d.sin_despacho > 0) out.push({ tone: "info", area: "despachos", text: `${d.sin_despacho} ${d.sin_despacho === 1 ? "persona apta hizo" : "personas aptas hicieron"} el test sin despacho en su provincia. Úsalo al llamar a despachos de esas provincias.` });
   if (d.clientes_activos < 3 && d.llamadas_b2b < 100) out.push({ tone: "info", area: "despachos", text: `${d.llamadas_b2b} llamadas a despachos este mes y ${d.clientes_activos} ${d.clientes_activos === 1 ? "cliente activo" : "clientes activos"}. Para llenar plazas hacen falta unas 20 llamadas al día.` });
 
-  energyInsights(r.luz, out);
-  energyInsights(r.placas, out);
+  for (const l of r.lines) lineInsights(l, out);
 
   // Dónde rinde más cada lead: para decidir dónde poner tiempo y presupuesto
   const perLead = [
     { k: "despachos", v: d.leads ? d.facturacion / d.leads : 0, n: d.leads },
-    { k: "luz", v: r.luz.leads ? r.luz.comision / r.luz.leads : 0, n: r.luz.leads },
-    { k: "placas", v: r.placas.leads ? r.placas.comision / r.placas.leads : 0, n: r.placas.leads },
+    ...r.lines.map((l) => ({ k: l.line.name.toLowerCase(), v: l.leads ? l.comision / l.leads : 0, n: l.leads })),
   ].filter((x) => x.n >= 5 && x.v > 0).sort((a, b) => b.v - a.v);
   if (perLead.length >= 2) out.push({ tone: "info", area: "general", text: `Ingreso por lead: ${perLead.map((x) => `${x.k} ${eur(x.v)}`).join(" · ")}. Pon más tiempo y anuncios en ${perLead[0].k}.` });
   return out;
@@ -72,12 +68,11 @@ export function reportInsights(r: Report): Insight[] {
 /** Resumen corto para mandarte por WhatsApp o que lo envíe n8n. */
 export function reportText(r: Report, monthName: string, insights = reportInsights(r)): string {
   const d = r.despachos;
-  const e = (x: EnergyReport) => `${x.leads} leads · ${x.contactados} contactados · ${x.contratados} contratos · ${eur(x.comision)}`;
+  const e = (x: LineReport) => `${x.leads} leads · ${x.contactados} contactados · ${x.contratados} ${x.line.won_label.toLowerCase()} · ${eur(x.comision)}`;
   const lines = [
     `📊 Informe interno · ${monthName}`,
     `⚖️ Despachos: ${d.leads} leads · ${d.citas} consultas (${d.asistidas} hechas) · ${d.clientes_activos} ${d.clientes_activos === 1 ? "cliente" : "clientes"} · ${eur(d.facturacion)}`,
-    `💡 Luz: ${e(r.luz)}`,
-    `☀️ Placas: ${e(r.placas)}`,
+    ...r.lines.map((l) => `${l.line.emoji} ${l.line.name} (${l.line.company_name}): ${e(l)}`),
   ];
   const top = insights.filter((i) => i.tone !== "good").slice(0, 4);
   if (top.length) lines.push("", "Para mejorar:", ...top.map((i) => `• ${i.text}`));

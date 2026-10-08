@@ -25,8 +25,9 @@ const MAIN = [
   { href: "/prospeccion", label: "Despachos", icon: IconTarget },
 ];
 const MORE = [
-  { href: "/energia", label: "Luz y placas", hint: "Leads de Recorta desde Instagram" },
-  { href: "/informes", label: "Informes", hint: "Despachos, luz y placas: qué mejorar" },
+  { href: "/lineas", label: "Otras líneas", hint: "Recorta (luz, placas) y demás empresas" },
+  { href: "/informes", label: "Informes", hint: "Todas las líneas: qué mejorar" },
+  { href: "/negocios", label: "Empresas y líneas", hint: "Crear líneas, preguntas y ManyChat" },
   { href: "/particulares", label: "Test particulares", hint: "Captación propia con consentimiento" },
   { href: "/citas", label: "Consultas", hint: "Agenda y asistencia" },
   { href: "/clientes", label: "Clientes", hint: "Despachos que pagan" },

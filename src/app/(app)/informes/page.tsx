@@ -1,8 +1,8 @@
-// Informe interno de las tres líneas (despachos, luz, placas) para mejorar y optimizar. No se enseña a nadie.
+// Informe interno de todas las líneas (despachos y las de cada empresa) para mejorar y optimizar. No se enseña a nadie.
 import Link from "next/link";
 import { currentMonth, eur, monthLabel, shiftMonth } from "@/lib/format";
 import { reportInsights, reportText, type Insight } from "@/lib/insights";
-import { buildReport, type Breakdown, type EnergyReport } from "@/lib/services/reports";
+import { buildReport, type Breakdown, type LineReport } from "@/lib/services/reports";
 import { contactInfo } from "@/lib/settings";
 import { Card, PageHeader, Stat, btn } from "@/components/ui";
 
@@ -15,7 +15,9 @@ const TONE: Record<Insight["tone"], string> = {
   good: "border-l-emerald-500 bg-emerald-50/60",
   info: "border-l-indigo-400 bg-white",
 };
-const AREA: Record<Insight["area"], string> = { despachos: "⚖️ Despachos", luz: "💡 Luz", placas: "☀️ Placas", general: "📌 General" };
+const AREA: Record<string, string> = { despachos: "⚖️ Despachos", general: "📌 General" };
+// colores de las barras semanales: despachos en tinta, el resto por orden
+const COLORS = ["bg-ink", "bg-amber-400", "bg-blaze", "bg-emerald-500", "bg-sky-500", "bg-violet-500", "bg-rose-400", "bg-slate-400"];
 
 function BreakdownTable({ title, rows, won }: { title: string; rows: Breakdown[]; won: string }) {
   if (!rows.length) return null;
@@ -38,23 +40,23 @@ function BreakdownTable({ title, rows, won }: { title: string; rows: Breakdown[]
   );
 }
 
-function EnergyCard({ r }: { r: EnergyReport }) {
-  const name = r.vertical === "luz" ? "💡 Luz" : "☀️ Placas solares";
+function LineCard({ r }: { r: LineReport }) {
+  const won = r.line.won_label.toLowerCase();
   return (
-    <Card title={name} actions={<Link href={`/energia?linea=${r.vertical}`} className="text-xs font-semibold text-indigo-600">Ver leads</Link>}>
+    <Card title={`${r.line.emoji} ${r.line.name} · ${r.line.company_name}`} actions={<Link href={`/lineas?linea=${r.line.slug}`} className="text-xs font-semibold text-indigo-600">Ver leads</Link>}>
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
         <div><dt className="text-xs text-slate-500">Leads</dt><dd className="num font-semibold">{r.leads}</dd><dd className="text-xs text-slate-500">{delta(r.leads, r.prev_leads)}</dd></div>
         <div><dt className="text-xs text-slate-500">Contactados</dt><dd className="font-semibold"><span className="num">{r.contactados}</span> <span className="text-xs font-normal text-slate-500">{pct(r.contactados, r.leads)}</span></dd></div>
         <div><dt className="text-xs text-slate-500">1er contacto</dt><dd className="num font-semibold">{mins(r.speed_min)}</dd><dd className="text-xs text-slate-500">mediana</dd></div>
-        <div><dt className="text-xs text-slate-500">Estudios enviados</dt><dd className="num font-semibold">{r.estudios}</dd></div>
-        <div><dt className="text-xs text-slate-500">Contratos</dt><dd className="num font-semibold">{r.contratados}</dd><dd className="text-xs text-slate-500">{pct(r.contratados_de_mes, r.leads)} de los leads del mes</dd></div>
-        <div><dt className="text-xs text-slate-500">Comisión</dt><dd className="num font-semibold text-emerald-700">{eur(r.comision)}</dd><dd className="text-xs text-slate-500">{r.contratados ? `${eur(r.comision / r.contratados)} por contrato` : ""}</dd></div>
+        <div><dt className="text-xs text-slate-500">{r.line.proposal_label}</dt><dd className="num font-semibold">{r.estudios}</dd></div>
+        <div><dt className="text-xs text-slate-500">{r.line.won_label}</dt><dd className="num font-semibold">{r.contratados}</dd><dd className="text-xs text-slate-500">{pct(r.contratados_de_mes, r.leads)} de los leads del mes</dd></div>
+        <div><dt className="text-xs text-slate-500">{r.line.value_label}</dt><dd className="num font-semibold text-emerald-700">{eur(r.comision)}</dd><dd className="text-xs text-slate-500">{r.contratados ? `${eur(r.comision / r.contratados)} de media` : ""}</dd></div>
       </dl>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <BreakdownTable title="Por prioridad (leads · contratos)" rows={r.priority} won="contratos" />
-        <BreakdownTable title="Por canal" rows={r.channels} won="contratos" />
-        <BreakdownTable title="Por campaña o reel" rows={r.campaigns} won="contratos" />
-        <BreakdownTable title="Por provincia" rows={r.provinces} won="contratos" />
+        <BreakdownTable title={`Por prioridad (leads · ${won})`} rows={r.priority} won={won} />
+        <BreakdownTable title="Por canal" rows={r.channels} won={won} />
+        <BreakdownTable title="Por campaña o reel" rows={r.campaigns} won={won} />
+        <BreakdownTable title="Por provincia" rows={r.provinces} won={won} />
       </div>
       {r.lost.length > 0 && (
         <p className="mt-3 text-xs text-slate-500">Descartes: {r.lost.map((l) => `${l.key} (${l.n})`).join(" · ")}</p>
@@ -71,14 +73,15 @@ export default async function Informes(props: PageProps<"/informes">) {
   const text = reportText(r, monthLabel(month), insights);
   const { phone } = await contactInfo();
   const d = r.despachos;
-  const maxWeek = Math.max(1, ...r.weeks.map((w) => w.despachos + w.luz + w.placas));
+  const series = [{ slug: "despachos", name: "Despachos" }, ...r.lines.map((l) => ({ slug: l.line.slug, name: `${l.line.emoji} ${l.line.name}` }))];
+  const maxWeek = Math.max(1, ...r.weeks.map((w) => series.reduce((a, x) => a + (w.counts[x.slug] ?? 0), 0)));
 
   return (
     <>
       <PageHeader
         title="Informes"
         eyebrow="Solo para ti"
-        subtitle={`Despachos, luz y placas en ${monthLabel(month)}: qué funciona y qué cambiar.`}
+        subtitle={`Todas las líneas en ${monthLabel(month)}: qué funciona y qué cambiar.`}
         actions={
           <>
             <Link href={`/informes?mes=${shiftMonth(month, -1)}`} className={btn.secondary}>← {monthLabel(shiftMonth(month, -1))}</Link>
@@ -87,10 +90,11 @@ export default async function Informes(props: PageProps<"/informes">) {
         }
       />
 
-      <div className="lh-rail -mx-4 mb-4 flex gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0">
+      <div className="lh-rail -mx-4 mb-4 flex gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible lg:grid-cols-4 sm:px-0">
         <Stat label="⚖️ Despachos" value={eur(d.facturacion)} hint={`${d.leads} leads · ${d.asistidas} consultas hechas · ${d.clientes_activos} ${d.clientes_activos === 1 ? "cliente" : "clientes"}`} tone="good" />
-        <Stat label="💡 Luz" value={eur(r.luz.comision)} hint={`${r.luz.leads} leads · ${r.luz.contratados} contratos`} tone="good" />
-        <Stat label="☀️ Placas" value={eur(r.placas.comision)} hint={`${r.placas.leads} leads · ${r.placas.contratados} contratos`} tone="good" />
+        {r.lines.map((l) => (
+          <Stat key={l.line.slug} label={`${l.line.emoji} ${l.line.name}`} value={eur(l.comision)} hint={`${l.line.company_name} · ${l.leads} leads · ${l.contratados} ${l.line.won_label.toLowerCase()}`} tone="good" />
+        ))}
       </div>
 
       <Card title="Qué mejorar" className="mb-4">
@@ -100,7 +104,7 @@ export default async function Informes(props: PageProps<"/informes">) {
           <ul className="space-y-2">
             {insights.map((i, n) => (
               <li key={n} className={`rounded-xl border border-l-4 border-slate-200 p-3 text-sm ${TONE[i.tone]}`}>
-                <span className="mr-2 text-xs font-semibold text-slate-500">{AREA[i.area]}</span>{i.text}
+                <span className="mr-2 text-xs font-semibold text-slate-500">{AREA[i.area] ?? i.area}</span>{i.text}
               </li>
             ))}
           </ul>
@@ -125,8 +129,7 @@ export default async function Informes(props: PageProps<"/informes">) {
             <BreakdownTable title="Por provincia" rows={d.provinces} won="con consulta" />
           </div>
         </Card>
-        <EnergyCard r={r.luz} />
-        <EnergyCard r={r.placas} />
+        {r.lines.map((l) => <LineCard key={l.line.slug} r={l} />)}
 
         <Card title="Leads por semana (últimas 8)">
           <ul className="space-y-2 text-sm">
@@ -134,18 +137,14 @@ export default async function Informes(props: PageProps<"/informes">) {
               <li key={w.week} className="grid grid-cols-[3.5rem_1fr_auto] items-center gap-3">
                 <span className="num text-xs text-slate-500">{w.week}</span>
                 <span className="flex h-3 overflow-hidden rounded-full bg-slate-100" aria-hidden>
-                  <span className="bg-ink" style={{ width: `${(w.despachos / maxWeek) * 100}%` }} />
-                  <span className="bg-amber-400" style={{ width: `${(w.luz / maxWeek) * 100}%` }} />
-                  <span className="bg-blaze" style={{ width: `${(w.placas / maxWeek) * 100}%` }} />
+                  {series.map((x, i) => <span key={x.slug} className={COLORS[i % COLORS.length]} style={{ width: `${((w.counts[x.slug] ?? 0) / maxWeek) * 100}%` }} />)}
                 </span>
-                <span className="num text-xs text-slate-600">{w.despachos} · {w.luz} · {w.placas}</span>
+                <span className="num text-xs text-slate-600">{series.reduce((a, x) => a + (w.counts[x.slug] ?? 0), 0)}</span>
               </li>
             ))}
           </ul>
           <p className="mt-3 flex flex-wrap gap-3 text-xs text-slate-500">
-            <span><span className="mr-1 inline-block size-2 rounded-full bg-ink" />Despachos</span>
-            <span><span className="mr-1 inline-block size-2 rounded-full bg-amber-400" />Luz</span>
-            <span><span className="mr-1 inline-block size-2 rounded-full bg-blaze" />Placas</span>
+            {series.map((x, i) => <span key={x.slug}><span className={`mr-1 inline-block size-2 rounded-full ${COLORS[i % COLORS.length]}`} />{x.name}</span>)}
           </p>
         </Card>
       </div>
@@ -158,7 +157,7 @@ export default async function Informes(props: PageProps<"/informes">) {
           ) : (
             <Link href="/ajustes" className={btn.secondary}>Pon tu teléfono en Ajustes para enviártelo por WhatsApp</Link>
           )}
-          <a href={`/api/export/energia`} className={btn.secondary}>CSV de luz y placas</a>
+          <a href={`/api/export/lineas`} className={btn.secondary}>CSV de las demás líneas</a>
           <a href={`/api/export/leads`} className={btn.secondary}>CSV de despachos</a>
         </div>
         <p className="mt-2 text-xs text-slate-500">n8n puede pedirlo cada semana en GET /api/v1/informes?mes=AAAA-MM (cabecera x-api-key) y mandarte el campo «texto».</p>
