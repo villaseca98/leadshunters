@@ -13,6 +13,7 @@ import { appUrl } from "@/lib/appUrl";
 import { ReactivateForm } from "./ReactivateForm";
 import { despachoBilling, markersFor } from "@/lib/services/clientMetrics";
 import { ClientMetrics } from "@/components/ClientMetrics";
+import { VERTICALS, isEnergy } from "@/lib/energy";
 
 export default async function ClientePage(props: PageProps<"/clientes/[id]">) {
   const { id } = await props.params;
@@ -61,7 +62,9 @@ document.getElementById('lh-form').onsubmit = async (e) => {
       <PageHeader
         title={c.name}
         eyebrow="Cliente"
-        subtitle={`Plan ${planName(c.plan)} · ${eur(c.monthly_fee)}/mes + ${eur(c.price_per_consultation)} por consulta realizada · ${c.status}`}
+        subtitle={isEnergy(c.vertical)
+          ? `${VERTICALS[c.vertical].label}${c.brand ? ` · marca ${c.brand}` : ""} · ${c.vertical === "placas" ? `${eur(c.price_per_lead ?? 0)} por lead aceptado + ${c.sale_commission_pct ?? 0} % de obra` : `${eur(c.price_per_sale ?? 0)} por contrato activado`} · ${c.status}`
+          : `Plan ${planName(c.plan)} · ${eur(c.monthly_fee)}/mes + ${eur(c.price_per_consultation)} por consulta realizada · ${c.status}`}
         actions={
           <>
             <a href={`/api/export/informe?cliente=${id}&mes=${month}`} className={btn.secondary}>Informe del mes (CSV)</a>
@@ -93,7 +96,12 @@ document.getElementById('lh-form').onsubmit = async (e) => {
             basePath={`/clientes/${id}`}
             markers={markers}
             total={mb?.total_con_marcadores ?? markers.filter((m) => m.unit === "eur" && m.billable).reduce((a, m) => a + m.value, 0)}
-            lines={mb ? [
+            lines={mb && isEnergy(c.vertical) ? [
+              { label: "Fijo mensual", detail: mb.status !== "activo" ? `${mb.status}, no se cobra` : undefined, amount: mb.importe_fijo },
+              ...(c.vertical === "placas" ? [{ label: "Leads aceptados", detail: `${mb.leads_aceptados} × ${eur(mb.price_per_lead ?? 0)} · ${mb.leads_rechazados} rechazados`, amount: mb.por_leads }] : []),
+              { label: c.vertical === "luz" ? "Contratos activados" : "Obras firmadas", detail: `${mb.ventas} × ${eur(mb.price_per_sale ?? 0)}`, amount: mb.por_ventas },
+              ...(c.vertical === "placas" ? [{ label: "% de obra", detail: `${mb.sale_commission_pct ?? 0} % de ${eur(mb.importe_obras)}`, amount: mb.por_comision }] : []),
+            ] : mb ? [
               { label: "Cuota fija", detail: `Plan ${planName(c.plan)}${mb.status !== "activo" ? ` · ${mb.status}, no se cobra` : ""}`, amount: mb.importe_fijo },
               {
                 label: "Consultas realizadas (show-ups)",
@@ -103,14 +111,20 @@ document.getElementById('lh-form').onsubmit = async (e) => {
             ] : []}
           >
             <div className="mb-4 grid grid-cols-3 gap-2 text-center sm:grid-cols-5">
-              {[
+              {(isEnergy(c.vertical) ? [
+                ["Leads", mb?.leads ?? 0],
+                ["Oportunidades", mb?.oportunidades ?? 0],
+                ["Aceptados", c.vertical === "placas" ? mb?.leads_aceptados ?? 0 : "—"],
+                [c.vertical === "luz" ? "Activados" : "Firmadas", mb?.ventas ?? 0],
+                ["Conversión", mb?.leads ? `${Math.round((100 * mb.ventas) / mb.leads)} %` : "—"],
+              ] : [
                 ["Leads", mb?.leads ?? 0],
                 ["Agendadas", mb?.citas_agendadas ?? 0],
                 ["Show-ups", mb?.citas_asistidas ?? 0],
                 ["No-shows", mb?.citas_no_asistio ?? 0],
                 ["Show-up %", mb && mb.citas_asistidas + mb.citas_no_asistio ? `${Math.round((100 * mb.citas_asistidas) / (mb.citas_asistidas + mb.citas_no_asistio))} %` : "—"],
-              ].map(([k, v]) => (
-                <div key={k} className="rounded-xl border border-slate-200 p-2"><div className="num text-lg font-semibold">{v}</div><div className="text-[11px] text-slate-500">{k}</div></div>
+              ]).map(([k, v]) => (
+                <div key={String(k)} className="rounded-xl border border-slate-200 p-2"><div className="num text-lg font-semibold">{v}</div><div className="text-[11px] text-slate-500">{k}</div></div>
               ))}
             </div>
           </ClientMetrics>

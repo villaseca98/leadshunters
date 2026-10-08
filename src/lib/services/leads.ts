@@ -1,9 +1,11 @@
 import "server-only";
 import { query, queryOne, tx } from "../db";
-import { mapAnswers, matchProvince, normalizeEmail, normalizePhone, parseBool, parseCount, parseEmployment, parseMoney, type LeadFields } from "../normalize";
+import { mapAnswers, matchProvince, provinceFromPostalCode, normalizeEmail, normalizePhone, parseBool, parseCount, parseEmployment, parseMoney, type LeadFields } from "../normalize";
 import { qualifyLead } from "../qualify";
+import { cleanEnergyData, isEnergy, qualifyEnergyLead, type EnergyLeadData } from "../energy";
 import { MAX_ATTEMPTS, nextRetry, toCallableTime } from "../schedule";
 import { emitEvent } from "./events";
+import { createDealTx, emitDealEvent } from "./deals";
 import { appUrl } from "@/lib/appUrl";
 
 export type LeadInput = {
@@ -17,14 +19,28 @@ export type LeadInput = {
   answers?: Record<string, unknown>; // respuestas libres del formulario
   raw?: unknown;
   silent?: boolean; // sin aviso a n8n (importaciones masivas)
-} & LeadFields;
+  energy?: Record<string, unknown>; // luz/placas: factura, tarifa, cubierta… (nombres libres)
+} & LeadFields & EnergyLeadData;
 
 const SOURCES = ["meta", "google", "web", "manual", "otro", "reactivacion"];
 
-type ClientRow = { id: string; name: string; status: string; min_debt: number; min_creditors: number; provinces: string[] };
+type ClientRow = {
+  id: string; name: string; status: string; min_debt: number; min_creditors: number; provinces: string[];
+  vertical: string; brand: string | null; min_monthly_bill: number | null;
+};
 
 async function loadClient(id: string) {
-  return queryOne<ClientRow>("SELECT id, name, status, min_debt, min_creditors, provinces FROM clients WHERE id = $1", [id]);
+  return queryOne<ClientRow>(
+    `SELECT id, name, status, min_debt, min_creditors, provinces, vertical, brand, min_monthly_bill::float AS min_monthly_bill
+       FROM clients WHERE id = $1`,
+    [id],
+  );
+}
+
+function qualifyFor(client: ClientRow, f: LeadFields, e: EnergyLeadData) {
+  if (isEnergy(client.vertical))
+    return qualifyEnergyLead({ ...f, ...e }, { vertical: client.vertical, min_monthly_bill: client.min_monthly_bill, provinces: client.provinces ?? [] });
+  return qualifyLead(f, client);
 }
 
 /** Alta de lead desde Meta/Google/web/manual: normaliza, deduplica, cualifica y avisa a n8n. */
@@ -46,7 +62,18 @@ export async function ingestLead(input: LeadInput) {
     prior_lso: parseBool(input.prior_lso) ?? mapped.prior_lso ?? null,
     criminal_record: parseBool(input.criminal_record) ?? mapped.criminal_record ?? null,
   };
-  const q = qualifyLead(f, client);
+  // Energía: campos sueltos del body + bloque `energy` + respuestas del formulario
+  const energy: EnergyLeadData = isEnergy(client.vertical)
+    ? {
+        ...(input.answers ? cleanEnergyData(input.answers) : {}),
+        ...cleanEnergyData(Object.fromEntries(Object.entries(input).filter(([k]) =>
+          ["interest", "business_type", "postal_code", "monthly_bill", "tariff", "contracted_power_kw", "current_supplier", "roof",
+           "daytime_share", "estimated_saving", "summary"].includes(k)))),
+        ...(input.energy ? cleanEnergyData(input.energy) : {}),
+      }
+    : {};
+  if (isEnergy(client.vertical) && !f.province && energy.postal_code) f.province = provinceFromPostalCode(energy.postal_code);
+  const q = qualifyFor(client, f, energy);
   const source = SOURCES.includes(input.source ?? "") ? input.source! : "otro";
 
   // Idempotencia: Meta/Google pueden reenviar el mismo lead
@@ -70,8 +97,11 @@ export async function ingestLead(input: LeadInput) {
   const row = await queryOne<{ id: string; created_at: string }>(
     `INSERT INTO leads(client_id, source, external_id, campaign, ad_name, full_name, phone, email, province, debt_amount,
        creditors_count, monthly_income, employment_status, owns_home, prior_lso, criminal_record, consent_at, consent_text,
-       qualification_score, qualification_status, qualification_reasons, status, next_call_at, raw)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
+       qualification_score, qualification_status, qualification_reasons, status, next_call_at, raw,
+       vertical, interest, business_type, postal_code, monthly_bill, tariff, contracted_power_kw, current_supplier, roof,
+       daytime_share, estimated_saving, summary)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,
+             $25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36)
      RETURNING id, created_at`,
     [
       client.id, source, input.external_id ?? null, input.campaign ?? null, input.ad_name ?? null, f.full_name, f.phone,
@@ -79,6 +109,9 @@ export async function ingestLead(input: LeadInput) {
       f.prior_lso, f.criminal_record, input.consent_at ?? new Date().toISOString(), input.consent_text ?? null,
       q.score, q.status, JSON.stringify(q.reasons), status, toCallableTime(new Date()).toISOString(),
       input.raw ? JSON.stringify(input.raw) : input.answers ? JSON.stringify(input.answers) : null,
+      client.vertical, energy.interest ?? null, energy.business_type ?? null, energy.postal_code ?? null, energy.monthly_bill ?? null,
+      energy.tariff ?? null, energy.contracted_power_kw ?? null, energy.current_supplier ?? null, energy.roof ?? null,
+      energy.daytime_share ?? null, energy.estimated_saving ?? null, energy.summary ?? null,
     ],
   );
 
@@ -87,6 +120,8 @@ export async function ingestLead(input: LeadInput) {
       lead_id: row!.id, cliente: client.name, client_id: client.id, nombre: f.full_name, telefono: f.phone,
       provincia: f.province, deuda: f.debt_amount, acreedores: f.creditors_count,
       cualificacion: q.status, puntuacion: q.score, origen: source, campana: input.campaign ?? null,
+      linea: client.vertical, marca: client.brand ?? client.name, factura_mes: energy.monthly_bill ?? null,
+      tarifa: energy.tariff ?? null, negocio: energy.business_type ?? null,
     });
   }
   return { id: row!.id, duplicate: !!samePhone, status, qualification: q };
@@ -94,14 +129,16 @@ export async function ingestLead(input: LeadInput) {
 
 /** Recalcula la cualificación tras editar datos en la llamada. */
 export async function requalify(leadId: string) {
-  const l = await queryOne<LeadFields & { client_id: string; status: string }>(
+  const l = await queryOne<LeadFields & EnergyLeadData & { client_id: string; status: string }>(
     `SELECT client_id, status, full_name, phone, email, province, debt_amount, creditors_count, monthly_income,
-            employment_status, owns_home, prior_lso, criminal_record FROM leads WHERE id = $1`,
+            employment_status, owns_home, prior_lso, criminal_record,
+            business_type, monthly_bill::float AS monthly_bill, tariff, contracted_power_kw::float AS contracted_power_kw,
+            current_supplier, roof, daytime_share FROM leads WHERE id = $1`,
     [leadId],
   );
   if (!l) return null;
   const client = await loadClient(l.client_id);
-  const q = qualifyLead(l, client!);
+  const q = qualifyFor(client!, l, l);
   await query(
     "UPDATE leads SET qualification_score = $2, qualification_status = $3, qualification_reasons = $4, updated_at = now() WHERE id = $1",
     [leadId, q.score, q.status, JSON.stringify(q.reasons)],
@@ -156,7 +193,8 @@ export async function releaseLead(leadId: string, userId: string) {
 }
 
 export type CallOutcome =
-  | "no_contesta" | "buzon" | "numero_erroneo" | "volver_a_llamar" | "no_cualificado" | "no_interesado" | "cita_agendada";
+  | "no_contesta" | "buzon" | "numero_erroneo" | "volver_a_llamar" | "no_cualificado" | "no_interesado" | "cita_agendada"
+  | "oportunidad"; // luz/placas: en vez de cita, pasa a oportunidad (oferta o instalador)
 
 export type LogCallInput = {
   leadId: string;
@@ -166,6 +204,7 @@ export type LogCallInput = {
   durationS?: number | null;
   callbackAt?: string | null; // para volver_a_llamar
   consultation?: { scheduledAt: string; mode: string; notes?: string | null } | null;
+  deal?: { notes?: string | null; visitAt?: string | null } | null;
 };
 
 /** Registra el resultado de una llamada y mueve el lead en el embudo. */
@@ -178,7 +217,7 @@ export async function logCall(i: LogCallInput) {
   const attempts = lead.attempts + 1;
   let status: string;
   let nextCall: Date | null = null;
-  const reached = ["volver_a_llamar", "no_cualificado", "no_interesado", "cita_agendada"].includes(i.outcome);
+  const reached = ["volver_a_llamar", "no_cualificado", "no_interesado", "cita_agendada", "oportunidad"].includes(i.outcome);
 
   switch (i.outcome) {
     case "no_contesta":
@@ -201,11 +240,15 @@ export async function logCall(i: LogCallInput) {
       status = "cita_agendada";
       if (!i.consultation?.scheduledAt) throw new Error("Falta la fecha de la cita");
       break;
+    case "oportunidad":
+      status = "oportunidad";
+      break;
     default:
       throw new Error("Resultado no válido");
   }
 
   let consultationId: string | null = null;
+  let dealId: string | null = null;
   await tx(async (c) => {
     await c.query("INSERT INTO calls(lead_id, user_id, outcome, notes, duration_s) VALUES ($1,$2,$3,$4,$5)", [
       lead.id, i.userId, i.outcome, i.notes ?? null, i.durationS ?? null,
@@ -226,10 +269,14 @@ export async function logCall(i: LogCallInput) {
       );
       consultationId = r.rows[0].id;
     }
+    if (i.outcome === "oportunidad") {
+      dealId = await createDealTx(c, { leadId: lead.id, clientId: lead.client_id, userId: i.userId, notes: i.deal?.notes ?? i.notes ?? null, visitAt: i.deal?.visitAt ?? null });
+    }
   });
 
   if (consultationId) await emitConsultationEvent("cita.agendada", consultationId);
-  return { status, nextCall, consultationId };
+  if (dealId) await emitDealEvent("oportunidad.nueva", dealId);
+  return { status, nextCall, consultationId, dealId };
 }
 
 /** Payload completo de una cita para n8n (email al despacho, SMS al lead...). */

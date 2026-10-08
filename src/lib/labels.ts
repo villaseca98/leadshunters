@@ -17,6 +17,7 @@ export const LEAD_STATUS: Record<string, { label: string; tone: Tone }> = {
   volver_a_llamar: { label: "Volver a llamar", tone: "violet" },
   contactado: { label: "Contactado", tone: "indigo" },
   cita_agendada: { label: "Cita agendada", tone: "emerald" },
+  oportunidad: { label: "Oportunidad", tone: "emerald" },
   no_cualificado: { label: "No cualificado", tone: "rose" },
   descartado: { label: "Descartado", tone: "slate" },
   duplicado: { label: "Duplicado", tone: "slate" },
@@ -45,6 +46,7 @@ export const CALL_OUTCOME: Record<string, string> = {
   no_cualificado: "No cualificado",
   no_interesado: "No interesado",
   cita_agendada: "Cita agendada",
+  oportunidad: "Oportunidad",
 };
 
 export const SOURCE: Record<string, string> = {

@@ -27,8 +27,8 @@ export const SECTIONS = [
   { href: "/", label: "Inicio", hint: "Resumen del día", icon: IconHome, tabs: [{ href: "/", label: "Inicio" }] },
   { href: "/cola", label: "Cazar", hint: "Cola de llamadas", icon: IconBolt, tabs: [{ href: "/cola", label: "Despachos" }, { href: "/lineas/cola", label: "Otras líneas" }] },
   {
-    href: "/leads", label: "Leads", hint: "Todas las líneas, consultas y test", icon: IconPeople,
-    tabs: [{ href: "/leads", label: "Leads", also: ["/lineas"] }, { href: "/citas", label: "Consultas" }, { href: "/particulares", label: "Test particulares" }],
+    href: "/leads", label: "Leads", hint: "Todas las líneas, oportunidades, consultas y test", icon: IconPeople,
+    tabs: [{ href: "/leads", label: "Leads", also: ["/lineas"] }, { href: "/oportunidades", label: "Oportunidades" }, { href: "/citas", label: "Consultas" }, { href: "/particulares", label: "Test particulares" }],
   },
   {
     href: "/clientes", label: "Clientes", hint: "Métricas y facturación", icon: IconWallet,

@@ -14,6 +14,7 @@ export default async function Lineas(props: PageProps<"/lineas">) {
   const str = (k: string) => (typeof sp[k] === "string" ? (sp[k] as string) : "");
   const lines = await getLines({ includeDespachos: false });
   const line = lines.find((l) => l.slug === str("linea")) ?? null;
+  const webLeads = line ? (await query<{ n: number }>("SELECT count(*)::int n FROM leads WHERE vertical = $1", [line.slug]))[0]?.n ?? 0 : 0;
   const companies = Array.from(new Map(lines.map((l) => [l.company_slug, l.company_name])).entries());
   const empresa = companies.some(([s]) => s === str("empresa")) ? str("empresa") : "";
   const q = str("q"), status = str("status"), priority = str("prioridad"), canal = str("canal");
@@ -74,6 +75,11 @@ export default async function Lineas(props: PageProps<"/lineas">) {
         }
       />
       <VerticalTabs active={line?.slug ?? "todas"} />
+      {line && webLeads > 0 && (
+        <p className="-mt-2 mb-4 text-sm text-slate-600">
+          Además hay <A href={`/leads?vertical=${line.slug}`}>{webLeads} leads de {line.name.toLowerCase()} de la web de Recorta</A>, que van por oportunidades.
+        </p>
+      )}
       {imported && (
         <Card className="mb-4"><p className="text-sm">Importados {imported} · ya estaban {str("repetidos")} · con errores {str("errores")} (teléfono o nombre que faltan).</p></Card>
       )}

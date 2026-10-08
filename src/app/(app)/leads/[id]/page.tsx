@@ -7,6 +7,9 @@ import { toCallableTime } from "@/lib/schedule";
 import { A, Card, PageHeader, StatusBadge, btn } from "@/components/ui";
 import { CallScreen } from "@/components/call/CallScreen";
 import { eraseLead, logCallAction } from "../actions";
+import { DealCard } from "@/components/deals/DealCard";
+import { isEnergy, type Vertical } from "@/lib/energy";
+import { dealForLead } from "@/lib/services/deals";
 
 export default async function LeadPage(props: PageProps<"/leads/[id]">) {
   const { id } = await props.params;
@@ -18,8 +21,11 @@ export default async function LeadPage(props: PageProps<"/leads/[id]">) {
     prior_lso: boolean | null; criminal_record: boolean | null; created_at: string; status: string; qualification_status: string;
     qualification_score: number; qualification_reasons: string[]; source: string; campaign: string | null; ad_name: string | null;
     attempts: number; consent_at: string | null; consent_text: string | null; notes: string | null; next_call_at: string;
-    cliente: string; client_id: string; calendar_url: string | null; external_id: string | null;
-  }>("SELECT l.*, c.name AS cliente, c.calendar_url FROM leads l JOIN clients c ON c.id = l.client_id WHERE l.id = $1", [id]);
+    cliente: string; client_id: string; calendar_url: string | null; external_id: string | null; vertical: Vertical;
+    business_type: string | null; monthly_bill: number | null; tariff: string | null; contracted_power_kw: number | null;
+    current_supplier: string | null; roof: string | null; daytime_share: number | null; postal_code: string | null;
+    summary: string | null; estimated_saving: number | null;
+  }>("SELECT l.*, c.name AS cliente, c.calendar_url, c.vertical FROM leads l JOIN clients c ON c.id = l.client_id WHERE l.id = $1", [id]);
   if (!lead) notFound();
   const calls = await query<{ outcome: string; notes: string | null; created_at: string; duration_s: number | null; user_name: string | null }>(
     "SELECT c.outcome, c.notes, c.created_at, c.duration_s, u.name AS user_name FROM calls c LEFT JOIN users u ON u.id = c.user_id WHERE lead_id = $1 ORDER BY c.created_at DESC",
@@ -29,6 +35,7 @@ export default async function LeadPage(props: PageProps<"/leads/[id]">) {
     "SELECT id, scheduled_at, status, mode FROM consultations WHERE lead_id = $1 ORDER BY scheduled_at DESC",
     [id],
   );
+  const deal = isEnergy(lead.vertical) ? await dealForLead(id) : null;
   const slot = toCallableTime(new Date(nowMs() + 24 * 3600_000));
 
   return (
@@ -45,7 +52,7 @@ export default async function LeadPage(props: PageProps<"/leads/[id]">) {
       />
       <div className="grid gap-4 xl:grid-cols-3 xl:gap-6">
         <div className="xl:col-span-2">
-          <CallScreen lead={lead} action={logCallAction.bind(null, id)} defaultSlot={toLocalInput(slot)} fromQueue={false} clientFilter="" calendarUrl={lead.calendar_url} />
+          <CallScreen lead={lead} action={logCallAction.bind(null, id)} defaultSlot={toLocalInput(slot)} fromQueue={false} clientFilter="" calendarUrl={lead.calendar_url} vertical={lead.vertical} />
         </div>
         <div className="space-y-4 xl:space-y-6">
           <Card title={`Cualificación: ${lead.qualification_score}/100`}>
@@ -53,7 +60,16 @@ export default async function LeadPage(props: PageProps<"/leads/[id]">) {
               {lead.qualification_reasons.map((r, i) => <li key={i}>{r}</li>)}
             </ul>
           </Card>
-          <Card title="Consultas">
+          {isEnergy(lead.vertical) && (deal ? <DealCard deal={deal} /> : (
+            <Card title="Oportunidad"><p className="text-sm text-slate-500">Aún no hay oportunidad. Se crea al marcar la llamada como «{lead.vertical === "luz" ? "Pedir factura y preparar oferta" : "Pasar al instalador"}».</p></Card>
+          ))}
+          {lead.summary && (
+            <Card title="Lo que vio en la web">
+              <p className="whitespace-pre-line text-sm text-slate-700">{lead.summary}</p>
+              {lead.estimated_saving != null && <p className="mt-2 text-sm font-semibold text-emerald-700">Ahorro estimado: {lead.estimated_saving.toLocaleString("es-ES")} € al año</p>}
+            </Card>
+          )}
+          {!isEnergy(lead.vertical) && <Card title="Consultas">
             {consults.length === 0 ? <p className="text-sm text-slate-500">Sin consultas.</p> : (
               <ul className="space-y-2 text-sm">
                 {consults.map((c) => (
@@ -65,7 +81,7 @@ export default async function LeadPage(props: PageProps<"/leads/[id]">) {
               </ul>
             )}
             <A href="/citas" className="mt-3 block text-xs">Gestionar en Consultas →</A>
-          </Card>
+          </Card>}
           <Card title="Llamadas">
             {calls.length === 0 ? <p className="text-sm text-slate-500">Aún no se le ha llamado.</p> : (
               <ul className="space-y-2 text-sm">

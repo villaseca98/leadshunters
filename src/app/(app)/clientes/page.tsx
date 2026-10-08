@@ -20,7 +20,7 @@ export default async function Clientes(props: PageProps<"/clientes">) {
   ]);
   const extraDesp = new Map(despMarkers.map((d) => [d.client_id, d.marcadores]));
   const clients = await query<{ id: string; name: string; city: string | null; status: string; monthly_fee: number; price_per_consultation: number; contact_name: string | null; plan: string }>(
-    "SELECT id, name, city, status, monthly_fee, price_per_consultation, contact_name, plan FROM clients ORDER BY status, name",
+    "SELECT id, name, city, status, monthly_fee, price_per_consultation, contact_name, plan FROM clients WHERE vertical = 'lso' ORDER BY status, name",
   );
   const bill = new Map((await billingForMonth(month)).map((b) => [b.client_id, b]));
   return (
@@ -52,10 +52,29 @@ export default async function Clientes(props: PageProps<"/clientes">) {
 
       {lines.map((line) => {
         const rows = lineBills.filter((r) => r.line_id === line.id);
+        // clientes de luz y placas que llegan por los formularios web de Recorta (con oportunidades)
+        const web = despMarkers.filter((d) => d.vertical === line.slug);
         return (
           <section key={line.id} className="mt-8">
             <h2 className="mb-3 font-display text-lg font-semibold">{line.emoji} {line.name} <span className="text-sm font-normal text-slate-500">· {line.company_name}</span></h2>
-            {rows.length === 0 ? <Empty>Sin clientes en {line.name}. Añade abajo quién te paga por estos leads.</Empty> : (
+            {web.length > 0 && (
+              <div className="mb-3">
+                <Table head={["Cliente (web y oportunidades)", "Estado", "Leads mes", "Oportunidades", line.slug === "placas" ? "Aceptados" : "Activados", "Marcadores", "Facturación mes"]}>
+                  {web.map((r) => (
+                    <tr key={r.client_id} className="hover:bg-slate-50">
+                      <Td primary><A href={`/clientes/${r.client_id}`}>{r.cliente}</A></Td>
+                      <Td><Badge tone={r.status === "activo" ? "emerald" : r.status === "pausado" ? "amber" : "slate"}>{r.status}</Badge></Td>
+                      <Td>{r.leads}</Td>
+                      <Td>{r.oportunidades}</Td>
+                      <Td className="font-medium text-emerald-700">{line.slug === "placas" ? r.leads_aceptados : r.ventas}</Td>
+                      <Td hide>{eur(r.marcadores)}</Td>
+                      <Td className="num text-base font-semibold">{eur(r.total_con_marcadores)}</Td>
+                    </tr>
+                  ))}
+                </Table>
+              </div>
+            )}
+            {rows.length === 0 && web.length > 0 ? null : rows.length === 0 ? <Empty>Sin clientes en {line.name}. Añade abajo quién te paga por estos leads.</Empty> : (
               <Table head={["Cliente", "Estado", "Condiciones", "Leads mes", "Show-ups", line.won_label, "Marcadores", "Facturación mes"]}>
                 {rows.map((r) => (
                   <tr key={r.client_id} className="hover:bg-slate-50">
