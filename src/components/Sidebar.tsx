@@ -27,8 +27,9 @@ const MAIN = [
 const MORE = [
   { href: "/particulares", label: "Test particulares", hint: "Captación propia con consentimiento" },
   { href: "/citas", label: "Consultas", hint: "Agenda y asistencia" },
-  { href: "/clientes", label: "Clientes", hint: "Despachos que pagan" },
-  { href: "/facturacion", label: "Facturación", hint: "Cuota + consultas" },
+  { href: "/oportunidades", label: "Oportunidades", hint: "Luz y placas: ofertas e instaladores" },
+  { href: "/clientes", label: "Clientes", hint: "Despachos, comercializadoras e instaladores" },
+  { href: "/facturacion", label: "Facturación", hint: "Consultas, contratos y leads aceptados" },
   { href: "/prospeccion/llamar", label: "Llamar despachos", hint: "Venta B2B, el siguiente mejor" },
   { href: "/ajustes", label: "Ajustes", hint: "Usuarios, n8n e integraciones" },
 ];

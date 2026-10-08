@@ -11,6 +11,7 @@ import { ClientForm, type ClientData } from "../ClientForm";
 import { importOldLeads, rotateClientKey, rotatePortalToken, updateClient } from "../actions";
 import { appUrl } from "@/lib/appUrl";
 import { ReactivateForm } from "./ReactivateForm";
+import { VERTICALS, isEnergy } from "@/lib/energy";
 
 export default async function ClientePage(props: PageProps<"/clientes/[id]">) {
   const { id } = await props.params;
@@ -57,7 +58,9 @@ document.getElementById('lh-form').onsubmit = async (e) => {
       <PageHeader
         title={c.name}
         eyebrow="Cliente"
-        subtitle={`Plan ${planName(c.plan)} · ${eur(c.monthly_fee)}/mes + ${eur(c.price_per_consultation)} por consulta realizada · ${c.status}`}
+        subtitle={isEnergy(c.vertical)
+          ? `${VERTICALS[c.vertical].label}${c.brand ? ` · marca ${c.brand}` : ""} · ${c.vertical === "placas" ? `${eur(c.price_per_lead ?? 0)} por lead aceptado + ${c.sale_commission_pct ?? 0} % de obra` : `${eur(c.price_per_sale ?? 0)} por contrato activado`} · ${c.status}`
+          : `Plan ${planName(c.plan)} · ${eur(c.monthly_fee)}/mes + ${eur(c.price_per_consultation)} por consulta realizada · ${c.status}`}
         actions={
           <>
             <a href={`/api/export/informe?cliente=${id}&mes=${month}`} className={btn.secondary}>Informe del mes (CSV)</a>

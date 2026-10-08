@@ -12,10 +12,10 @@ export default async function Cola(props: PageProps<"/cola">) {
   const clients = await query<{ id: string; name: string }>("SELECT id, name FROM clients WHERE status = 'activo' ORDER BY name");
   const rows = await query<{
     id: string; full_name: string; cliente: string; source: string; created_at: string; next_call_at: string; attempts: number;
-    status: string; qualification_status: string; debt_amount: number | null; locked_by_name: string | null; locked_by: string | null;
+    status: string; qualification_status: string; debt_amount: number | null; monthly_bill: number | null; vertical: string; locked_by_name: string | null; locked_by: string | null;
   }>(
     `SELECT l.id, l.full_name, c.name AS cliente, l.source, l.created_at, l.next_call_at, l.attempts, l.status, l.qualification_status,
-            l.debt_amount, u.name AS locked_by_name, CASE WHEN l.locked_at > now() - interval '10 minutes' THEN l.locked_by END AS locked_by
+            l.debt_amount, l.monthly_bill, l.vertical, u.name AS locked_by_name, CASE WHEN l.locked_at > now() - interval '10 minutes' THEN l.locked_by END AS locked_by
        FROM leads l JOIN clients c ON c.id = l.client_id LEFT JOIN users u ON u.id = l.locked_by AND l.locked_at > now() - interval '10 minutes'
       WHERE c.status = 'activo' AND l.status IN ('nuevo','no_contesta','volver_a_llamar')
         AND l.qualification_status <> 'no_cualificado' AND l.phone IS NOT NULL
@@ -58,7 +58,7 @@ export default async function Cola(props: PageProps<"/cola">) {
       {rows.length === 0 ? (
         <Empty>No hay leads en cola. Cuando entren por Meta o Google aparecerán aquí al instante.</Empty>
       ) : (
-        <Table head={["Lead", "Cliente", "Origen", "Entró", "Intentos", "Estado", "Cualificación", "Deuda", "Siguiente llamada"]}>
+        <Table head={["Lead", "Cliente", "Origen", "Entró", "Intentos", "Estado", "Cualificación", "Deuda / factura", "Siguiente llamada"]}>
           {rows.map((r) => (
             <tr key={r.id} className={new Date(r.next_call_at) > new Date() ? "opacity-50" : ""}>
               <Td primary className="font-semibold text-ink">
@@ -71,7 +71,7 @@ export default async function Cola(props: PageProps<"/cola">) {
               <Td hide>{r.attempts}</Td>
               <Td hide><StatusBadge map={LEAD_STATUS} value={r.status} /></Td>
               <Td><StatusBadge map={QUALIFICATION} value={r.qualification_status} /></Td>
-              <Td>{eur(r.debt_amount)}</Td>
+              <Td>{r.vertical === "lso" ? eur(r.debt_amount) : r.monthly_bill != null ? `${eur(r.monthly_bill)}/mes luz` : "—"}</Td>
               <Td hide className="text-xs">{new Date(r.next_call_at) <= new Date() ? "Ahora" : ago(r.next_call_at)}</Td>
             </tr>
           ))}

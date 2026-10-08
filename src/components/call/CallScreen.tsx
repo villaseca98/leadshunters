@@ -6,10 +6,20 @@ type Lead = {
   id: string; full_name: string; phone: string | null; email: string | null; province: string | null;
   debt_amount: number | null; creditors_count: number | null; monthly_income: number | null; employment_status: string | null;
   owns_home: boolean | null; prior_lso: boolean | null; criminal_record: boolean | null; created_at: string;
+  // luz / placas
+  business_type?: string | null; monthly_bill?: number | null; tariff?: string | null; contracted_power_kw?: number | null;
+  current_supplier?: string | null; roof?: string | null; daytime_share?: number | null; postal_code?: string | null;
+};
+
+type Vertical = "lso" | "luz" | "placas";
+
+const WIN: Record<Vertical, { v: string; l: string; cls: string }> = {
+  lso: { v: "cita_agendada", l: "✓ Cita agendada", cls: btn.success },
+  luz: { v: "oportunidad", l: "✓ Pedir factura y preparar oferta", cls: btn.success },
+  placas: { v: "oportunidad", l: "✓ Pasar al instalador", cls: btn.success },
 };
 
 const OUTCOMES = [
-  { v: "cita_agendada", l: "✓ Cita agendada", cls: btn.success },
   { v: "no_contesta", l: "No contesta", cls: btn.secondary },
   { v: "buzon", l: "Buzón", cls: btn.secondary },
   { v: "volver_a_llamar", l: "Volver a llamar", cls: btn.secondary },
@@ -27,8 +37,9 @@ function elapsed(ms: number) {
 const tri = (v: boolean | null) => (v == null ? "" : v ? "si" : "no");
 
 export function CallScreen({
-  lead, action, defaultSlot, fromQueue, clientFilter, calendarUrl,
+  lead, action, defaultSlot, fromQueue, clientFilter, calendarUrl, vertical = "lso",
 }: {
+  vertical?: Vertical;
   lead: Lead;
   action: (fd: FormData) => void;
   defaultSlot: string;
@@ -44,6 +55,8 @@ export function CallScreen({
     return () => clearInterval(t);
   }, []);
   const sinceArrival = now - new Date(lead.created_at).getTime();
+  const energy = vertical !== "lso";
+  const outcomes = [WIN[vertical], ...OUTCOMES];
 
   return (
     <form action={action} className="space-y-5">
@@ -72,6 +85,7 @@ export function CallScreen({
         </div>
       </div>
 
+      {energy ? <EnergyFields lead={lead} vertical={vertical} /> : (
       <fieldset className="grid grid-cols-2 gap-3 rounded-[var(--radius-card)] border border-slate-200 bg-white p-4 sm:grid-cols-3 sm:p-5">
         <legend className="px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Cualificación · confírmala en la llamada</legend>
         <label className="col-span-2 sm:col-span-1"><span className={label}>Nombre</span><input name="full_name" defaultValue={lead.full_name} className={input} /></label>
@@ -101,21 +115,24 @@ export function CallScreen({
           <select name="criminal_record" defaultValue={tri(lead.criminal_record)} className={input}><option value="">—</option><option value="si">Sí</option><option value="no">No</option></select>
         </label>
       </fieldset>
+      )}
 
       <div className="rounded-[var(--radius-card)] border border-slate-200 bg-white p-4 sm:p-5">
-        <span className={label}>Notas de la llamada (las verá el despacho si se agenda cita)</span>
-        <textarea name="notes" rows={3} className={input} placeholder="Tipo de deudas, urgencia (embargos, llamadas de recobro), disponibilidad…" />
+        <span className={label}>{energy ? `Notas de la llamada (las verá ${vertical === "placas" ? "el instalador" : "quien prepare la oferta"})` : "Notas de la llamada (las verá el despacho si se agenda cita)"}</span>
+        <textarea name="notes" rows={3} className={input} placeholder={energy
+          ? vertical === "placas" ? "Horario de visita, tipo de cubierta, si tiene coche eléctrico o piensa en batería…" : "Cuándo vence su contrato, si tiene permanencia, si le han subido el precio…"
+          : "Tipo de deudas, urgencia (embargos, llamadas de recobro), disponibilidad…"} />
       </div>
 
       <div className="rounded-[var(--radius-card)] border border-slate-200 bg-white p-4 sm:p-5">
         <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Resultado</div>
         <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-          {OUTCOMES.map((o) => (
+          {outcomes.map((o) => (
             <button
               type="button"
               key={o.v}
               onClick={() => setOutcome(o.v)}
-              className={`${o.cls} ${o.v === "cita_agendada" ? "col-span-2" : ""} ${outcome === o.v ? "ring-2 ring-blaze ring-offset-2" : ""}`}
+              className={`${o.cls} ${o.v === WIN[vertical].v ? "col-span-2" : ""} ${outcome === o.v ? "ring-2 ring-blaze ring-offset-2" : ""}`}
             >
               {o.l}
             </button>
@@ -134,6 +151,16 @@ export function CallScreen({
             {calendarUrl && (
               <a href={calendarUrl} target="_blank" className="text-xs font-medium text-emerald-700 sm:col-span-3">Abrir la agenda del despacho ↗</a>
             )}
+          </div>
+        )}
+        {outcome === "oportunidad" && (
+          <div className="mt-4 rounded-2xl bg-emerald-50 p-3.5 text-sm text-emerald-900">
+            {vertical === "luz" ? (
+              <p>Se crea la oportunidad en <b>Estudio</b>. Pídele una foto de la última factura por WhatsApp o email; con ella preparas la oferta y la marcas como enviada en Oportunidades.</p>
+            ) : (
+              <p>Se envía al <b>instalador</b> con un enlace para aceptarlo o rechazarlo. Si no responde en su plazo, cuenta como aceptado.</p>
+            )}
+            <label className="mt-3 block"><span className={label}>{vertical === "luz" ? "Nota para la oferta" : "Nota para el instalador"}</span><input name="deal_notes" className={input} placeholder={vertical === "luz" ? "Mejor por WhatsApp, permanencia hasta marzo…" : "Prefiere visita por la mañana…"} /></label>
           </div>
         )}
         {outcome === "volver_a_llamar" && (
@@ -164,5 +191,51 @@ function HeatRing({ ms }: { ms: number }) {
         <span className="num text-sm font-semibold leading-none">{min < 60 ? `${Math.floor(min)}′` : `${Math.floor(min / 60)}h`}</span>
       </div>
     </div>
+  );
+}
+
+const n = (v: number | null | undefined) => (v == null ? "" : String(v));
+
+/** Datos que se confirman en la llamada de luz y placas. */
+function EnergyFields({ lead, vertical }: { lead: Lead; vertical: Vertical }) {
+  return (
+    <fieldset className="grid grid-cols-2 gap-3 rounded-[var(--radius-card)] border border-slate-200 bg-white p-4 sm:grid-cols-3 sm:p-5">
+      <legend className="px-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Su factura · confírmala en la llamada</legend>
+      <label className="col-span-2 sm:col-span-1"><span className={label}>Nombre</span><input name="full_name" defaultValue={lead.full_name} className={input} /></label>
+      <label><span className={label}>Teléfono</span><input name="phone" defaultValue={lead.phone ?? ""} className={input} /></label>
+      <label className="col-span-2 sm:col-span-1"><span className={label}>Email</span><input name="email" defaultValue={lead.email ?? ""} className={input} /></label>
+      <label><span className={label}>Negocio</span><input name="business_type" defaultValue={lead.business_type ?? ""} className={input} placeholder="bar, taller, clínica…" /></label>
+      <label><span className={label}>Factura de luz al mes (€)</span><input name="monthly_bill" inputMode="decimal" defaultValue={n(lead.monthly_bill)} className={input} placeholder="ej. 180" /></label>
+      <label><span className={label}>Provincia</span><input name="province" defaultValue={lead.province ?? ""} className={input} /></label>
+      <label><span className={label}>Código postal</span><input name="postal_code" inputMode="numeric" defaultValue={lead.postal_code ?? ""} className={input} /></label>
+      {vertical === "luz" ? (
+        <>
+          <label>
+            <span className={label}>Tarifa (peaje)</span>
+            <select name="tariff" defaultValue={lead.tariff ?? ""} className={input}>
+              <option value="">—</option><option value="2.0TD">2.0TD (hasta 15 kW)</option><option value="3.0TD">3.0TD (más de 15 kW)</option><option value="6.1TD">6.1TD (alta tensión)</option>
+            </select>
+          </label>
+          <label><span className={label}>Potencia contratada (kW)</span><input name="contracted_power_kw" inputMode="decimal" defaultValue={n(lead.contracted_power_kw)} className={input} /></label>
+          <label><span className={label}>Comercializadora actual</span><input name="current_supplier" defaultValue={lead.current_supplier ?? ""} className={input} /></label>
+          <input type="hidden" name="roof" value={lead.roof ?? ""} />
+          <input type="hidden" name="daytime_share" value={n(lead.daytime_share)} />
+        </>
+      ) : (
+        <>
+          <label>
+            <span className={label}>Cubierta</span>
+            <select name="roof" defaultValue={lead.roof ?? ""} className={input}>
+              <option value="">—</option><option value="propio">Propia (tejado, nave, terraza)</option><option value="comunidad">De la comunidad</option>
+              <option value="alquiler">Local en alquiler</option><option value="no">No tiene</option>
+            </select>
+          </label>
+          <label><span className={label}>% del consumo de día</span><input name="daytime_share" inputMode="numeric" defaultValue={n(lead.daytime_share)} className={input} placeholder="ej. 70" /></label>
+          <label><span className={label}>Comercializadora actual</span><input name="current_supplier" defaultValue={lead.current_supplier ?? ""} className={input} /></label>
+          <input type="hidden" name="tariff" value={lead.tariff ?? ""} />
+          <input type="hidden" name="contracted_power_kw" value={n(lead.contracted_power_kw)} />
+        </>
+      )}
+    </fieldset>
   );
 }

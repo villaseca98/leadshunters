@@ -6,6 +6,8 @@ import { toCallableTime } from "@/lib/schedule";
 import { Card, PageHeader, StatusBadge, btn } from "@/components/ui";
 import { CallScreen } from "@/components/call/CallScreen";
 import { logCallAction, release } from "../../leads/actions";
+import { CallScript } from "@/components/call/CallScript";
+import { DEFAULT_MIN_BILL, isEnergy, type Vertical } from "@/lib/energy";
 
 export default async function CallPage(props: PageProps<"/cola/[id]">) {
   const { id } = await props.params;
@@ -17,8 +19,12 @@ export default async function CallPage(props: PageProps<"/cola/[id]">) {
     prior_lso: boolean | null; criminal_record: boolean | null; created_at: string; status: string; qualification_status: string;
     qualification_score: number; qualification_reasons: string[]; source: string; campaign: string | null; attempts: number;
     cliente: string; client_id: string; calendar_url: string | null; min_debt: number;
+    vertical: Vertical; brand: string | null; min_monthly_bill: number | null; business_type: string | null; monthly_bill: number | null;
+    tariff: string | null; contracted_power_kw: number | null; current_supplier: string | null; roof: string | null;
+    daytime_share: number | null; postal_code: string | null; summary: string | null; estimated_saving: number | null;
   }>(
-    `SELECT l.*, c.name AS cliente, c.calendar_url, c.min_debt FROM leads l JOIN clients c ON c.id = l.client_id WHERE l.id = $1`,
+    `SELECT l.*, c.name AS cliente, c.calendar_url, c.min_debt, c.vertical, c.brand, c.min_monthly_bill
+       FROM leads l JOIN clients c ON c.id = l.client_id WHERE l.id = $1`,
     [id],
   );
   if (!lead) notFound();
@@ -53,6 +59,7 @@ export default async function CallPage(props: PageProps<"/cola/[id]">) {
             fromQueue={true}
             clientFilter={typeof sp.cliente === "string" ? sp.cliente : ""}
             calendarUrl={lead.calendar_url}
+            vertical={lead.vertical}
           />
         </div>
         <div className="space-y-4 xl:space-y-6">
@@ -60,18 +67,19 @@ export default async function CallPage(props: PageProps<"/cola/[id]">) {
             <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
               {lead.qualification_reasons.map((r, i) => <li key={i}>{r}</li>)}
             </ul>
-            <p className="mt-3 text-xs text-slate-500">Mínimo de deuda de este despacho: {lead.min_debt.toLocaleString("es-ES")} €</p>
+            <p className="mt-3 text-xs text-slate-500">
+              {isEnergy(lead.vertical)
+                ? `Factura mínima que interesa: ${(lead.min_monthly_bill ?? DEFAULT_MIN_BILL[lead.vertical]).toLocaleString("es-ES")} €/mes`
+                : `Mínimo de deuda de este despacho: ${lead.min_debt.toLocaleString("es-ES")} €`}
+            </p>
           </Card>
-          <Card title="Guion de llamada">
-            <ol className="list-decimal space-y-2 pl-5 text-sm text-slate-700">
-              <li>«Hola {lead.full_name.split(" ")[0]}, soy [nombre] del equipo de {lead.cliente}. Nos dejaste tus datos hace un momento sobre tus deudas, ¿tienes dos minutos?»</li>
-              <li>«Para ver si la Ley de Segunda Oportunidad encaja contigo: ¿cuánto debes en total, más o menos? ¿Con cuántos bancos o financieras?»</li>
-              <li>«¿Tienes ingresos ahora mismo? ¿Tienes casa en propiedad?»</li>
-              <li>«¿Has usado esta ley en los últimos 5 años? ¿Alguna condena por delitos económicos?» (si es que sí, no cualifica)</li>
-              <li>«Por lo que me cuentas, un abogado especialista puede revisar tu caso sin compromiso. ¿Te va bien el [día] a las [hora]?»</li>
-              <li>Confirma teléfono y email. «Te llegará un recordatorio antes de la cita.»</li>
-            </ol>
-          </Card>
+          {lead.summary && (
+            <Card title="Lo que vio en la web">
+              <p className="whitespace-pre-line text-sm text-slate-700">{lead.summary}</p>
+              {lead.estimated_saving != null && <p className="mt-2 text-sm font-semibold text-emerald-700">Ahorro estimado: {lead.estimated_saving.toLocaleString("es-ES")} € al año</p>}
+            </Card>
+          )}
+          <CallScript vertical={lead.vertical} name={lead.full_name} brand={lead.brand ?? lead.cliente} />
           {calls.length > 0 && (
             <Card title="Llamadas anteriores">
               <ul className="space-y-2 text-sm">
