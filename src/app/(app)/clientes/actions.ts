@@ -76,7 +76,7 @@ export async function createClient(formData: FormData) {
     `INSERT INTO clients(${COLS.join(",")}) VALUES (${COLS.map((_, i) => `$${i + 1}`).join(",")}) RETURNING id`,
     COLS.map((c) => d[c]),
   );
-  redirect(`/clientes/${row!.id}`);
+  redirect(`/clientes/${row!.id}?nuevo=1`);
 }
 
 export async function updateClient(id: string, formData: FormData) {

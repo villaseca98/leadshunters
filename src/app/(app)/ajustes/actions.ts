@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/auth";
 import { hashPassword } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { saveContactInfo } from "@/lib/settings";
+import { saveAnthropicKey } from "@/lib/services/clientAi";
 
 export async function createUser(formData: FormData) {
   await requireAdmin();
@@ -37,4 +38,13 @@ export async function saveContact(formData: FormData) {
     legal: String(formData.get("legal") ?? ""),
   });
   revalidatePath("/ajustes");
+}
+
+export async function saveAiKey(formData: FormData) {
+  await requireAdmin();
+  const key = String(formData.get("key") ?? "").trim();
+  if (!/^sk-ant-[A-Za-z0-9_-]{20,}$/.test(key)) throw new Error("La clave de Claude empieza por sk-ant-");
+  await saveAnthropicKey(key);
+  revalidatePath("/ajustes");
+  revalidatePath("/clientes", "layout");
 }

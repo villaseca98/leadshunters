@@ -8,6 +8,8 @@ import { currentMonth, dateTime, eur, monthLabel } from "@/lib/format";
 import { A, Badge, Card, Field, PageHeader, StatusBadge, btn, input } from "@/components/ui";
 import { ClientMetrics } from "@/components/ClientMetrics";
 import { updateLineClient } from "../../lineActions";
+import { ClientAi } from "@/components/ClientAi";
+import { aiState, anthropicKey, clientReports } from "@/lib/services/clientAi";
 
 export default async function LineClientPage(props: PageProps<"/clientes/l/[id]">) {
   const { id } = await props.params;
@@ -18,13 +20,16 @@ export default async function LineClientPage(props: PageProps<"/clientes/l/[id]"
   const user = await getUser();
   const line = (await getLine(c.line_id))!;
   const mes = typeof sp.mes === "string" && /^\d{4}-\d{2}$/.test(sp.mes) ? sp.mes : currentMonth();
-  const [[b], markers, leads] = await Promise.all([
+  const [[b], markers, leads, ai, reports, key] = await Promise.all([
     lineClientBilling(mes, id),
     markersFor("linea", id, mes),
     query<{ id: string; full_name: string; status: string; priority: string; created_at: string; showup_at: string | null; won_at: string | null; value: number | null }>(
       "SELECT id, full_name, status, priority, created_at, showup_at, won_at, value FROM line_leads WHERE client_id = $1 ORDER BY created_at DESC LIMIT 20",
       [id],
     ),
+    aiState("linea", id),
+    clientReports("linea", id),
+    anthropicKey(),
   ]);
   const st = statusMap(line);
   const isAdmin = user?.role === "admin";
@@ -43,11 +48,11 @@ export default async function LineClientPage(props: PageProps<"/clientes/l/[id]"
         subtitle={<span className="flex flex-wrap items-center gap-2"><Badge tone={c.status === "activo" ? "emerald" : c.status === "pausado" ? "amber" : "slate"}>{c.status}</Badge>{conditions.join(" + ") || "Sin condiciones: ponlas en la ficha"}</span>}
         actions={<A href={`/lineas?linea=${line.slug}&cliente=${id}`}>Ver leads →</A>}
       />
-      {sp.nuevo && <p className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Cliente creado. Rellena su ficha a la derecha: sus datos de {line.name.toLowerCase()} y lo que te paga.</p>}
       {c.lead_id && <p className="mb-4 text-sm text-slate-600">Vino de este lead: <A href={`/lineas/${c.lead_id}`}>ver el lead</A>.</p>}
 
       <div className="grid gap-4 xl:grid-cols-3 xl:gap-6">
         <div className="space-y-4 xl:col-span-2 xl:space-y-6">
+          <ClientAi kind="linea" clientId={id} messages={ai.messages} plan={ai.plan} reports={reports} month={mes} monthName={monthLabel(mes)} hasKey={!!key} fresh={!!sp.nuevo} />
           <ClientMetrics
             kind="linea"
             clientId={id}

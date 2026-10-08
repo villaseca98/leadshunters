@@ -84,6 +84,18 @@ export default async function Captar(props: PageProps<"/captar">) {
                 );
               }
               const f = funnels.get(l.id);
+              if (!l.fields.length && !l.keywords.length) {
+                return (
+                  <Card key={l.id} title={`${l.emoji} ${l.name}`}>
+                    <p className="mb-3 text-sm text-slate-600">Línea libre, sin embudo de Instagram: negocios que todavía no impulsas pero que ya tienen clientes. Los das de alta a mano en Clientes y el asistente IA monta sus métricas.</p>
+                    <p className="text-xs text-slate-500">{f?.clientes ?? 0} clientes activos · {f?.abiertos ?? 0} leads abiertos</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Link href="/clientes#nuevo" className={btn.secondary}>+ Cliente de {l.name.toLowerCase()}</Link>
+                      <Link href={`/negocios/${l.id}`} className={btn.ghost}>Configurar →</Link>
+                    </div>
+                  </Card>
+                );
+              }
               return (
                 <Card key={l.id} title={`${l.emoji} ${l.name}`}>
                   <p className="mb-3 text-sm text-slate-600">
