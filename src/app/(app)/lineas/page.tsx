@@ -28,6 +28,7 @@ export default async function Lineas(props: PageProps<"/lineas">) {
   else if (status) add("ll.status = ?", status);
   if (priority) add("ll.priority = ?", priority);
   if (canal) add("ll.channel = ?", canal);
+  if (/^[0-9a-f-]{36}$/.test(str("cliente"))) add("ll.client_id = ?", str("cliente"));
   const w = `FROM line_leads ll JOIN business_lines bl ON bl.id = ll.line_id JOIN companies c ON c.id = bl.company_id WHERE ${where.join(" AND ")}`;
 
   const [{ total }] = await query<{ total: number }>(`SELECT count(*)::int total ${w}`, params);

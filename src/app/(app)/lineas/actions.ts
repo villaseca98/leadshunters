@@ -3,10 +3,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin, requireUser } from "@/lib/auth";
 import { parseCsv } from "@/lib/csv";
-import { query } from "@/lib/db";
+import { query, queryOne } from "@/lib/db";
 import { extractData, readField, scoreLead } from "@/lib/lineas";
 import { matchProvince, normalizeEmail, normalizePhone, parseMoney } from "@/lib/normalize";
 import { claimNextLineLead, getLine, setLineStatus, submitLineLead } from "@/lib/services/lines";
+import { defaultClientFor } from "@/lib/services/clientMetrics";
 
 export async function changeLineStatus(id: string, fromQueue: boolean, formData: FormData) {
   const user = await requireUser();
@@ -48,16 +49,34 @@ export async function updateLineLead(id: string, formData: FormData) {
     else data[f.key] = v;
   }
   const pr = scoreLead(line, data);
+  // el cliente tiene que ser de la misma línea; si se cambia de línea sin elegir, se pone el de serie
+  const clientId = /^[0-9a-f-]{36}$/.test(g("client_id")) ? g("client_id") : null;
   await query(
     `UPDATE line_leads SET line_id = $2, full_name = coalesce(nullif($3,''), full_name), phone = coalesce($4, phone), email = $5,
-       province = $6, data = $7, notes = nullif($8,''), value = $9, priority = $10, priority_points = $11, priority_reasons = $12, updated_at = now()
+       province = $6, data = $7, notes = nullif($8,''), value = $9, priority = $10, priority_points = $11, priority_reasons = $12,
+       client_id = CASE WHEN EXISTS (SELECT 1 FROM line_clients WHERE id = $13 AND line_id = $2) THEN $13::uuid
+                       WHEN line_id = $2 THEN (CASE WHEN $14 THEN NULL ELSE client_id END)
+                       ELSE $15::uuid END,
+       updated_at = now()
      WHERE id = $1`,
     [
       id, line.id, g("full_name"), normalizePhone(g("phone")), normalizeEmail(g("email")), matchProvince(g("province")) ?? (g("province") || null),
       JSON.stringify(data), g("notes"), parseMoney(g("value")), pr.tier, pr.points, JSON.stringify(pr.reasons),
+      clientId, formData.has("client_id"), await defaultClientFor(line.id),
     ],
   );
   revalidatePath(`/lineas/${id}`);
+}
+
+/** Se presentó a la cita o visita (show-up): cuenta para lo que le facturas al cliente ese mes. */
+export async function toggleShowup(id: string) {
+  await requireUser();
+  const r = await queryOne<{ client_id: string | null }>(
+    "UPDATE line_leads SET showup_at = CASE WHEN showup_at IS NULL THEN now() ELSE NULL END, updated_at = now() WHERE id = $1 RETURNING client_id",
+    [id],
+  );
+  revalidatePath(`/lineas/${id}`);
+  if (r?.client_id) revalidatePath(`/clientes/l/${r.client_id}`);
 }
 
 export async function createLineLead(formData: FormData) {

@@ -11,6 +11,8 @@ import { ClientForm, type ClientData } from "../ClientForm";
 import { importOldLeads, rotateClientKey, rotatePortalToken, updateClient } from "../actions";
 import { appUrl } from "@/lib/appUrl";
 import { ReactivateForm } from "./ReactivateForm";
+import { despachoBilling, markersFor } from "@/lib/services/clientMetrics";
+import { ClientMetrics } from "@/components/ClientMetrics";
 
 export default async function ClientePage(props: PageProps<"/clientes/[id]">) {
   const { id } = await props.params;
@@ -21,6 +23,8 @@ export default async function ClientePage(props: PageProps<"/clientes/[id]">) {
   if (!c) notFound();
   const month = currentMonth();
   const [b] = await billingForMonth(month, id);
+  const mes = typeof sp.mes === "string" && /^\d{4}-\d{2}$/.test(sp.mes) ? sp.mes : month;
+  const [[mb], markers] = await Promise.all([despachoBilling(mes, id), markersFor("despacho", id, mes)]);
   const consults = await query<{ id: string; scheduled_at: string; status: string; full_name: string; lead_id: string }>(
     `SELECT co.id, co.scheduled_at, co.status, l.full_name, l.id AS lead_id FROM consultations co JOIN leads l ON l.id = co.lead_id
       WHERE co.client_id = $1 ORDER BY co.scheduled_at DESC LIMIT 15`,
@@ -81,7 +85,35 @@ document.getElementById('lh-form').onsubmit = async (e) => {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-3 xl:gap-6">
-        <div className="xl:col-span-2">
+        <div className="space-y-4 xl:col-span-2 xl:space-y-6">
+          <ClientMetrics
+            kind="despacho"
+            clientId={id}
+            month={mes}
+            basePath={`/clientes/${id}`}
+            markers={markers}
+            total={mb?.total_con_marcadores ?? markers.filter((m) => m.unit === "eur" && m.billable).reduce((a, m) => a + m.value, 0)}
+            lines={mb ? [
+              { label: "Cuota fija", detail: `Plan ${planName(c.plan)}${mb.status !== "activo" ? ` · ${mb.status}, no se cobra` : ""}`, amount: mb.importe_fijo },
+              {
+                label: "Consultas realizadas (show-ups)",
+                detail: `${mb.consultas_facturables} × ${eur(mb.price_per_consultation)}${mb.citas_gratis_retraso ? ` · ${mb.citas_gratis_retraso} gratis por llamada tardía` : ""}${mb.max_billable_per_month != null && mb.citas_asistidas > mb.max_billable_per_month ? ` · tope ${mb.max_billable_per_month}` : ""}`,
+                amount: mb.importe_variable,
+              },
+            ] : []}
+          >
+            <div className="mb-4 grid grid-cols-3 gap-2 text-center sm:grid-cols-5">
+              {[
+                ["Leads", mb?.leads ?? 0],
+                ["Agendadas", mb?.citas_agendadas ?? 0],
+                ["Show-ups", mb?.citas_asistidas ?? 0],
+                ["No-shows", mb?.citas_no_asistio ?? 0],
+                ["Show-up %", mb && mb.citas_asistidas + mb.citas_no_asistio ? `${Math.round((100 * mb.citas_asistidas) / (mb.citas_asistidas + mb.citas_no_asistio))} %` : "—"],
+              ].map(([k, v]) => (
+                <div key={k} className="rounded-xl border border-slate-200 p-2"><div className="num text-lg font-semibold">{v}</div><div className="text-[11px] text-slate-500">{k}</div></div>
+              ))}
+            </div>
+          </ClientMetrics>
           <Card title="Ficha y condiciones">
             {isAdmin ? <ClientForm action={updateClient.bind(null, id)} c={c} submit="Guardar cambios" /> : <p className="text-sm text-slate-500">Solo un administrador puede editar la ficha.</p>}
           </Card>

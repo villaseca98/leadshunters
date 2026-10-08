@@ -3,6 +3,7 @@ import { query, queryOne } from "../db";
 import { matchLine, scoreLead, statusMap, type Line, type LineStatus, LINE_STATUSES } from "../lineas";
 import { matchProvince, normalizeEmail, normalizePhone } from "../normalize";
 import { nextRetry } from "../schedule";
+import { defaultClientFor } from "./clientMetrics";
 import { emitEvent } from "./events";
 
 const LINE_SELECT = `SELECT bl.*, c.name AS company_name, c.slug AS company_slug
@@ -73,12 +74,12 @@ export async function submitLineLead(s: LineSubmission): Promise<LineResult> {
   }
   const row = await queryOne<{ id: string }>(
     `INSERT INTO line_leads(line_id, full_name, phone, email, province, data, priority, priority_points, priority_reasons,
-       channel, campaign, utm, consent_text, marketing_ok, notes, raw)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING id`,
+       channel, campaign, utm, consent_text, marketing_ok, notes, raw, client_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING id`,
     [
       s.line.id, full_name, phone, email, province, JSON.stringify(data), pr.tier, pr.points, JSON.stringify(pr.reasons),
       channel, campaign, JSON.stringify(s.utm ?? {}), s.line.consent_text, !!s.marketing_ok, s.notes || null,
-      s.raw ? JSON.stringify(s.raw) : null,
+      s.raw ? JSON.stringify(s.raw) : null, await defaultClientFor(s.line.id),
     ],
   );
   if (!s.reactivation) {

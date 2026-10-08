@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
 import { getUser } from "@/lib/auth";
-import { queryOne } from "@/lib/db";
+import { query, queryOne } from "@/lib/db";
 import { displayValue, LOST_REASONS, PRIORITY, statusMap } from "@/lib/lineas";
 import { getLine, getLines } from "@/lib/services/lines";
 import { dateTime, eur, telHref, waHref } from "@/lib/format";
 import { A, Card, Field, PageHeader, StatusBadge, btn, input } from "@/components/ui";
-import { changeLineStatus, eraseLineLead, updateLineLead } from "../actions";
+import { changeLineStatus, eraseLineLead, toggleShowup, updateLineLead } from "../actions";
 
 export default async function LineLeadPage(props: PageProps<"/lineas/[id]">) {
   const { id } = await props.params;
@@ -17,10 +17,13 @@ export default async function LineLeadPage(props: PageProps<"/lineas/[id]">) {
     priority: string; priority_points: number; priority_reasons: string[]; status: string; attempts: number; next_call_at: string;
     first_contact_at: string | null; won_at: string | null; value: number | null; lost_reason: string | null; notes: string | null;
     channel: string; campaign: string | null; consent_text: string; consent_at: string; created_at: string;
+    client_id: string | null; showup_at: string | null;
   }>("SELECT * FROM line_leads WHERE id = $1", [id]);
   if (!l) notFound();
   const line = (await getLine(l.line_id))!;
   const lines = await getLines({ includeDespachos: false });
+  const clients = await query<{ id: string; name: string; status: string }>("SELECT id, name, status FROM line_clients WHERE line_id = $1 ORDER BY status = 'activo' DESC, name", [l.line_id]);
+  const myClient = clients.find((x) => x.id === l.client_id);
   const cola = typeof sp.cola === "string" ? sp.cola : "";
   const queueLine = cola && cola !== "todas" ? cola : "";
   const status = changeLineStatus.bind(null, id, !!cola);
@@ -76,6 +79,12 @@ export default async function LineLeadPage(props: PageProps<"/lineas/[id]">) {
                 <button className={btn.secondary}>Descartar</button>
               </form>
             </div>
+            <form action={toggleShowup.bind(null, id)} className="mt-3 flex flex-wrap items-center gap-3 rounded-2xl bg-sky-50 p-3">
+              <button className={l.showup_at ? btn.success : btn.secondary}>{l.showup_at ? "✓ Se presentó" : "Marcar show-up"}</button>
+              <span className="text-xs text-slate-600">
+                {l.showup_at ? `Show-up el ${dateTime(l.showup_at)}. Pulsa para quitarlo.` : "Si acudió a la cita o visita con el cliente. Cuenta en lo que le facturas por show-up."}
+              </span>
+            </form>
             <p className="mt-3 text-xs text-slate-500">
               Intentos: {l.attempts}
               {l.status === "no_contesta" ? ` · próxima llamada ${dateTime(l.next_call_at)}` : ""}
@@ -90,6 +99,12 @@ export default async function LineLeadPage(props: PageProps<"/lineas/[id]">) {
               <Field label="Línea">
                 <select name="line_id" defaultValue={line.id} className={input}>
                   {lines.map((x) => <option key={x.id} value={x.id}>{x.emoji} {x.name} · {x.company_name}</option>)}
+                </select>
+              </Field>
+              <Field label="Cliente (quién te paga este lead)">
+                <select name="client_id" defaultValue={l.client_id ?? ""} className={input}>
+                  <option value="">Sin cliente</option>
+                  {clients.map((c) => <option key={c.id} value={c.id}>{c.name}{c.status !== "activo" ? ` (${c.status})` : ""}</option>)}
                 </select>
               </Field>
               <Field label="Nombre"><input name="full_name" defaultValue={l.full_name} className={input} /></Field>
@@ -123,6 +138,7 @@ export default async function LineLeadPage(props: PageProps<"/lineas/[id]">) {
         </div>
 
         <div className="space-y-4 xl:space-y-6">
+          {myClient && <A href={`/clientes/l/${myClient.id}`}>Cliente: {myClient.name} →</A>}
           <Card title={`Prioridad ${l.priority} · ${l.priority_points} puntos`}>
             <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
               {l.priority_reasons.map((r, i) => <li key={i}>{r}</li>)}
