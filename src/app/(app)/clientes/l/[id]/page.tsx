@@ -43,7 +43,8 @@ export default async function LineClientPage(props: PageProps<"/clientes/l/[id]"
         subtitle={<span className="flex flex-wrap items-center gap-2"><Badge tone={c.status === "activo" ? "emerald" : c.status === "pausado" ? "amber" : "slate"}>{c.status}</Badge>{conditions.join(" + ") || "Sin condiciones: ponlas en la ficha"}</span>}
         actions={<A href={`/lineas?linea=${line.slug}&cliente=${id}`}>Ver leads →</A>}
       />
-      {sp.nuevo && <p className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Cliente creado. Los leads nuevos de {line.name} se le asignan solos si es el único cliente activo de la línea; si no, elígelo en cada lead.</p>}
+      {sp.nuevo && <p className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Cliente creado. Rellena su ficha a la derecha: sus datos de {line.name.toLowerCase()} y lo que te paga.</p>}
+      {c.lead_id && <p className="mb-4 text-sm text-slate-600">Vino de este lead: <A href={`/lineas/${c.lead_id}`}>ver el lead</A>.</p>}
 
       <div className="grid gap-4 xl:grid-cols-3 xl:gap-6">
         <div className="space-y-4 xl:col-span-2 xl:space-y-6">
@@ -101,6 +102,18 @@ export default async function LineClientPage(props: PageProps<"/clientes/l/[id]"
                     <option value="activo">Activo</option><option value="pausado">Pausado</option><option value="baja">Baja</option>
                   </select>
                 </Field>
+                {line.client_fields.map((f) => (
+                  <Field key={f.key} label={f.label}>
+                    {f.type === "select" ? (
+                      <select name={`c_${f.key}`} defaultValue={c.data[f.key] ?? ""} className={input}>
+                        <option value="">—</option>
+                        {f.options?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                    ) : (
+                      <input name={`c_${f.key}`} defaultValue={c.data[f.key] ?? ""} inputMode={f.type === "number" ? "decimal" : undefined} className={input} />
+                    )}
+                  </Field>
+                ))}
                 <div className="grid grid-cols-3 gap-2">
                   <Field label="Fijo €"><input name="monthly_fee" inputMode="decimal" defaultValue={c.monthly_fee || ""} placeholder="0" className={input} /></Field>
                   <Field label="Show-up €"><input name="price_per_showup" inputMode="decimal" defaultValue={c.price_per_showup || ""} placeholder="0" className={input} /></Field>

@@ -74,7 +74,7 @@ export default async function Clientes(props: PageProps<"/clientes">) {
                 </Table>
               </div>
             )}
-            {rows.length === 0 && web.length > 0 ? null : rows.length === 0 ? <Empty>Sin clientes en {line.name}. Añade abajo quién te paga por estos leads.</Empty> : (
+            {rows.length === 0 && web.length > 0 ? null : rows.length === 0 ? <Empty>Sin clientes en {line.name}. Convierte un lead en cliente desde su ficha o añádelo abajo.</Empty> : (
               <Table head={["Cliente", "Estado", "Condiciones", "Leads mes", "Show-ups", line.won_label, "Marcadores", "Facturación mes"]}>
                 {rows.map((r) => (
                   <tr key={r.client_id} className="hover:bg-slate-50">
@@ -102,7 +102,7 @@ export default async function Clientes(props: PageProps<"/clientes">) {
                 {lines.map((l) => <option key={l.id} value={l.id}>{l.emoji} {l.name} · {l.company_name}</option>)}
               </select>
             </Field>
-            <Field label="Nombre"><input name="name" required placeholder="Comercializadora, instalador…" className={input} /></Field>
+            <Field label="Nombre"><input name="name" required placeholder="Nombre del cliente" className={input} /></Field>
             <Field label="Fijo €/mes"><input name="monthly_fee" inputMode="decimal" placeholder="0" className={input} /></Field>
             <Field label="€ por show-up"><input name="price_per_showup" inputMode="decimal" placeholder="0" className={input} /></Field>
             <Field label="€ por venta"><input name="price_per_sale" inputMode="decimal" placeholder="0 = importe de cada lead" className={input} /></Field>

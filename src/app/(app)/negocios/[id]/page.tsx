@@ -17,6 +17,7 @@ export default async function LineaAjustes(props: PageProps<"/negocios/[id]">) {
   if (!line || line.kind === "despachos") notFound();
   const companies = await query<{ id: string; name: string }>("SELECT id, name FROM companies ORDER BY name");
   const rows: (LineField | null)[] = [...line.fields, ...Array(3).fill(null)].slice(0, 12);
+  const crows: (LineField | null)[] = [...line.client_fields, ...Array(2).fill(null)].slice(0, 10);
   const url = `${appUrl() || "https://leadshunters-nrfo.vercel.app"}/api/v1/particulares`;
 
   return (
@@ -77,6 +78,25 @@ export default async function LineaAjustes(props: PageProps<"/negocios/[id]">) {
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <Field label="Puntos para prioridad A"><input name="priority_a" inputMode="numeric" defaultValue={line.priority_a} className={input} /></Field>
             <Field label="Puntos para prioridad B"><input name="priority_b" inputMode="numeric" defaultValue={line.priority_b} className={input} /></Field>
+          </div>
+        </Card>
+
+        <Card title="Campos de sus clientes">
+          <p className="mb-3 text-sm text-slate-500">Lo que apuntas en la ficha de cada cliente de esta línea (en Clientes), aparte del fijo, show-ups y ventas.</p>
+          <div className="space-y-2">
+            {crows.map((f, i) => (
+              <div key={i} className="grid gap-2 rounded-2xl bg-slate-50 p-3 sm:grid-cols-12">
+                <div className="sm:col-span-5"><Field label={`Campo ${i + 1}`}><input name={`cf_label_${i}`} defaultValue={f?.label ?? ""} placeholder="Comercializadora, dominio…" className={input} /></Field></div>
+                <div className="sm:col-span-3">
+                  <Field label="Tipo">
+                    <select name={`cf_type_${i}`} defaultValue={f?.type ?? "text"} className={input}>
+                      <option value="text">Texto</option><option value="number">Número</option><option value="select">Opciones</option>
+                    </select>
+                  </Field>
+                </div>
+                <div className="sm:col-span-4"><Field label="Opciones (si es de opciones)"><input name={`cf_options_${i}`} defaultValue={optionsText(f?.options)} className={input} /></Field></div>
+              </div>
+            ))}
           </div>
         </Card>
 

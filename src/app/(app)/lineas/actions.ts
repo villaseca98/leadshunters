@@ -7,7 +7,6 @@ import { query, queryOne } from "@/lib/db";
 import { extractData, readField, scoreLead } from "@/lib/lineas";
 import { matchProvince, normalizeEmail, normalizePhone, parseMoney } from "@/lib/normalize";
 import { claimNextLineLead, getLine, setLineStatus, submitLineLead } from "@/lib/services/lines";
-import { defaultClientFor } from "@/lib/services/clientMetrics";
 
 export async function changeLineStatus(id: string, fromQueue: boolean, formData: FormData) {
   const user = await requireUser();
@@ -56,16 +55,40 @@ export async function updateLineLead(id: string, formData: FormData) {
        province = $6, data = $7, notes = nullif($8,''), value = $9, priority = $10, priority_points = $11, priority_reasons = $12,
        client_id = CASE WHEN EXISTS (SELECT 1 FROM line_clients WHERE id = $13 AND line_id = $2) THEN $13::uuid
                        WHEN line_id = $2 THEN (CASE WHEN $14 THEN NULL ELSE client_id END)
-                       ELSE $15::uuid END,
+                       ELSE NULL END,
        updated_at = now()
      WHERE id = $1`,
     [
       id, line.id, g("full_name"), normalizePhone(g("phone")), normalizeEmail(g("email")), matchProvince(g("province")) ?? (g("province") || null),
       JSON.stringify(data), g("notes"), parseMoney(g("value")), pr.tier, pr.points, JSON.stringify(pr.reasons),
-      clientId, formData.has("client_id"), await defaultClientFor(line.id),
+      clientId, formData.has("client_id"),
     ],
   );
   revalidatePath(`/lineas/${id}`);
+}
+
+/** El lead se convierte en cliente de su línea: se crea su ficha (con sus datos) y se marca como cerrado. */
+export async function convertLineLead(id: string) {
+  const user = await requireUser();
+  const l = await queryOne<{ line_id: string; full_name: string; phone: string; email: string | null; client_id: string | null; status: string; notes: string | null }>(
+    "SELECT line_id, full_name, phone, email, client_id, status, notes FROM line_leads WHERE id = $1",
+    [id],
+  );
+  if (!l) return;
+  let clientId = l.client_id;
+  if (!clientId) {
+    const c = await queryOne<{ id: string }>(
+      `INSERT INTO line_clients(line_id, name, contact_name, contact_phone, contact_email, notes, lead_id)
+       VALUES ($1, $2, $2, $3, $4, $5, $6) RETURNING id`,
+      [l.line_id, l.full_name, l.phone, l.email, l.notes, id],
+    );
+    clientId = c!.id;
+    await query("UPDATE line_leads SET client_id = $2 WHERE id = $1", [id, clientId]);
+  }
+  if (l.status !== "ganado") await setLineStatus(id, "ganado", { userId: user.id });
+  revalidatePath(`/lineas/${id}`);
+  revalidatePath("/clientes");
+  redirect(`/clientes/l/${clientId}?nuevo=1`);
 }
 
 /** Se presentó a la cita o visita (show-up): cuenta para lo que le facturas al cliente ese mes. */

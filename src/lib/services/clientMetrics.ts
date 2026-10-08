@@ -110,15 +110,10 @@ export async function lineClientBilling(month: string, clientId?: string): Promi
   });
 }
 
-/** Si la línea tiene un solo cliente activo, los leads nuevos son suyos. */
-export async function defaultClientFor(lineId: string): Promise<string | null> {
-  const rows = await query<{ id: string }>("SELECT id FROM line_clients WHERE line_id = $1 AND status = 'activo' LIMIT 2", [lineId]);
-  return rows.length === 1 ? rows[0].id : null;
-}
-
 export async function lineClient(id: string) {
   return queryOne<{
     id: string; line_id: string; name: string; contact_name: string | null; contact_phone: string | null; contact_email: string | null;
     status: string; monthly_fee: number; price_per_showup: number; price_per_sale: number; notes: string | null; started_at: string;
+    data: Record<string, string>; lead_id: string | null;
   }>("SELECT * FROM line_clients WHERE id = $1", [id]);
 }

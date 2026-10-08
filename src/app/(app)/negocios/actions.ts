@@ -68,17 +68,32 @@ export async function updateLine(id: string, formData: FormData) {
     }
     fields.push(f);
   }
+  // campos de la ficha de sus clientes
+  const clientFields: LineField[] = [];
+  const usedC = new Set<string>();
+  for (let i = 0; i < 10; i++) {
+    const label = g(`cf_label_${i}`);
+    if (!label) continue;
+    const type = (["select", "number", "text"].includes(g(`cf_type_${i}`)) ? g(`cf_type_${i}`) : "text") as LineField["type"];
+    const prev = line.client_fields.find((x) => x.label === label);
+    let key = prev?.key ?? (slugify(label).replace(/-/g, "_").slice(0, 30) || `dato_${i}`);
+    while (usedC.has(key)) key += "_2";
+    usedC.add(key);
+    const f: LineField = { key, label, type };
+    if (type === "select") f.options = parseOptions(g(`cf_options_${i}`), line.client_fields.flatMap((x) => x.options ?? []));
+    clientFields.push(f);
+  }
   const keywords = g("keywords").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
   await query(
     `UPDATE business_lines SET name = coalesce(nullif($2,''), name), emoji = coalesce(nullif($3,''), emoji), keywords = $4, fields = $5,
        priority_a = $6, priority_b = $7, consent_text = coalesce(nullif($8,''), consent_text), thanks_text = coalesce(nullif($9,''), thanks_text),
        proposal_label = coalesce(nullif($10,''), proposal_label), won_label = coalesce(nullif($11,''), won_label),
-       value_label = coalesce(nullif($12,''), value_label), default_value = $13, active = $14, company_id = $15
+       value_label = coalesce(nullif($12,''), value_label), default_value = $13, active = $14, company_id = $15, client_fields = $16
      WHERE id = $1`,
     [
       id, g("name"), g("emoji"), keywords, JSON.stringify(fields), Number(g("priority_a")) || 0, Number(g("priority_b")) || 0,
       g("consent_text"), g("thanks_text"), g("proposal_label"), g("won_label"), g("value_label"), parseMoney(g("default_value")),
-      formData.get("active") === "on", g("company_id") || line.company_id,
+      formData.get("active") === "on", g("company_id") || line.company_id, JSON.stringify(clientFields),
     ],
   );
   // recalcula la prioridad de los leads abiertos con las preguntas nuevas
