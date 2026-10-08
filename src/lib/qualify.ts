@@ -1,6 +1,8 @@
 // Cualificación de leads para la Ley de Segunda Oportunidad (LSO).
-// Requisitos legales básicos: deudor de buena fe, ≥2 acreedores, deuda ≤ 5M €,
-// no haber usado la LSO en los últimos 5 años y sin condenas por delitos económicos.
+// Requisitos legales básicos (TRLC tras la Ley 16/2022): persona física insolvente y de buena fe (art. 487),
+// ≥2 acreedores (criterio de los juzgados), sin exoneración en los últimos 2 años con plan de pagos
+// o 5 con liquidación (art. 488) y sin condenas firmes por delitos económicos en 10 años.
+// El tope de 5 M€ no es legal: es un filtro comercial (casos así no son de este servicio).
 // El despacho fija su deuda mínima (los casos pequeños no le salen rentables).
 
 import type { LeadFields } from "./normalize";
@@ -19,9 +21,9 @@ export function qualifyLead(l: LeadFields, c: ClientCriteria): QualifyResult {
   const fails: string[] = [];
   let score = 0;
 
-  if (l.prior_lso === true) fails.push("Ya usó la Segunda Oportunidad en los últimos 5 años");
+  if (l.prior_lso === true) fails.push("Obtuvo la exoneración hace menos de 2 años: aún no puede volver a pedirla");
   if (l.criminal_record === true) fails.push("Tiene condenas por delitos económicos");
-  if (l.debt_amount != null && l.debt_amount > 5_000_000) fails.push("Deuda superior a 5 M€ (fuera de la LSO)");
+  if (l.debt_amount != null && l.debt_amount > 5_000_000) fails.push("Deuda superior a 5 M€ (fuera de este servicio)");
   if (l.debt_amount != null && l.debt_amount < c.min_debt) fails.push(`Deuda de ${eur(l.debt_amount)}, por debajo del mínimo del despacho (${eur(c.min_debt)})`);
   if (l.creditors_count != null && l.creditors_count < c.min_creditors) fails.push(`Solo ${l.creditors_count} acreedor(es); el mínimo es ${c.min_creditors}`);
 

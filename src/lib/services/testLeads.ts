@@ -1,7 +1,7 @@
 import "server-only";
 import { query, queryOne } from "../db";
 import { matchProvince, normalizeEmail, normalizePhone } from "../normalize";
-import { answersToFields, CONSENT_TEXT, FIRM_CONSENT_TEXT, evaluateTest, QUESTIONS, sourceFromUtm, type TestAnswers, type Verdict } from "../lsoTest";
+import { answersToFields, CONSENT_TEXT, OPTIONAL_ANSWERS, FIRM_CONSENT_TEXT, evaluateTest, QUESTIONS, sourceFromUtm, type TestAnswers, type Verdict } from "../lsoTest";
 import { contactInfo } from "../settings";
 import { emitEvent } from "./events";
 import { ingestLead } from "./leads";
@@ -37,7 +37,9 @@ async function pickClient(province: string | null) {
 
 export async function submitTest(s: TestSubmission): Promise<{ ok: true; verdict: Verdict } | { ok: false; error: string }> {
   for (const q of QUESTIONS) {
-    if (!q.options.some((o) => o.value === s.answers[q.id])) return { ok: false, error: "Faltan respuestas del test." };
+    const v = s.answers[q.id];
+    if (v == null && OPTIONAL_ANSWERS.includes(q.id)) continue;
+    if (!q.options.some((o) => o.value === v)) return { ok: false, error: "Faltan respuestas del test." };
   }
   const full_name = s.full_name.trim().slice(0, 120);
   const phone = normalizePhone(s.phone);

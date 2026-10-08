@@ -8,7 +8,7 @@ import { clientByTestCode, submitTest } from "./testLeads";
 
 // Asistente de WhatsApp 24 h (plan Premium): la persona escribe al WhatsApp del despacho
 // (siempre es ella quien inicia) y el asistente le hace el mismo test que /test, paso a paso.
-// Pasos: 0..5 preguntas · 6 nombre · 7 provincia · 8 consentimiento · 9 terminado.
+// Pasos: una por pregunta del test · nombre · provincia · consentimiento · terminado.
 
 const NAME = QUESTIONS.length, PROVINCE = NAME + 1, CONSENT = NAME + 2, DONE = NAME + 3;
 

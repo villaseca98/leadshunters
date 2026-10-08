@@ -19,6 +19,9 @@
   --color-blaze: #ff5b1a;
   --color-blaze-ink: #3a1200;
   --color-moss: #1f6b45;
+  /* web para particulares (Mi Cuenta Nueva) */
+  --color-sage: #2f7d6d;
+  --color-sage-soft: #e3efe9;
 
   /* neutros con un punto de salvia */
   --color-slate-50: #f6f7f2;
@@ -190,4 +193,22 @@ h1, h2, h3 {
 
 input:focus-visible, select:focus-visible, textarea:focus-visible {
   outline: none;
+}
+
+/*
+  Mi Cuenta Nueva · web para particulares (marca de consumo).
+  Verde salvia de calma, papel cálido y mostaza para los botones. Sin la tipografía ancha del CRM.
+*/
+.brand-mcn {
+  --color-paper: #faf8f4;
+  --color-ink: #1f2328;
+  --color-blaze: #e0a526;
+  --color-blaze-ink: #2a1d00;
+  --color-moss: #2f7d6d;
+  --font-display: "Onest Variable", ui-sans-serif, system-ui, sans-serif;
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+.brand-mcn .font-display {
+  letter-spacing: -0.025em;
 }
