@@ -1,11 +1,12 @@
 // Separa la web para particulares (el test) del CRM por dominio.
-// En el dominio del CRM (leadshunters…, *.vercel.app, localhost) todo sigue igual.
+// En el dominio del CRM (leadshunters…, *.vercel.app, localhost) todo sigue igual,
+// salvo micuentanueva.vercel.app, que es la dirección gratuita de la marca para particulares.
 // En cualquier otro dominio conectado al proyecto (la marca para particulares, p. ej. micuentanueva.es) solo existe
 // la web pública: la portada (/web servida en la raíz), las páginas informativas, el test y las páginas legales.
 import { NextResponse, type NextRequest } from "next/server";
 
 const isAppHost = (host: string) =>
-  !host.startsWith("consumer.") && (/leadshunters|\.vercel\.app$|^localhost$|^127\.0\.0\.1$/.test(host));
+  !host.startsWith("consumer.") && !host.startsWith("micuentanueva") && (/leadshunters|\.vercel\.app$|^localhost$|^127\.0\.0\.1$/.test(host));
 
 const CONSUMER_PATHS = new Set(["/test", "/requisitos", "/deudas", "/como-funciona", "/preguntas", "/privacidad", "/aviso-legal", "/cookies"]);
 
