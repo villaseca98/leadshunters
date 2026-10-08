@@ -3,13 +3,13 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## 04 · Eventos de la app\nLa app llama a este webhook en cada evento (`N8N_EVENTS_WEBHOOK_URL`).\n- **lead.nuevo** → WhatsApp al equipo para llamar en < 5 min\n- **cita.agendada** → email al despacho con el resumen + enlace para confirmar asistencia, y confirmación al lead (email; SMS con Twilio si lo activas)\n- **cita.asistida / no_asistio** → aviso; si el despacho tiene enlace de reseña, email al lead pidiendo su opinión en Google\n- **prospecto.cliente** → aviso de nuevo cliente\n- **prospecto.vio_auditoria** → WhatsApp para llamar al despacho mientras mira su auditoría\n- **test.sin_despacho** → alguien hizo el test en una provincia sin despacho cliente\n\nActiva el flujo para que la URL de producción funcione.",
+        "content": "## 04 · Eventos de la app\nLa app llama a este webhook en cada evento (`N8N_EVENTS_WEBHOOK_URL`).\n- **lead.nuevo** → WhatsApp al equipo para llamar en < 5 min\n- **cita.agendada** → email al despacho con el resumen + enlace para confirmar asistencia, y confirmación al lead (email; SMS con Twilio si lo activas)\n- **cita.asistida / no_asistio** → aviso; si el despacho tiene enlace de reseña, email al lead pidiendo su opinión en Google\n- **prospecto.cliente** → aviso de nuevo cliente\n- **prospecto.vio_auditoria** → WhatsApp para llamar al despacho mientras mira su auditoría\n- **test.sin_despacho** → alguien hizo el test en una provincia sin despacho cliente\n- **energia.nuevo** → lead de luz o placas (Recorta) entrado por Instagram\n\nActiva el flujo para que la URL de producción funcione.",
         "width": 560,
         "height": 300,
         "color": 4
       },
-      "id": "f7857c58-a814-4656-8d54-e7bc320f319a",
-      "name": "Nota 5f43",
+      "id": "a6a7f2d2-49a1-4240-ae0c-0abe1557f6a6",
+      "name": "Nota 8cf7",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
@@ -24,7 +24,7 @@
         "responseMode": "onReceived",
         "options": {}
       },
-      "id": "50900b96-9dda-4f4e-94fb-43430663ad04",
+      "id": "da760722-2c14-47da-a97e-bf6bef4c1512",
       "name": "Eventos de la app",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -32,13 +32,13 @@
         220,
         400
       ],
-      "webhookId": "d6d9b587-6bdb-49e8-ab71-bfb6f431423a"
+      "webhookId": "2257e13c-6264-4333-b55e-be077b40ab53"
     },
     {
       "parameters": {
         "jsCode": "const h = $input.first().json.headers || {};\nconst b = $input.first().json.body || {};\nif (h['x-api-key'] !== $('Config').first().json.LH_API_KEY) return [];\nreturn [{ json: { event_id: b.id, kind: b.kind, ...b.payload } }];"
       },
-      "id": "45c24028-b757-4164-9a5b-c02643a5e772",
+      "id": "cc4f3f23-18de-4f48-9b98-2bc5c7bd244b",
       "name": "Comprobar clave",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -61,7 +61,7 @@
                 },
                 "conditions": [
                   {
-                    "id": "f99d0af1-069f-44e9-b5a9-c7582eef353f",
+                    "id": "fa5c8460-22e1-411a-bc9e-66dee16461d6",
                     "leftValue": "={{ $json.kind }}",
                     "rightValue": "lead.nuevo",
                     "operator": {
@@ -85,7 +85,7 @@
                 },
                 "conditions": [
                   {
-                    "id": "a1ad7711-648e-47d2-ace3-a172796deb31",
+                    "id": "c7c8e254-5e4c-40d5-b9fb-5d4becb442dc",
                     "leftValue": "={{ $json.kind }}",
                     "rightValue": "cita.agendada",
                     "operator": {
@@ -109,7 +109,7 @@
                 },
                 "conditions": [
                   {
-                    "id": "8fb629e2-aae6-4791-9997-6c1e0c4b4fde",
+                    "id": "8128a2df-af15-4076-9e0a-3876783da9ef",
                     "leftValue": "={{ $json.kind }}",
                     "rightValue": "cita.asistida",
                     "operator": {
@@ -133,7 +133,7 @@
                 },
                 "conditions": [
                   {
-                    "id": "70bf721b-885c-45b8-8a12-0dec3eac15ea",
+                    "id": "3f991fb3-841f-4227-ad0e-d7cd0fd69a50",
                     "leftValue": "={{ $json.kind }}",
                     "rightValue": "cita.no_asistio",
                     "operator": {
@@ -157,7 +157,7 @@
                 },
                 "conditions": [
                   {
-                    "id": "950e0040-08d0-4727-8c6e-0c1cbfc142f7",
+                    "id": "58ed3f83-125d-46dd-9886-69619faf0953",
                     "leftValue": "={{ $json.kind }}",
                     "rightValue": "prospecto.cliente",
                     "operator": {
@@ -181,7 +181,7 @@
                 },
                 "conditions": [
                   {
-                    "id": "313481ff-a991-4cf3-9008-5fd21a720b70",
+                    "id": "7a0fb793-46fd-453b-80f1-67b52870e8df",
                     "leftValue": "={{ $json.kind }}",
                     "rightValue": "prospecto.vio_auditoria",
                     "operator": {
@@ -205,7 +205,7 @@
                 },
                 "conditions": [
                   {
-                    "id": "425af2ab-4ff9-4815-8ae1-c60f44d130f4",
+                    "id": "b295e445-630b-4da3-b2d0-d4378b1aa0f3",
                     "leftValue": "={{ $json.kind }}",
                     "rightValue": "test.sin_despacho",
                     "operator": {
@@ -218,12 +218,36 @@
               },
               "renameOutput": true,
               "outputKey": "test.sin_despacho"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "2111c8f2-4dc4-4dd6-a98e-3016e862ecb3",
+                    "leftValue": "={{ $json.kind }}",
+                    "rightValue": "energia.nuevo",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "energia.nuevo"
             }
           ]
         },
         "options": {}
       },
-      "id": "f9473fd9-96b0-47c8-a3ff-45c94a05726b",
+      "id": "8976452c-080d-481d-b7f5-3e3308e419f4",
       "name": "Tipo de evento",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
@@ -255,7 +279,7 @@
           ]
         }
       },
-      "id": "9344b1de-5772-490d-9262-eb18a7b98ffe",
+      "id": "34df0ece-9347-4e85-a16c-af9ce457cab9",
       "name": "🔥 Nuevo lead al equipo",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -276,7 +300,7 @@
           "appendAttribution": false
         }
       },
-      "id": "83fd1a91-2c12-4396-a363-ab5d1828cb44",
+      "id": "945aa374-4fd8-4e4c-8628-4a9dfe044855",
       "name": "Email al despacho",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -297,7 +321,7 @@
           },
           "conditions": [
             {
-              "id": "ed980715-6425-4707-a54c-44208589dc38",
+              "id": "b0c8054f-5973-430a-9c12-b2825e0415a3",
               "leftValue": "={{ !!$('Tipo de evento').item.json.lead_email }}",
               "rightValue": "",
               "operator": {
@@ -311,7 +335,7 @@
         },
         "options": {}
       },
-      "id": "b8b53c92-7f74-4184-bdc0-0ff6cdc55516",
+      "id": "77a63386-f89d-436d-afaf-f404c5efb3b6",
       "name": "¿El lead tiene email?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -331,7 +355,7 @@
           "appendAttribution": false
         }
       },
-      "id": "1b7412bc-a1b7-4ff4-b96f-887cd393379f",
+      "id": "b2c60a51-48ec-44b9-9566-e3e42f9b62c4",
       "name": "Email de confirmación al lead",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -348,7 +372,7 @@
         "message": "=Hola, tu consulta con {{ $('Tipo de evento').item.json.cliente }} es el {{ new Date($('Tipo de evento').item.json.scheduled_at).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) }}. Te llamará un abogado especialista.",
         "options": {}
       },
-      "id": "03600a50-0e4b-4e34-b0ab-f2c5bc639047",
+      "id": "ab38d67e-c043-43d0-a028-62c1174eef16",
       "name": "SMS al lead (opcional)",
       "type": "n8n-nodes-base.twilio",
       "typeVersion": 1,
@@ -382,7 +406,7 @@
           ]
         }
       },
-      "id": "fe725938-6ad7-4672-be37-cde3e7871e5d",
+      "id": "95dbe5af-350f-41af-a5c0-c36d69f9ea67",
       "name": "✅ Consulta realizada",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -403,7 +427,7 @@
           },
           "conditions": [
             {
-              "id": "015422cb-4847-468b-946b-6bb5cb5ff935",
+              "id": "dacb38a9-29e3-435f-9ac2-e615ed41a02d",
               "leftValue": "={{ !!$('Tipo de evento').item.json.enlace_resena && !!$('Tipo de evento').item.json.lead_email && !$('Tipo de evento').item.json.review_requested_at }}",
               "rightValue": "",
               "operator": {
@@ -417,7 +441,7 @@
         },
         "options": {}
       },
-      "id": "97356e15-d250-4c19-8f62-68aabf50d68d",
+      "id": "c0915e22-64b4-471f-90f1-e0f01706c34c",
       "name": "¿Pedir reseña?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -437,7 +461,7 @@
           "appendAttribution": false
         }
       },
-      "id": "7d004cd7-5c7e-4ab9-89f4-0874b08cfaa3",
+      "id": "c31bfa1c-a041-4618-a5fe-dbb96d032c34",
       "name": "⭐ Pedir reseña al lead",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
@@ -465,7 +489,7 @@
         "specifyBody": "json",
         "jsonBody": "={\"review_requested\": true}"
       },
-      "id": "fc2c7871-7ae7-4fa2-8b97-cb619be42f22",
+      "id": "66cd41a9-9529-41e4-8916-1977e950a9a5",
       "name": "Marcar reseña pedida",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -498,7 +522,7 @@
           ]
         }
       },
-      "id": "d1785c85-ba1e-43d1-baea-a9fbb750c203",
+      "id": "d69207db-18df-495d-bb55-cfdcce29cd6b",
       "name": "❌ No se presentó",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -531,7 +555,7 @@
           ]
         }
       },
-      "id": "e2089926-128b-4800-8481-8beaeeff827b",
+      "id": "f4978260-f842-485d-90c5-e384704d12e1",
       "name": "🎉 Nuevo cliente",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -564,7 +588,7 @@
           ]
         }
       },
-      "id": "9163f3a6-d961-4017-a97c-6d75268c3aa0",
+      "id": "651a0eb6-a2bc-4438-b504-7962f96854de",
       "name": "👀 Están viendo la auditoría",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -597,7 +621,7 @@
           ]
         }
       },
-      "id": "e4b4d5b0-b88c-4154-b375-e8ffe72bf702",
+      "id": "b691923f-99a4-4a75-9081-800dbe8e9bf5",
       "name": "🙋 Persona sin despacho",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -609,48 +633,81 @@
     },
     {
       "parameters": {
+        "method": "GET",
+        "url": "https://api.callmebot.com/whatsapp.php",
+        "options": {},
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "={{ $('Config').first().json.WHATSAPP_PHONE }}"
+            },
+            {
+              "name": "apikey",
+              "value": "={{ $('Config').first().json.WHATSAPP_APIKEY }}"
+            },
+            {
+              "name": "text",
+              "value": "=⚡ *Lead de {{ $json.linea === 'placas' ? 'placas solares' : 'luz' }}* · prioridad {{ $json.prioridad }}\n{{ $json.nombre }} · {{ $json.telefono }} · {{ $json.provincia || '' }}\nFactura: {{ $json.factura ? $json.factura + ' €/mes' : '¿?' }} · {{ $json.canal }}\n{{ $('Config').first().json.APP_URL }}/energia/{{ $json.id }}"
+            }
+          ]
+        }
+      },
+      "id": "98341bd9-5a9e-4960-9961-cbf81bc42c86",
+      "name": "⚡ Lead de luz o placas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1160,
+        1340
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
         "mode": "manual",
         "includeOtherFields": true,
         "assignments": {
           "assignments": [
             {
-              "id": "4a6ca6c8-a92a-4475-a2a9-3222997f84d8",
+              "id": "1563192f-80f1-4f63-9868-2734a873c1a4",
               "name": "APP_URL",
               "value": "https://app.tudominio.com",
               "type": "string"
             },
             {
-              "id": "cf86373b-e127-4218-8a66-0fe44c307b78",
+              "id": "724b317a-3de4-4d7c-833a-1627a7f6d0df",
               "name": "EMAIL_FROM",
               "value": "Leads Hunters <hola@tudominio.com>",
               "type": "string"
             },
             {
-              "id": "da54fe58-a342-4ee8-8fd9-176c6081f005",
+              "id": "9bb7cf99-73fc-4583-bd90-f35b54631134",
               "name": "LH_API_KEY",
               "value": "PEGA_AQUI_LA_N8N_API_KEY_DE_LA_APP",
               "type": "string"
             },
             {
-              "id": "4432b67c-1657-4abd-968a-10b46dfadf91",
+              "id": "1471cd0f-2426-4d9d-89d6-56a782434fa6",
               "name": "LH_API_URL",
               "value": "https://app.tudominio.com",
               "type": "string"
             },
             {
-              "id": "e36a15a4-0ede-4601-a237-c1317d6f77e9",
+              "id": "7a3a5da8-11e2-4e38-b9eb-3cdcfb457856",
               "name": "TWILIO_FROM",
               "value": "+34000000000",
               "type": "string"
             },
             {
-              "id": "776fd660-01b9-41f6-8be9-574daa42e370",
+              "id": "2fb10009-f411-43b6-b292-cb4c118004a9",
               "name": "WHATSAPP_APIKEY",
               "value": "PEGA_AQUI_TU_APIKEY_DE_CALLMEBOT",
               "type": "string"
             },
             {
-              "id": "49e09f1d-9f24-456c-bf6b-fad308c42271",
+              "id": "5c236fb2-c2fe-4e01-a72a-b937d8e07691",
               "name": "WHATSAPP_PHONE",
               "value": "+34600000000",
               "type": "string"
@@ -659,7 +716,7 @@
         },
         "options": {}
       },
-      "id": "3076c579-88c0-416c-85a1-94517e6ac563",
+      "id": "3e9b84ec-450c-4902-a9d7-3127bd2e2833",
       "name": "Config",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -739,6 +796,13 @@
         [
           {
             "node": "🙋 Persona sin despacho",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "⚡ Lead de luz o placas",
             "type": "main",
             "index": 0
           }

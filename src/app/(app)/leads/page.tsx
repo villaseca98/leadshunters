@@ -2,6 +2,7 @@ import Link from "next/link";
 import { query } from "@/lib/db";
 import { LEAD_STATUS, QUALIFICATION, SOURCE } from "@/lib/labels";
 import { dateTime, eur } from "@/lib/format";
+import { VerticalTabs } from "@/components/VerticalTabs";
 import { A, Empty, Filters, PageHeader, Pager, StatusBadge, Table, Td, btn, input } from "@/components/ui";
 
 const PER_PAGE = 50;
@@ -31,6 +32,9 @@ export default async function Leads(props: PageProps<"/leads">) {
     params,
   );
   const clients = await query<{ id: string; name: string }>("SELECT id, name FROM clients ORDER BY name");
+  const counts = await query<{ vertical: string; n: number }>(
+    "SELECT 'despachos' AS vertical, count(*)::int n FROM leads UNION ALL SELECT vertical, count(*)::int FROM energy_leads GROUP BY vertical",
+  );
   const href = (p: number) => {
     const u = new URLSearchParams(Object.entries({ q, cliente: client, status, cualificacion: qual, origen: source }).filter(([, v]) => v) as [string, string][]);
     u.set("page", String(p));
@@ -49,6 +53,7 @@ export default async function Leads(props: PageProps<"/leads">) {
           </>
         }
       />
+      <VerticalTabs active="despachos" counts={Object.fromEntries(counts.map((c) => [c.vertical, c.n]))} />
       <Filters active={[client, status, qual, source].filter(Boolean).length}>
       <form className="grid grid-cols-2 gap-2 md:grid-cols-6">
         <input name="q" defaultValue={q} placeholder="Nombre, teléfono, email…" className={`${input} col-span-2`} />

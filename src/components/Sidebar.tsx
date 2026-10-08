@@ -25,6 +25,8 @@ const MAIN = [
   { href: "/prospeccion", label: "Despachos", icon: IconTarget },
 ];
 const MORE = [
+  { href: "/energia", label: "Luz y placas", hint: "Leads de Recorta desde Instagram" },
+  { href: "/informes", label: "Informes", hint: "Despachos, luz y placas: qué mejorar" },
   { href: "/particulares", label: "Test particulares", hint: "Captación propia con consentimiento" },
   { href: "/citas", label: "Consultas", hint: "Agenda y asistencia" },
   { href: "/clientes", label: "Clientes", hint: "Despachos que pagan" },

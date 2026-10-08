@@ -31,7 +31,9 @@ Todo en español, se instala en tu propio servidor con Docker.
 - **Ficha de despacho**: por qué tiene esa puntuación, ganchos para abrir la llamada, guion de venta, registro de llamadas, señales de marketing (web, WhatsApp, píxel, anuncios en Meta), botón **Convertir en cliente**.
 - **Llamar despachos**: abre el siguiente despacho a llamar (acciones vencidas primero, luego los de mejor puntuación).
 - **Cola de llamadas**: el telefonista pulsa «Coger el siguiente lead» y le sale la pantalla de llamada: teléfono grande, cronómetro desde que entró el lead, datos de cualificación editables, guion LSO y botones de resultado. Al guardar salta al siguiente. Dos telefonistas nunca cogen el mismo lead.
-- **Leads**: todos los leads con filtros y exportación. Botón de **supresión RGPD**.
+- **Leads**: todos los leads con filtros y exportación. Botón de **supresión RGPD**. Arriba, chips para cambiar de línea: Despachos, Luz, Placas.
+- **Luz y placas** (`/energia`): segunda línea de negocio, la afiliación de **Recorta**. Leads de Instagram (ManyChat) con prioridad A/B/C (factura, vivienda, propietario), estados (nuevo → contactado → estudio enviado → contratado o descartado con motivo), comisión por contrato, alta manual y CSV. No van a ningún despacho.
+- **Informes** (`/informes`): informe interno del mes de las tres líneas (despachos, luz, placas): leads frente al mes anterior, contacto, velocidad, consultas o contratos, facturación y comisiones, desglose por campaña, canal, provincia y prioridad, leads por semana y una lista automática de **qué mejorar**. Resumen listo para mandártelo por WhatsApp; también en `GET /api/v1/informes?mes=AAAA-MM` para n8n.
 - **Consultas**: agenda; marcar asistió / no asistió / cancelar / mover.
 - **Clientes**: condiciones económicas, criterios de cualificación (deuda mínima, acreedores, provincias), IDs de formularios de Meta/Google, clave y formulario web para pegar en la web del despacho.
 - **Facturación**: por mes y cliente: cuota fija + consultas realizadas × precio, con tope opcional. Exporta CSV y justificante por cliente.
