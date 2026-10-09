@@ -4,12 +4,11 @@ import { query } from "@/lib/db";
 import { eur } from "@/lib/format";
 import { Card, Field, PageHeader, btn, input } from "@/components/ui";
 import { createCompany, createLine, updateCompany } from "./actions";
+import { getCompanies } from "@/lib/services/group";
 
 export default async function Negocios(props: PageProps<"/negocios">) {
   const sp = await props.searchParams;
-  const companies = await query<{ id: string; slug: string; name: string; website: string | null; notes: string | null; active: boolean }>(
-    "SELECT id, slug, name, website, notes, active FROM companies ORDER BY name = 'Leads Hunters' DESC, name",
-  );
+  const companies = await getCompanies();
   const lines = await query<{
     id: string; company_id: string; slug: string; name: string; emoji: string; kind: string; active: boolean; fields: unknown[];
     leads_mes: number; abiertos: number; ganados_mes: number; valor_mes: number | null;
@@ -27,16 +26,18 @@ export default async function Negocios(props: PageProps<"/negocios">) {
   return (
     <>
       <PageHeader
-        title="Empresas y líneas"
+        title="Grupo y empresas"
         eyebrow="Leads Hunters · matriz"
-        subtitle="Cada empresa tiene sus líneas de negocio, con sus preguntas y su prioridad. Todos los leads de Instagram entran aquí, clasificados."
+        subtitle="Leads Hunters es la matriz. Las empresas del grupo cuelgan de ella, cada una con sus líneas de negocio, sus preguntas y su prioridad. Todos sus leads, clientes e informes entran aquí."
       />
       {error && <p className="mb-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800">{error}</p>}
       <div className="space-y-4">
-        {companies.map((c) => (
+        {companies.map((c, i) => (
+          <div key={c.id} id={c.slug}>
+          {i === 1 && <h2 className="mb-3 mt-6 font-display text-lg font-semibold">Empresas que cuelgan de Leads Hunters</h2>}
           <Card
-            key={c.id}
-            title={<span className="text-ink">{c.name}{!c.active && " · pausada"}</span>}
+            className={c.is_parent ? "ring-2 ring-blaze" : "sm:ml-6"}
+            title={<span className="text-ink">{c.emoji} {c.name}{c.is_parent ? " · matriz" : ""}{!c.active && " · pausada"}{c.tagline ? <span className="ml-2 font-normal normal-case tracking-normal text-slate-500">{c.tagline}</span> : null}</span>}
             actions={c.website ? <a href={c.website} target="_blank" className="text-xs font-semibold text-indigo-600">{c.website.replace(/^https?:\/\//, "")}</a> : null}
           >
             {c.notes && <p className="mb-3 text-sm text-slate-500">{c.notes}</p>}
@@ -65,12 +66,15 @@ export default async function Negocios(props: PageProps<"/negocios">) {
               <form action={updateCompany.bind(null, c.id)} className="mt-3 grid gap-3 sm:grid-cols-2">
                 <Field label="Nombre"><input name="name" defaultValue={c.name} className={input} /></Field>
                 <Field label="Web"><input name="website" defaultValue={c.website ?? ""} className={input} /></Field>
+                <Field label="Qué hace (una línea)"><input name="tagline" defaultValue={c.tagline ?? ""} className={input} /></Field>
+                <Field label="Emoji"><input name="emoji" defaultValue={c.emoji} className={input} /></Field>
                 <div className="sm:col-span-2"><Field label="Notas"><input name="notes" defaultValue={c.notes ?? ""} className={input} /></Field></div>
-                <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="active" defaultChecked={c.active} /> Activa</label>
+                {!c.is_parent && <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="active" defaultChecked={c.active} /> Activa</label>}
                 <div><button className={btn.secondary}>Guardar empresa</button></div>
               </form>
             </details>
           </Card>
+          </div>
         ))}
       </div>
 
@@ -86,10 +90,13 @@ export default async function Negocios(props: PageProps<"/negocios">) {
             <div className="sm:col-span-2"><button className={btn.primary}>Crear y poner sus preguntas</button></div>
           </form>
         </Card>
-        <Card title="Nueva empresa">
+        <Card title="Nueva empresa del grupo">
+          <p className="mb-3 text-xs text-slate-500">Cuelga de Leads Hunters automáticamente.</p>
           <form action={createCompany} className="grid gap-3 sm:grid-cols-2">
             <Field label="Nombre"><input name="name" required className={input} /></Field>
             <Field label="Web"><input name="website" placeholder="https://…" className={input} /></Field>
+            <Field label="Qué hace (una línea)"><input name="tagline" placeholder="Seguros de coche" className={input} /></Field>
+            <Field label="Emoji"><input name="emoji" placeholder="🏢" className={input} /></Field>
             <div className="sm:col-span-2"><button className={btn.secondary}>Crear empresa</button></div>
           </form>
         </Card>

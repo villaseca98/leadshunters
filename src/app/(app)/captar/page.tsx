@@ -12,9 +12,10 @@ type Funnel = { line_id: string; entraron: number; contactados: number; propuest
 export default async function Captar(props: PageProps<"/captar">) {
   const sp = await props.searchParams;
   const sel = typeof sp.linea === "string" ? sp.linea : "";
+  const empresa = typeof sp.empresa === "string" ? sp.empresa : "";
   const month = currentMonth();
   const all = await getLines();
-  const lines = sel ? all.filter((l) => l.slug === sel) : all;
+  const lines = sel ? all.filter((l) => l.slug === sel) : empresa ? all.filter((l) => l.company_slug === empresa) : all;
   const start = `${month}-01`;
 
   const funnels = new Map(
@@ -51,12 +52,12 @@ export default async function Captar(props: PageProps<"/captar">) {
     <>
       <PageHeader
         title="Captar clientes"
-        eyebrow="De dónde salen tus clientes"
+        eyebrow={empresa && lines[0] ? `Leads Hunters · matriz › ${lines[0].company_name}` : "Leads Hunters · matriz › empresas del grupo"}
         subtitle={`Cada empresa y línea con su embudo de Instagram. Datos de ${monthLabel(month)}.`}
         actions={<Link href="/negocios" className={btn.secondary}>+ Empresa o línea</Link>}
       />
       <div className="lh-rail -mx-4 mb-5 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
-        <ChipLink href="/captar" active={!sel}>Todas</ChipLink>
+        <ChipLink href="/captar" active={!sel && !empresa}>Todo el grupo</ChipLink>
         {all.map((l) => (
           <ChipLink key={l.slug} href={`/captar?linea=${l.slug}`} active={sel === l.slug}>
             {l.emoji} {l.kind === "despachos" ? "Segunda Oportunidad" : l.name} <span className="text-xs opacity-60">· {l.company_name}</span>
@@ -66,7 +67,7 @@ export default async function Captar(props: PageProps<"/captar">) {
 
       {companies.map(([cid, cname]) => (
         <section key={cid} className="mb-7">
-          <h2 className="mb-3 font-display text-lg font-semibold">{cname}</h2>
+          <h2 className="mb-3 font-display text-lg font-semibold">{cname} <span className="text-sm font-normal text-slate-500">{cname === "Leads Hunters" ? "· matriz (ramas propias)" : "· cuelga de Leads Hunters"}</span></h2>
           <div className="grid gap-4 lg:grid-cols-2">
             {lines.filter((l) => l.company_id === cid).map((l) => {
               if (l.kind === "despachos") {
