@@ -1,0 +1,227 @@
+{
+  "marcas": {
+    "leads-hunters": {
+      "nombre": "Leads Hunters",
+      "lema": "Captación para despachos",
+      "icono": "crosshair",
+      "color": "#ff5b1a",
+      "fondo": "#14140f",
+      "texto": "#ffffff"
+    },
+    "micuentanueva": {
+      "nombre": "Mi Cuenta Nueva",
+      "lema": "Ley de Segunda Oportunidad",
+      "icono": "⚖️",
+      "color": "#2fbf8f",
+      "fondo": "#0d2a22",
+      "texto": "#ffffff"
+    },
+    "recorta": {
+      "nombre": "Recorta",
+      "lema": "Luz y placas solares",
+      "icono": "⚡",
+      "color": "#ffc21a",
+      "fondo": "#1c1a10",
+      "texto": "#ffffff"
+    },
+    "mewhub": {
+      "nombre": "MewHub",
+      "lema": "Webs que venden",
+      "icono": "🌐",
+      "color": "#7c6cff",
+      "fondo": "#14122b",
+      "texto": "#ffffff"
+    }
+  },
+  "reels": [
+    {
+      "video": "animados/01-provincia-el-mismo-lead-para-4-despachos",
+      "marca": "leads-hunters",
+      "titulo": "El mismo lead, vendido a *4 despachos*",
+      "etiqueta": "1 despacho por provincia"
+    },
+    {
+      "video": "animados/02-provincia-el-despacho-sin-consultas",
+      "marca": "leads-hunters",
+      "titulo": "Lunes. Martes. *Ni una consulta.*",
+      "etiqueta": "1 despacho por provincia"
+    },
+    {
+      "video": "animados/03-provincia-pagar-por-leads-que-no-contestan",
+      "marca": "leads-hunters",
+      "titulo": "¿Pagar por leads que *no contestan*?",
+      "etiqueta": "1 despacho por provincia"
+    },
+    {
+      "video": "animados/04-provincia-tu-competencia-entra-primero",
+      "marca": "leads-hunters",
+      "titulo": "Tu competencia *entra primero*",
+      "etiqueta": "1 despacho por provincia"
+    },
+    {
+      "video": "animados/05-provincia-precios-sin-sorpresas",
+      "marca": "leads-hunters",
+      "titulo": "Cuánto cuesta una *agenda llena*",
+      "etiqueta": "Precios sin sorpresas"
+    },
+    {
+      "video": "animados/06-provincia-llamar-en-5-minutos",
+      "marca": "leads-hunters",
+      "titulo": "Un lead que llamas mañana *ya es de otro*",
+      "etiqueta": "Llamada en 5 minutos"
+    },
+    {
+      "video": "animados/07-triaje-consultas-que-no-sirven",
+      "marca": "leads-hunters",
+      "titulo": "3 consultas al día… *y ninguna era un caso*",
+      "etiqueta": "Consultas filtradas"
+    },
+    {
+      "video": "animados/08-triaje-la-ficha-del-caso",
+      "marca": "leads-hunters",
+      "titulo": "Sabes su caso *antes de que entre*",
+      "etiqueta": "Consultas filtradas"
+    },
+    {
+      "video": "animados/09-triaje-mas-leads-no-es-la-solucion",
+      "marca": "leads-hunters",
+      "titulo": "¿Más leads? *No. Mejores.*",
+      "etiqueta": "Consultas filtradas"
+    },
+    {
+      "video": "animados/10-triaje-agenda-limpia",
+      "marca": "leads-hunters",
+      "titulo": "Tu tiempo vale más que *una consulta perdida*",
+      "etiqueta": "Consultas filtradas"
+    },
+    {
+      "video": "animados/11-lanzamiento-cuenta-atras-31-diciembre",
+      "marca": "leads-hunters",
+      "titulo": "Plazas hasta el *31 de diciembre*",
+      "etiqueta": "Lanzamiento"
+    },
+    {
+      "video": "animados/12-lanzamiento-carrera-por-la-plaza",
+      "marca": "leads-hunters",
+      "titulo": "Dos despachos. *Una sola plaza.*",
+      "etiqueta": "Lanzamiento"
+    },
+    {
+      "video": "animados/13-lanzamiento-que-incluye",
+      "marca": "leads-hunters",
+      "titulo": "Todo lo que *te llevas*",
+      "etiqueta": "Lanzamiento"
+    },
+    {
+      "video": "animados/14-concurso-llamar-en-5-minutos",
+      "marca": "leads-hunters",
+      "titulo": "La pregunta *del millón*",
+      "etiqueta": "¿Cuándo hay que llamar?"
+    },
+    {
+      "video": "animados/15-vacaciones-agenda-que-se-llena-sola",
+      "marca": "leads-hunters",
+      "titulo": "De vacaciones y la agenda *se llena sola*",
+      "etiqueta": "POV"
+    },
+    {
+      "video": "animados/16-citas-perdidas-recordatorios",
+      "marca": "leads-hunters",
+      "titulo": "El cliente *no se presenta*",
+      "etiqueta": "Recordatorios"
+    },
+    {
+      "video": "animados/17-leads-olvidados-reactivacion",
+      "marca": "leads-hunters",
+      "titulo": "Tu cajón de *contactos olvidados*",
+      "etiqueta": "Reactivación"
+    },
+    {
+      "video": "animados/18-resenas-google",
+      "marca": "leads-hunters",
+      "titulo": "¿Quién elige un abogado con *6 reseñas*?",
+      "etiqueta": "Reseñas de Google"
+    },
+    {
+      "video": "animados/19-informe-mensual-retorno",
+      "marca": "leads-hunters",
+      "titulo": "Cuánto te devuelve *cada euro*",
+      "etiqueta": "Informe mensual"
+    },
+    {
+      "video": "animados/20-whatsapp-24h",
+      "marca": "leads-hunters",
+      "titulo": "3:12 de la madrugada. *Te escriben.*",
+      "etiqueta": "WhatsApp 24 h"
+    },
+    {
+      "video": "animados/21-mitos-de-la-captacion",
+      "marca": "leads-hunters",
+      "titulo": "3 mitos de *la captación*",
+      "etiqueta": "Mitos"
+    },
+    {
+      "video": "reel-1",
+      "marca": "leads-hunters",
+      "titulo": "¿Tu agenda depende del *boca a boca*?",
+      "etiqueta": "Segunda Oportunidad",
+      "fondo": "marca"
+    },
+    {
+      "video": "reel-2",
+      "marca": "leads-hunters",
+      "titulo": "Un lead que llamas *mañana…*",
+      "etiqueta": "Llamada en 5 minutos",
+      "fondo": "marca"
+    },
+    {
+      "video": "reel-3",
+      "marca": "leads-hunters",
+      "titulo": "¿Pagar por leads que *no contestan*? No.",
+      "etiqueta": "Solo pagas consultas",
+      "fondo": "marca"
+    },
+    {
+      "video": "reel-4",
+      "marca": "leads-hunters",
+      "titulo": "Así suena *tu lunes*",
+      "etiqueta": "Agenda llena",
+      "fondo": "marca"
+    },
+    {
+      "video": "reel-5",
+      "marca": "leads-hunters",
+      "titulo": "Cómo llenamos *tu agenda*",
+      "etiqueta": "En 15 segundos",
+      "fondo": "marca"
+    },
+    {
+      "video": "reel-6",
+      "marca": "leads-hunters",
+      "titulo": "El mismo lead vendido a *5 despachos*",
+      "etiqueta": "1 despacho por provincia",
+      "fondo": "marca"
+    },
+    {
+      "video": "reel-7",
+      "marca": "leads-hunters",
+      "titulo": "¿Cuánto te deja de verdad *el marketing*?",
+      "etiqueta": "Retorno real",
+      "fondo": "marca"
+    },
+    {
+      "video": "reel-8",
+      "marca": "leads-hunters",
+      "titulo": "Tienes una *mina de oro* en tu Excel",
+      "etiqueta": "Reactivación",
+      "fondo": "marca"
+    },
+    {
+      "video": "reel-9",
+      "marca": "leads-hunters",
+      "titulo": "Te auditamos *la captación*",
+      "etiqueta": "Gratis para despachos",
+      "fondo": "marca"
+    }
+  ]
+}
