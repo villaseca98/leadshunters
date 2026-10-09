@@ -16,6 +16,8 @@ export type LineField = {
   points_no?: number;
 };
 
+export type AuditItem = { key: string; label: string; area?: string };
+
 export type Line = {
   id: string;
   company_id: string;
@@ -29,6 +31,10 @@ export type Line = {
   fields: LineField[];
   /** campos de la ficha de sus clientes (comercializadora, kWp, dominio…) */
   client_fields: LineField[];
+  /** ficha operativa de sus leads (CUPS, tejado, web actual…) */
+  lead_fields: LineField[];
+  /** auditoría mensual de sus clientes */
+  audit_items: AuditItem[];
   priority_a: number;
   priority_b: number;
   consent_text: string;

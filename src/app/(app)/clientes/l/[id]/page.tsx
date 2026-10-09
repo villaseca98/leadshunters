@@ -9,6 +9,10 @@ import { A, Badge, Card, Field, PageHeader, StatusBadge, btn, input } from "@/co
 import { ClientMetrics } from "@/components/ClientMetrics";
 import { updateLineClient } from "../../lineActions";
 import { ClientAi } from "@/components/ClientAi";
+import { ClientAudit } from "@/components/ClientAudit";
+import { ClientEvolution } from "@/components/ClientEvolution";
+import { auditFor, evolution } from "@/lib/services/clientOps";
+
 import { aiState, anthropicKey, clientReports } from "@/lib/services/clientAi";
 
 export default async function LineClientPage(props: PageProps<"/clientes/l/[id]">) {
@@ -31,6 +35,7 @@ export default async function LineClientPage(props: PageProps<"/clientes/l/[id]"
     clientReports("linea", id),
     anthropicKey(),
   ]);
+  const [audit, evo] = await Promise.all([auditFor("linea", id, mes, line.audit_items), evolution("linea", id, mes)]);
   const st = statusMap(line);
   const isAdmin = user?.role === "admin";
   const conditions = [
@@ -78,6 +83,8 @@ export default async function LineClientPage(props: PageProps<"/clientes/l/[id]"
               ))}
             </div>
           </ClientMetrics>
+          <ClientEvolution rows={evo} labels={{ contactados: "Contactados", showups: "Show-ups", ventas: line.won_label }} />
+          <ClientAudit kind="linea" clientId={id} month={mes} monthName={monthLabel(mes)} items={audit.items} history={evo.map((r) => ({ month: r.month, score: r.auditoria }))} />
 
           <Card title="Sus leads" flush>
             {leads.length === 0 ? <p className="p-5 text-sm text-slate-500">Todavía no tiene leads asignados.</p> : (

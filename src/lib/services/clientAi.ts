@@ -9,6 +9,7 @@ import { currentMonth, eur, monthLabel, shiftMonth } from "../format";
 import { planName } from "../plans";
 import { getLine } from "./lines";
 import { despachoBilling, lineClient, lineClientBilling, markersFor, type ClientKind } from "./clientMetrics";
+import { opsText } from "./clientOps";
 
 const MODEL = "claude-opus-5-5";
 
@@ -142,6 +143,7 @@ export async function chatTurn(kind: ClientKind, id: string, text: string): Prom
   if (!key) return { error: "Falta la clave de Claude: pégala en Ajustes y vuelve a enviar." };
   const ctx = await context(kind, id);
   if (!ctx) return { error: "Cliente no encontrado." };
+  ctx.text += `\n${await opsText(kind, id, currentMonth())}`;
   const state = await aiState(kind, id);
   const now = new Date().toISOString();
   const history = [...state.messages, { role: "user" as const, text, at: now }];
@@ -256,12 +258,13 @@ export async function monthReport(kind: ClientKind, id: string, month: string): 
   if (!/^\d{4}-\d{2}$/.test(month)) return { error: "Mes no válido." };
   const ctx = await context(kind, id, 4);
   if (!ctx) return { error: "Cliente no encontrado." };
+  ctx.text += `\n${await opsText(kind, id, month)}`;
   const state = await aiState(kind, id);
   const res = await client(key).messages.create({
     model: MODEL,
     max_tokens: 16000,
     output_config: { effort: "medium" },
-    system: `${SYSTEM.split("\n")[0]}\nAhora escribes el informe interno mensual de un cliente para que el dueño lo optimice. Texto plano, sin markdown ni asteriscos. Secciones en este orden, cada una con su título en una línea: RESUMEN, EVOLUCIÓN (compara con los meses anteriores con cifras), QUÉ LE FACTURAS, QUÉ FUNCIONA Y QUÉ NO, PASOS A SEGUIR (3 a 6 líneas que empiecen por "- "). Máximo 300 palabras. No inventes datos que no estén.`,
+    system: `${SYSTEM.split("\n")[0]}\nAhora escribes el informe interno mensual de un cliente para que el dueño lo optimice. Texto plano, sin markdown ni asteriscos. Secciones en este orden, cada una con su título en una línea: RESUMEN, EVOLUCIÓN (compara con los meses anteriores con cifras), AUDITORÍA (nota del mes y puntos pendientes), QUÉ LE FACTURAS, QUÉ FUNCIONA Y QUÉ NO, PASOS A SEGUIR (3 a 6 líneas que empiecen por "- "). Máximo 350 palabras. No inventes datos que no estén.`,
     messages: [
       {
         role: "user",

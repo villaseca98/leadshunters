@@ -18,6 +18,7 @@ export default async function LineaAjustes(props: PageProps<"/negocios/[id]">) {
   const companies = await query<{ id: string; name: string }>("SELECT id, name FROM companies ORDER BY name");
   const rows: (LineField | null)[] = [...line.fields, ...Array(3).fill(null)].slice(0, 12);
   const crows: (LineField | null)[] = [...line.client_fields, ...Array(2).fill(null)].slice(0, 10);
+  const lrows: (LineField | null)[] = [...line.lead_fields, ...Array(2).fill(null)].slice(0, 10);
   const url = `${appUrl() || "https://leadshunters-nrfo.vercel.app"}/api/v1/particulares`;
 
   return (
@@ -98,6 +99,30 @@ export default async function LineaAjustes(props: PageProps<"/negocios/[id]">) {
               </div>
             ))}
           </div>
+        </Card>
+
+        <Card title="Ficha operativa de sus leads">
+          <p className="mb-3 text-sm text-slate-500">Lo que preguntas en la llamada para preparar la propuesta (CUPS, tejado, web actual…). Sale en la ficha de cada lead.</p>
+          <div className="space-y-2">
+            {lrows.map((f, i) => (
+              <div key={i} className="grid gap-2 rounded-2xl bg-slate-50 p-3 sm:grid-cols-12">
+                <div className="sm:col-span-5"><Field label={`Campo ${i + 1}`}><input name={`lf_label_${i}`} defaultValue={f?.label ?? ""} placeholder="CUPS, tipo de tejado…" className={input} /></Field></div>
+                <div className="sm:col-span-3">
+                  <Field label="Tipo">
+                    <select name={`lf_type_${i}`} defaultValue={f?.type ?? "text"} className={input}>
+                      <option value="text">Texto</option><option value="number">Número</option><option value="select">Opciones</option>
+                    </select>
+                  </Field>
+                </div>
+                <div className="sm:col-span-4"><Field label="Opciones (si es de opciones)"><input name={`lf_options_${i}`} defaultValue={optionsText(f?.options)} className={input} /></Field></div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card title="Auditoría de sus clientes">
+          <p className="mb-3 text-sm text-slate-500">La lista que revisas cada mes con cada cliente de esta línea. Un punto por línea; si quieres, empieza por el área: «cobro: Comisión cobrada».</p>
+          <textarea name="audit_items" rows={7} defaultValue={line.audit_items.map((a) => (a.area ? `${a.area}: ${a.label}` : a.label)).join("\n")} className={input} />
         </Card>
 
         <Card title="Textos">
