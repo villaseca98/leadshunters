@@ -5,7 +5,8 @@ import { displayValue, LOST_REASONS, PRIORITY, statusMap } from "@/lib/lineas";
 import { getLine, getLines } from "@/lib/services/lines";
 import { dateTime, eur, telHref, waHref } from "@/lib/format";
 import { A, Card, Field, PageHeader, StatusBadge, btn, input } from "@/components/ui";
-import { changeLineStatus, convertLineLead, eraseLineLead, toggleShowup, updateLineLead } from "../actions";
+import { changeLineStatus, convertLineLead, eraseLineLead, toggleShowup, updateLeadOps, updateLineLead } from "../actions";
+import { estimate } from "@/lib/estimates";
 
 export default async function LineLeadPage(props: PageProps<"/lineas/[id]">) {
   const { id } = await props.params;
@@ -17,7 +18,7 @@ export default async function LineLeadPage(props: PageProps<"/lineas/[id]">) {
     priority: string; priority_points: number; priority_reasons: string[]; status: string; attempts: number; next_call_at: string;
     first_contact_at: string | null; won_at: string | null; value: number | null; lost_reason: string | null; notes: string | null;
     channel: string; campaign: string | null; consent_text: string; consent_at: string; created_at: string;
-    client_id: string | null; showup_at: string | null;
+    client_id: string | null; showup_at: string | null; ops: Record<string, string>;
   }>("SELECT * FROM line_leads WHERE id = $1", [id]);
   if (!l) notFound();
   const line = (await getLine(l.line_id))!;
@@ -31,6 +32,7 @@ export default async function LineLeadPage(props: PageProps<"/lineas/[id]">) {
   const firstName = l.full_name.split(/\s+/)[0];
   const waText = `Hola ${firstName}, te escribo de ${line.company_name} por lo que nos pediste en Instagram (${line.name.toLowerCase()}). ¿Te va bien que te llame ahora?`;
   const extras = Object.entries(l.data).filter(([k]) => !line.fields.some((f) => f.key === k));
+  const est = estimate(line.slug, l.data, l.ops);
   const q = queueLine ? <input type="hidden" name="queue_line" value={queueLine} /> : null;
 
   return (
@@ -94,6 +96,27 @@ export default async function LineLeadPage(props: PageProps<"/lineas/[id]">) {
             </p>
           </Card>
 
+          {line.lead_fields.length > 0 && (
+            <Card title={`Ficha operativa · ${line.name}`}>
+              <p className="mb-3 text-xs text-slate-500">Lo que preguntas en la llamada para preparar la propuesta. Con estos datos se afinan las estimaciones.</p>
+              <form action={updateLeadOps.bind(null, id)} className="grid gap-3 sm:grid-cols-2">
+                {line.lead_fields.map((f) => (
+                  <Field key={f.key} label={f.label}>
+                    {f.type === "select" ? (
+                      <select name={`o_${f.key}`} defaultValue={l.ops[f.key] ?? ""} className={input}>
+                        <option value="">—</option>
+                        {f.options?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      </select>
+                    ) : (
+                      <input name={`o_${f.key}`} defaultValue={l.ops[f.key] ?? ""} inputMode={f.type === "number" ? "decimal" : undefined} className={input} />
+                    )}
+                  </Field>
+                ))}
+                <div className="sm:col-span-2"><button className={btn.secondary}>Guardar ficha operativa</button></div>
+              </form>
+            </Card>
+          )}
+
           <Card title="Datos">
             <form action={updateLineLead.bind(null, id)} className="grid gap-3 sm:grid-cols-2">
               <Field label="Línea">
@@ -145,6 +168,20 @@ export default async function LineLeadPage(props: PageProps<"/lineas/[id]">) {
               <button className={`${btn.success} w-full`}>Convertir en cliente</button>
               <p className="mt-1.5 text-xs text-slate-500">Crea su ficha en Clientes con sus datos y lo marca como {line.won_label.toLowerCase()}.</p>
             </form>
+          )}
+          {est.length > 0 && (
+            <Card title="Estimación para la llamada">
+              <dl className="space-y-3">
+                {est.map((e) => (
+                  <div key={e.label}>
+                    <dt className="text-xs text-slate-500">{e.label}</dt>
+                    <dd className="num text-lg font-semibold">{e.value}</dd>
+                    {e.hint && <dd className="text-xs text-slate-500">{e.hint}</dd>}
+                  </div>
+                ))}
+              </dl>
+              <p className="mt-3 text-[11px] text-slate-400">Cifras orientativas, calculadas con medias de mercado.</p>
+            </Card>
           )}
           <Card title={`Prioridad ${l.priority} · ${l.priority_points} puntos`}>
             <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
