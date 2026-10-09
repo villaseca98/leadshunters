@@ -24,14 +24,14 @@ export default async function Preguntas() {
   return (
     <>
       <PageTitle eyebrow="Preguntas" title="Preguntas frecuentes" />
-      <div className="mt-8 divide-y divide-black/5 rounded-[1.5rem] bg-white ring-1 ring-black/5">
+      <div className="mt-14 max-w-3xl divide-y divide-black/[0.06] border-y border-black/[0.06]">
         {FAQ.map(([q, a]) => (
-          <details key={q} className="group p-5 md:px-6">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold">
+          <details key={q} className="group py-6">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-6 text-lg font-medium">
               {q}
-              <span aria-hidden className="text-sage transition group-open:rotate-45">+</span>
+              <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full ring-1 ring-black/10 text-slate-500 transition group-open:rotate-45">+</span>
             </summary>
-            <p className="mt-2 leading-relaxed text-slate-600">{a}</p>
+            <p className="mt-3 max-w-2xl pr-12 leading-relaxed text-slate-500">{a}</p>
           </details>
         ))}
       </div>

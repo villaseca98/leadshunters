@@ -14,9 +14,9 @@ export default function Requisitos() {
         title="¿Puedo acogerme a la Ley de Segunda Oportunidad?"
         intro="Necesitas cumplir todo lo de la primera lista y no estar en ninguno de los casos de la segunda."
       />
-      <div className="mt-8 grid gap-4 md:grid-cols-2">
+      <div className="mt-14 grid gap-4 md:grid-cols-2">
         <Card>
-          <h2 className="font-display text-xl font-semibold">Lo que tienes que cumplir</h2>
+          <h2 className="font-display text-2xl font-medium">Lo que tienes que cumplir</h2>
           <div className="mt-4">
             <Checklist items={[
               <><strong>Ser persona física</strong>: particular, autónomo o empresario individual. Las sociedades no; su administrador sí, por sus deudas personales (por ejemplo, avales).</>,
@@ -29,7 +29,7 @@ export default function Requisitos() {
           <p className="mt-4 text-sm leading-relaxed text-slate-500">No hay un importe mínimo de deuda en la ley. Ya no hace falta intentar antes un acuerdo extrajudicial de pagos.</p>
         </Card>
         <Card>
-          <h2 className="font-display text-xl font-semibold">Cuándo no puedes, en general</h2>
+          <h2 className="font-display text-2xl font-medium">Cuándo no puedes, en general</h2>
           <div className="mt-4">
             <Checklist kind="no" items={[
               "Condena firme a prisión en los últimos 10 años por delitos contra el patrimonio y el orden socioeconómico, falsedad documental, contra Hacienda o la Seguridad Social o contra los trabajadores. Salvo que esté extinguida y pagada la responsabilidad.",
@@ -42,7 +42,7 @@ export default function Requisitos() {
         </Card>
       </div>
       <Card tone="sage" className="mt-4">
-        <h2 className="font-semibold">¿Y si me derivaron deudas de mi empresa?</h2>
+        <h2 className="text-lg font-medium">¿Y si me derivaron deudas de mi empresa?</h2>
         <p className="mt-1.5 leading-relaxed text-slate-700">
           Que Hacienda o la Seguridad Social te hayan derivado deudas como administrador no te impide por sí solo acogerte. Según el Tribunal Supremo
           (sentencias de 18 de febrero de 2026) solo lo impide si hubo una conducta fraudulenta. Un abogado lo revisa con tu expediente.

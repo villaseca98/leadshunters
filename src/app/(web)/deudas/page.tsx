@@ -10,9 +10,9 @@ export default function Deudas() {
   return (
     <>
       <PageTitle eyebrow="Deudas" title="Qué deudas se pueden cancelar y cuáles no" intro="La ley cancela casi todo lo que no puedes pagar, pero protege algunas deudas. Mejor saberlo desde el principio." />
-      <div className="mt-8 grid gap-4 md:grid-cols-2">
+      <div className="mt-14 grid gap-4 md:grid-cols-2">
         <Card>
-          <h2 className="font-display text-xl font-semibold">Sí, normalmente</h2>
+          <h2 className="font-display text-2xl font-medium">Sí, normalmente</h2>
           <div className="mt-4">
             <Checklist items={[
               "Préstamos personales y tarjetas de crédito",
@@ -25,7 +25,7 @@ export default function Deudas() {
           </div>
         </Card>
         <Card>
-          <h2 className="font-display text-xl font-semibold">No se cancelan</h2>
+          <h2 className="font-display text-2xl font-medium">No se cancelan</h2>
           <div className="mt-4">
             <Checklist kind="no" items={[
               "Pensiones de alimentos (hijos, expareja)",
@@ -41,7 +41,7 @@ export default function Deudas() {
       </div>
 
       <Card tone="sage" className="mt-4">
-        <h2 className="font-display text-xl font-semibold">Hacienda, Seguridad Social y otras administraciones</h2>
+        <h2 className="font-display text-2xl font-medium">Hacienda, Seguridad Social y otras administraciones</h2>
         <ul className="mt-3 list-disc space-y-1.5 pl-5 leading-relaxed text-slate-700">
           <li>De lo que debas a <strong>cada administración</strong> se cancelan los <strong>primeros 5.000 €</strong> y, a partir de ahí, <strong>la mitad</strong>, con un máximo de <strong>10.000 €</strong> cancelados.</li>
           <li>El Tribunal Supremo aplica este límite también a comunidades autónomas y ayuntamientos, y permite cancelar enteros los <strong>recargos e intereses</strong>.</li>
@@ -54,7 +54,7 @@ export default function Deudas() {
       </Card>
 
       <Card tone="warn" className="mt-4">
-        <h2 className="font-semibold">Importante: tus avalistas</h2>
+        <h2 className="text-lg font-medium">Importante: tus avalistas</h2>
         <p className="mt-1.5 leading-relaxed text-slate-700">
           La cancelación te protege a ti. Quien te avaló, firmó contigo como deudor solidario o hipotecó un bien suyo por tu deuda sigue respondiendo,
           y el acreedor puede reclamarle.
