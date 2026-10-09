@@ -197,18 +197,38 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 
 /*
   Mi Cuenta Nueva · web para particulares (marca de consumo).
-  Verde salvia de calma, papel cálido y mostaza para los botones. Sin la tipografía ancha del CRM.
+  Minimalista: papel casi blanco, tinta casi negra para los botones, un único verde profundo de acento,
+  grises neutros (sin el tinte salvia del CRM) y líneas finas en lugar de tarjetas con sombra.
 */
 .brand-mcn {
-  --color-paper: #faf8f4;
-  --color-ink: #1f2328;
-  --color-blaze: #e0a526;
-  --color-blaze-ink: #2a1d00;
-  --color-moss: #2f7d6d;
+  --color-paper: #fafaf8;
+  --color-ink: #0f1412;
+  --color-blaze: #0f1412;
+  --color-blaze-ink: #ffffff;
+  --color-moss: #0f6b58;
+  --color-sage: #0f6b58;
+  --color-sage-soft: #ebf3ef;
+  --color-slate-50: #f7f7f6;
+  --color-slate-100: #efefed;
+  --color-slate-200: #e3e3e0;
+  --color-slate-300: #cfcfcb;
+  --color-slate-400: #a3a39f;
+  --color-slate-500: #73736f;
+  --color-slate-600: #575754;
+  --color-slate-700: #3d3d3b;
+  --color-slate-800: #262625;
   --font-display: "Onest Variable", ui-sans-serif, system-ui, sans-serif;
   background: var(--color-paper);
   color: var(--color-ink);
+  font-feature-settings: "ss01", "cv11";
 }
 .brand-mcn .font-display {
-  letter-spacing: -0.025em;
+  letter-spacing: -0.035em;
+}
+.brand-mcn ::selection {
+  background: var(--color-sage-soft);
+}
+.brand-mcn .verdict-revisar {
+  background: #fbf6ea;
+  color: var(--color-ink);
 }

@@ -9,7 +9,7 @@ export default async function WebLayout({ children }: { children: React.ReactNod
   return (
     <div className="brand-mcn min-h-dvh">
       <SiteHeader brand={c.brand} />
-      <main className="mx-auto max-w-5xl px-4 pt-8 md:pt-12">{children}</main>
+      <main className="mx-auto max-w-6xl px-5 pt-8 md:pt-12">{children}</main>
       <SiteFooter c={c} />
     </div>
   );

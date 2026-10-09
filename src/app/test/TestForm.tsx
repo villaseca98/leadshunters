@@ -15,7 +15,7 @@ export function TestForm({ questions, provinces, consentText, utm, code, privacy
   const total = questions.length + 1;
 
   if (verdict) {
-    const tone = verdict.kind === "apto" ? "bg-moss text-white" : verdict.kind === "revisar" ? "bg-blaze text-blaze-ink" : "bg-ink text-white";
+    const tone = verdict.kind === "apto" ? "bg-moss text-white" : verdict.kind === "revisar" ? "verdict-revisar bg-blaze text-blaze-ink" : "bg-ink text-white";
     return (
       <section className="mt-6 space-y-4" aria-live="polite">
         <div className={`rounded-[1.75rem] p-6 ${tone}`}>
