@@ -31,10 +31,10 @@ export function GroupOverview({ parent, companies, total, monthName }: {
         </div>
 
         {/* Empresas del grupo */}
-        <ol className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 sm:p-6 xl:grid-cols-3">
+        <ol className="lh-rail flex gap-3 overflow-x-auto p-4 sm:grid sm:grid-cols-2 sm:overflow-visible sm:p-6 xl:grid-cols-3">
           {companies.map((c) => (
-            <li key={c.id} className="min-w-0">
-              <Link href={`/captar?empresa=${c.slug}`} className={`group block h-full rounded-2xl border p-4 transition hover:border-slate-400 ${c.active ? "border-slate-200" : "border-dashed border-slate-300 opacity-70"}`}>
+            <li key={c.id} className="w-[80%] min-w-0 shrink-0 sm:w-auto">
+              <Link href={`/?empresa=${c.slug}`} className={`group block h-full rounded-2xl border p-4 transition hover:border-slate-400 ${c.active ? "border-slate-200" : "border-dashed border-slate-300 opacity-70"}`}>
                 <div className="flex items-start gap-3">
                   <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-paper text-xl">{c.emoji}</span>
                   <div className="min-w-0 flex-1">

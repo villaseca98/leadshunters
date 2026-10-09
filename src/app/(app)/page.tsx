@@ -1,76 +1,156 @@
+// Inicio: el grupo entero (o una empresa) de un vistazo, la cola de todas las líneas y la bandeja para operar sin entrar en cada ficha.
 import Link from "next/link";
 import { query, queryOne } from "@/lib/db";
-import { billingForMonth } from "@/lib/services/billing";
-import { currentMonth, dateTime, eur, monthLabel, ago, nowMs, shortName } from "@/lib/format";
-import { A, Card, Empty, ScorePill, Stat, StatusBadge, btn } from "@/components/ui";
+import { currentMonth, eur, monthLabel, ago, nowMs, shortName, telHref } from "@/lib/format";
+import { A, Card, ChipLink, Empty, Stat, StatusBadge, btn } from "@/components/ui";
 import { IconBolt } from "@/components/Sidebar";
 import { requireUser } from "@/lib/auth";
-import { CONSULTATION_STATUS, PROSPECT_STATUS } from "@/lib/labels";
+import { LEAD_STATUS } from "@/lib/labels";
+import { statusMap } from "@/lib/lineas";
+import { getLines } from "@/lib/services/lines";
 import { groupOverview } from "@/lib/services/group";
 import { GroupOverview } from "@/components/GroupOverview";
+import { LineStatusSelect } from "@/components/Operativa";
 
-export default async function Dashboard() {
+export default async function Dashboard(props: PageProps<"/">) {
+  const sp = await props.searchParams;
   const user = await requireUser();
   const month = currentMonth();
-  const [kpi] = await query<{
-    leads_hoy: number; leads_mes: number; cualif_mes: number; citas_mes: number; asistidas_mes: number;
-    en_cola: number; speed_min: number | null; contact_rate: number | null;
+  const [group, allLines] = await Promise.all([groupOverview(month), getLines()]);
+  const companies = [...(group.parent ? [group.parent] : []), ...group.companies];
+  const company = companies.find((c) => c.slug === sp.empresa) ?? null;
+  const lines = company ? allLines.filter((l) => l.company_slug === company.slug) : allLines;
+  const generic = lines.filter((l) => l.kind !== "despachos");
+  const ids = generic.map((l) => l.id);
+  const desp = lines.some((l) => l.kind === "despachos"); // Segunda Oportunidad (tablas de siempre) entra en las cifras
+  const byId = new Map(allLines.map((l) => [l.id, l]));
+  const despLine = allLines.find((l) => l.kind === "despachos");
+
+  const [k] = await query<{
+    cola: number; hoy: number; mes: number; contactados: number; con_intento: number; cierres: number; valor: number; speed: number | null; esperando: string | null;
   }>(
-    `WITH m AS (SELECT date_trunc('month', now() AT TIME ZONE 'Europe/Madrid') AT TIME ZONE 'Europe/Madrid' AS start)
+    `WITH day AS (SELECT date_trunc('day', now() AT TIME ZONE 'Europe/Madrid') AT TIME ZONE 'Europe/Madrid' AS d),
+          m AS (SELECT date_trunc('month', now() AT TIME ZONE 'Europe/Madrid') AT TIME ZONE 'Europe/Madrid' AS d),
+          ll AS (SELECT * FROM line_leads WHERE line_id = ANY($1::uuid[])),
+          dl AS (SELECT * FROM leads WHERE $2 AND vertical = 'lso' AND status <> 'duplicado')
      SELECT
-       (SELECT count(*) FROM leads WHERE created_at >= date_trunc('day', now() AT TIME ZONE 'Europe/Madrid') AT TIME ZONE 'Europe/Madrid' AND status <> 'duplicado')::int AS leads_hoy,
-       (SELECT count(*) FROM leads, m WHERE created_at >= m.start AND status <> 'duplicado')::int AS leads_mes,
-       (SELECT count(*) FROM leads, m WHERE created_at >= m.start AND qualification_status = 'cualificado')::int AS cualif_mes,
-       (SELECT count(*) FROM consultations, m WHERE created_at >= m.start AND status <> 'cancelada')::int AS citas_mes,
-       (SELECT count(*) FROM consultations, m WHERE scheduled_at >= m.start AND status = 'asistida')::int AS asistidas_mes,
-       (SELECT count(*) FROM leads l JOIN clients c ON c.id = l.client_id WHERE c.status='activo' AND l.status IN ('nuevo','no_contesta','volver_a_llamar') AND l.qualification_status <> 'no_cualificado' AND l.next_call_at <= now() AND l.phone IS NOT NULL)::int AS en_cola,
-       (SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY extract(epoch FROM (c.created_at - l.created_at)) / 60)
-          FROM leads l JOIN LATERAL (SELECT created_at FROM calls WHERE lead_id = l.id ORDER BY created_at LIMIT 1) c ON true, m
-         WHERE l.created_at >= m.start) AS speed_min,
-       (SELECT avg(CASE WHEN first_contact_at IS NOT NULL THEN 1.0 ELSE 0 END) FROM leads, m WHERE created_at >= m.start AND attempts > 0) AS contact_rate`,
-  );
-  const billing = await billingForMonth(month);
-  const group = await groupOverview(month);
-  const mrr = billing.reduce((a, b) => a + b.total, 0);
-
-  const pipeline = await query<{ status: string; n: number }>("SELECT status, count(*)::int AS n FROM prospects GROUP BY status");
-  const pmap = Object.fromEntries(pipeline.map((p) => [p.status, p.n]));
-  const topProspects = await query<{ id: string; name: string; city: string | null; score: number; score_tier: string; status: string }>(
-    "SELECT id, name, city, score, score_tier, status FROM prospects WHERE status IN ('nuevo','a_llamar','no_contesta') AND phone IS NOT NULL ORDER BY score DESC LIMIT 6",
-  );
-  const upcoming = await query<{ id: string; scheduled_at: string; status: string; full_name: string; cliente: string }>(
-    `SELECT co.id, co.scheduled_at, co.status, l.full_name, c.name AS cliente FROM consultations co
-       JOIN leads l ON l.id = co.lead_id JOIN clients c ON c.id = co.client_id
-      WHERE co.status = 'agendada' ORDER BY co.scheduled_at LIMIT 6`,
-  );
-  const lastLead = await queryOne<{ created_at: string }>("SELECT created_at FROM leads ORDER BY created_at DESC LIMIT 1");
-  const oldestWaiting = await queryOne<{ created_at: string }>(
-    `SELECT l.created_at FROM leads l JOIN clients c ON c.id = l.client_id
-      WHERE c.status = 'activo' AND l.status = 'nuevo' AND l.attempts = 0 AND l.qualification_status <> 'no_cualificado'
-        AND l.phone IS NOT NULL ORDER BY l.created_at LIMIT 1`,
+       ((SELECT count(*) FROM ll WHERE status IN ('nuevo','no_contesta') AND next_call_at <= now())
+        + (SELECT count(*) FROM dl JOIN clients c ON c.id = dl.client_id WHERE c.status = 'activo' AND dl.status IN ('nuevo','no_contesta','volver_a_llamar')
+             AND dl.qualification_status <> 'no_cualificado' AND dl.next_call_at <= now() AND dl.phone IS NOT NULL))::int cola,
+       ((SELECT count(*) FROM ll, day WHERE created_at >= day.d) + (SELECT count(*) FROM dl, day WHERE created_at >= day.d))::int hoy,
+       ((SELECT count(*) FROM ll, m WHERE created_at >= m.d) + (SELECT count(*) FROM dl, m WHERE created_at >= m.d))::int mes,
+       ((SELECT count(*) FROM ll, m WHERE created_at >= m.d AND attempts > 0 AND first_contact_at IS NOT NULL) + (SELECT count(*) FROM dl, m WHERE created_at >= m.d AND attempts > 0 AND first_contact_at IS NOT NULL))::int contactados,
+       ((SELECT count(*) FROM ll, m WHERE created_at >= m.d AND attempts > 0) + (SELECT count(*) FROM dl, m WHERE created_at >= m.d AND attempts > 0))::int con_intento,
+       ((SELECT count(*) FROM ll, m WHERE won_at >= m.d)
+        + (SELECT count(*) FROM consultations co, m WHERE $2 AND co.scheduled_at >= m.d AND co.status = 'asistida'))::int cierres,
+       coalesce((SELECT sum(value) FROM ll, m WHERE won_at >= m.d), 0)::float valor,
+       (SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY mins) FROM (
+          SELECT extract(epoch FROM (first_contact_at - created_at)) / 60 mins FROM ll, m WHERE created_at >= m.d AND first_contact_at IS NOT NULL
+          UNION ALL
+          SELECT extract(epoch FROM (c.created_at - dl.created_at)) / 60 FROM dl JOIN LATERAL (SELECT created_at FROM calls WHERE lead_id = dl.id ORDER BY created_at LIMIT 1) c ON true, m
+           WHERE dl.created_at >= m.d) s) speed,
+       (SELECT min(created_at) FROM (
+          SELECT created_at FROM ll WHERE status = 'nuevo' AND attempts = 0
+          UNION ALL
+          SELECT dl.created_at FROM dl JOIN clients c ON c.id = dl.client_id WHERE c.status = 'activo' AND dl.status = 'nuevo' AND dl.attempts = 0
+            AND dl.qualification_status <> 'no_cualificado' AND dl.phone IS NOT NULL) w)::text esperando`,
+    [ids, desp],
   );
 
-  const conv = (a: number, b: number) => (b ? `${Math.round((a / b) * 100)} %` : "—");
+  // Bandeja: los últimos leads de todas las líneas (o de la empresa elegida)
+  const inbox = await query<{ kind: "linea" | "despacho"; id: string; line_id: string | null; full_name: string; phone: string | null; status: string; priority: string | null; created_at: string }>(
+    `(SELECT 'linea' kind, id, line_id, full_name, phone, status, priority, created_at FROM line_leads WHERE line_id = ANY($1::uuid[]) ORDER BY created_at DESC LIMIT 12)
+     UNION ALL
+     (SELECT 'despacho', id, NULL, full_name, phone, status, NULL, created_at FROM leads WHERE $2 AND vertical = 'lso' AND status <> 'duplicado' ORDER BY created_at DESC LIMIT 12)
+     ORDER BY created_at DESC LIMIT 12`,
+    [ids, desp],
+  );
+
+  // Pendientes: lo que se está quedando atrás
+  const [p] = await query<{ sin_llamar: number; rellamadas: number; propuestas: number }>(
+    `SELECT count(*) FILTER (WHERE status = 'nuevo' AND attempts = 0 AND created_at < now() - interval '5 minutes')::int sin_llamar,
+            count(*) FILTER (WHERE status = 'no_contesta' AND next_call_at <= now())::int rellamadas,
+            count(*) FILTER (WHERE status = 'propuesta' AND updated_at < now() - interval '7 days')::int propuestas
+       FROM line_leads WHERE line_id = ANY($1::uuid[])`,
+    [ids],
+  );
+  const audits = await query<{ kind: string; id: string; name: string; total: number; done: number; plan: boolean }>(
+    `SELECT 'linea' kind, lc.id, lc.name, jsonb_array_length(bl.audit_items)::int total,
+            (SELECT count(*) FROM client_audits a WHERE a.client_kind = 'linea' AND a.client_id = lc.id AND a.month = $2 AND a.done)::int done,
+            EXISTS (SELECT 1 FROM client_ai ai WHERE ai.client_kind = 'linea' AND ai.client_id = lc.id AND ai.plan IS NOT NULL) plan
+       FROM line_clients lc JOIN business_lines bl ON bl.id = lc.line_id WHERE lc.status = 'activo' AND lc.line_id = ANY($1::uuid[])
+     UNION ALL
+     SELECT 'despacho', c.id, c.name, coalesce((SELECT jsonb_array_length(audit_items) FROM business_lines WHERE kind = 'despachos' LIMIT 1), 0)::int,
+            (SELECT count(*) FROM client_audits a WHERE a.client_kind = 'despacho' AND a.client_id = c.id AND a.month = $2 AND a.done)::int,
+            EXISTS (SELECT 1 FROM client_ai ai WHERE ai.client_kind = 'despacho' AND ai.client_id = c.id AND ai.plan IS NOT NULL)
+       FROM clients c WHERE $3 AND c.vertical = 'lso' AND c.status = 'activo'`,
+    [ids, month, desp],
+  );
+  const lowAudit = audits.filter((a) => a.total > 0 && a.done / a.total < 0.5);
+  const noPlan = audits.filter((a) => !a.plan);
+  const lastLead = await queryOne<{ at: string | null }>(
+    "SELECT greatest((SELECT max(created_at) FROM line_leads WHERE line_id = ANY($1::uuid[])), (SELECT max(created_at) FROM leads WHERE $2 AND vertical = 'lso'))::text at",
+    [ids, desp],
+  );
+
   const hour = Number(new Date(nowMs()).toLocaleString("es-ES", { timeZone: "Europe/Madrid", hour: "2-digit", hour12: false }));
   const greet = hour < 6 ? "Buenas noches" : hour < 14 ? "Buenos días" : hour < 21 ? "Buenas tardes" : "Buenas noches";
-  const waitMin = oldestWaiting ? Math.floor((nowMs() - new Date(oldestWaiting.created_at).getTime()) / 60000) : null;
-  const funnel = ["nuevo", "a_llamar", "no_contesta", "contactado", "interesado", "reunion", "propuesta", "cliente"];
-  const funnelTotal = funnel.reduce((a, k) => a + (pmap[k] ?? 0), 0) || 1;
-  const funnelColor: Record<string, string> = {
-    nuevo: "#c2c6b7", a_llamar: "#959a8b", no_contesta: "#e8a317", contactado: "#ff9a6b", interesado: "#ff7a3f",
-    reunion: "#ff5b1a", propuesta: "#b83808", cliente: "#1f6b45",
-  };
+  const waitMin = k.esperando ? Math.floor((nowMs() - new Date(k.esperando).getTime()) / 60000) : null;
+  const pct = (a: number, b: number) => (b ? `${Math.round((a / b) * 100)} %` : "—");
+  const q = company ? `empresa=${company.slug}` : "";
+  // Cazar: con Segunda Oportunidad dentro, la cola general (con su pestaña de otras líneas); si no, la de la línea o la de todas
+  const hunt = desp ? "/cola" : generic.length === 1 ? `/lineas/cola?linea=${generic[0].slug}` : "/lineas/cola";
+  const clientHref = (a: { kind: string; id: string }) => (a.kind === "linea" ? `/clientes/l/${a.id}` : `/clientes/${a.id}`);
+  const todo = [
+    { n: p.sin_llamar, label: "leads nuevos sin llamar (más de 5 min)", href: `/lineas?status=nuevo${q ? `&${q}` : ""}`, tone: "bad" },
+    { n: p.rellamadas, label: "rellamadas vencidas", href: `/lineas?status=no_contesta${q ? `&${q}` : ""}` },
+    { n: p.propuestas, label: "propuestas sin mover en 7 días", href: `/lineas?status=propuesta&vista=tablero${q ? `&${q}` : ""}` },
+    { n: lowAudit.length, label: `clientes con la auditoría de ${monthLabel(month).split(" ")[0]} por debajo del 50 %`, href: lowAudit[0] ? clientHref(lowAudit[0]) : "/clientes" },
+    { n: noPlan.length, label: "clientes sin plan de la IA", href: noPlan[0] ? clientHref(noPlan[0]) : "/clientes" },
+  ].filter((t) => t.n > 0);
 
   return (
     <>
-      <div className="mb-4 sm:mb-6">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500"><span className="text-blaze">{group.parent?.name ?? "Leads Hunters"} · matriz</span> · {monthLabel(month)} · último lead {ago(lastLead?.created_at)}</div>
+      <div className="mb-4">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+          <span className="text-blaze">{group.parent?.name ?? "Leads Hunters"} · matriz</span>{company && !company.is_parent ? ` › ${company.name}` : ""} · {monthLabel(month)} · último lead {ago(lastLead?.at)}
+        </div>
         <h1 className="font-display mt-1 text-[1.6rem] font-semibold leading-tight sm:text-3xl">{greet}, {shortName(user.name)}</h1>
       </div>
 
-      <GroupOverview parent={group.parent} companies={group.companies} total={group.total} monthName={monthLabel(month).split(" ")[0]} />
+      {/* Filtro por empresa: todo Inicio se recalcula */}
+      <nav aria-label="Filtrar por empresa" className="lh-rail -mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+        <ChipLink href="/" active={!company}>🎯 Todo el grupo</ChipLink>
+        {companies.map((c) => (
+          <ChipLink key={c.id} href={`/?empresa=${c.slug}`} active={company?.id === c.id}>{c.emoji} {c.is_parent ? "Ramas propias" : c.name}</ChipLink>
+        ))}
+      </nav>
 
-      {/* Lo urgente: la cola */}
+      {!company && <GroupOverview parent={group.parent} companies={group.companies} total={group.total} monthName={monthLabel(month).split(" ")[0]} />}
+
+      {company && (
+        <section className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[1.75rem] border border-slate-200 bg-white p-4 sm:p-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-paper text-2xl">{company.emoji}</span>
+            <div className="min-w-0">
+              <div className="font-display text-xl font-semibold">{company.is_parent ? `${company.name} · ramas propias` : company.name}</div>
+              <div className="truncate text-xs text-slate-500">{company.tagline ?? "Empresa del grupo"} · {company.lines.map((l) => `${l.emoji} ${l.name}`).join(", ") || "sin líneas"}</div>
+            </div>
+          </div>
+          <dl className="grid grid-cols-3 gap-5 text-right">
+            <div><dt className="text-[11px] text-slate-500">Leads mes</dt><dd className="num text-lg font-semibold">{company.leads_mes}</dd></div>
+            <div><dt className="text-[11px] text-slate-500">Clientes</dt><dd className="num text-lg font-semibold">{company.clientes}</dd></div>
+            <div><dt className="text-[11px] text-slate-500">Factura</dt><dd className="num text-lg font-semibold text-emerald-700">{eur(company.facturacion_mes)}</dd></div>
+          </dl>
+          <div className="flex w-full flex-wrap gap-2">
+            <Link href={`/captar?empresa=${company.slug}`} className={btn.secondary}>Captar clientes</Link>
+            <Link href={`/lineas?${q}`} className={btn.secondary}>Sus leads</Link>
+            <Link href="/clientes" className={btn.secondary}>Sus clientes</Link>
+          </div>
+        </section>
+      )}
+
+      {/* Lo urgente: la cola de todas las líneas */}
       <section className="relative overflow-hidden rounded-[1.75rem] bg-ink p-5 text-white sm:p-7">
         <svg viewBox="0 0 200 200" className="pointer-events-none absolute -right-14 -top-14 size-64 opacity-[0.13]" aria-hidden>
           <circle cx="100" cy="100" r="96" fill="none" stroke="#ff5b1a" strokeWidth="2" />
@@ -80,98 +160,82 @@ export default async function Dashboard() {
         </svg>
         <div className="relative flex flex-wrap items-end justify-between gap-5">
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">En la mira ahora</div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/50">En la mira ahora · {company ? company.name : "todas las líneas"}</div>
             <div className="mt-2 flex items-baseline gap-3">
-              <span className="num text-6xl font-semibold leading-none text-blaze sm:text-7xl">{kpi.en_cola}</span>
-              <span className="text-base text-white/80">{kpi.en_cola === 1 ? "persona esperando tu llamada" : "personas esperando tu llamada"}</span>
+              <span className="num text-6xl font-semibold leading-none text-blaze sm:text-7xl">{k.cola}</span>
+              <span className="text-base text-white/80">{k.cola === 1 ? "persona esperando tu llamada" : "personas esperando tu llamada"}</span>
             </div>
             <p className="mt-3 max-w-md text-sm text-white/60">
               {waitMin == null
                 ? "No hay leads nuevos sin llamar. Buen trabajo."
                 : waitMin <= 5
                   ? `El lead más antiguo entró hace ${waitMin} min. Aún estás dentro de los 5 minutos de oro.`
-                  : `El lead nuevo más antiguo lleva ${waitMin < 120 ? `${waitMin} min` : ago(oldestWaiting!.created_at).replace("hace ", "")} esperando. Cada minuto baja la probabilidad de contactar.`}
+                  : `El lead nuevo más antiguo lleva ${ago(k.esperando).replace("hace ", "")} esperando. Cada minuto baja la probabilidad de contactar.`}
             </p>
           </div>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-            <Link href="/cola" className={`${btn.hunt} min-h-13 px-6 text-base`}><IconBolt className="size-5" /> Cazar el siguiente</Link>
-            <Link href="/prospeccion/llamar" className={`${btn.base} bg-white/10 text-white ring-1 ring-inset ring-white/20 hover:bg-white/15`}>Llamar despachos</Link>
+            <Link href={hunt} className={`${btn.hunt} min-h-13 px-6 text-base`}><IconBolt className="size-5" /> Cazar el siguiente</Link>
+            <Link href={`/lineas?vista=tablero${q ? `&${q}` : ""}`} className={`${btn.base} bg-white/10 text-white ring-1 ring-inset ring-white/20 hover:bg-white/15`}>▦ Abrir tablero</Link>
           </div>
         </div>
       </section>
 
-      {/* KPIs: carril deslizable en móvil, rejilla en ordenador */}
       <div className="lh-rail -mx-4 mt-4 flex gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4">
-        <Stat label="Facturación del mes" value={eur(mrr)} hint={`${billing.filter((b) => b.status === "activo").length} clientes activos`} tone="good" />
-        <Stat label="Consultas realizadas" value={kpi.asistidas_mes} hint="Facturables este mes" tone="good" />
+        <Stat label="Leads hoy" value={k.hoy} hint={`${k.mes} este mes`} />
         <Stat
           label="Velocidad"
-          value={kpi.speed_min == null ? "—" : kpi.speed_min < 60 ? `${Math.round(kpi.speed_min)}′` : `${(kpi.speed_min / 60).toFixed(1)} h`}
-          hint="Mediana hasta la 1ª llamada · objetivo < 5′"
-          tone={kpi.speed_min != null && kpi.speed_min <= 5 ? "good" : kpi.speed_min != null && kpi.speed_min > 30 ? "bad" : undefined}
+          value={k.speed == null ? "—" : k.speed < 60 ? `${Math.round(k.speed)}′` : `${(k.speed / 60).toFixed(1)} h`}
+          hint="Mediana hasta el 1er contacto · objetivo < 5′"
+          tone={k.speed != null && k.speed <= 5 ? "good" : k.speed != null && k.speed > 30 ? "bad" : undefined}
         />
-        <Stat label="Leads hoy" value={kpi.leads_hoy} hint={`${kpi.leads_mes} este mes`} />
-        <Stat label="Cualificados" value={kpi.cualif_mes} hint={`${conv(kpi.cualif_mes, kpi.leads_mes)} de los leads`} />
-        <Stat label="Consultas agendadas" value={kpi.citas_mes} hint="Este mes" />
-        <Stat label="Tasa de contacto" value={kpi.contact_rate == null ? "—" : `${Math.round(kpi.contact_rate * 100)} %`} hint="Leads que contestaron" />
-        <Stat label="Clientes" value={pmap.cliente ?? 0} hint="Despachos que pagan" />
+        <Stat label="Tasa de contacto" value={pct(k.contactados, k.con_intento)} hint="De los leads a los que has llamado" />
+        <Stat label="Cierres del mes" value={k.cierres} hint={k.valor ? `${eur(k.valor)} en ventas de las líneas` : "Ventas, altas y consultas realizadas"} tone="good" />
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
-        <Card title="Próximas consultas" actions={<A href="/citas" className="text-xs">Agenda</A>}>
-          {upcoming.length ? (
-            <ol className="relative space-y-4 border-l-2 border-slate-200 pl-4">
-              {upcoming.map((c) => (
-                <li key={c.id} className="relative">
-                  <span className="absolute -left-[1.4rem] top-1.5 size-2.5 rounded-full bg-blaze ring-4 ring-white" />
-                  <div className="text-xs font-medium text-slate-500">{dateTime(c.scheduled_at)}</div>
-                  <div className="truncate font-semibold">{c.full_name}</div>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate text-xs text-slate-500">{c.cliente}</span>
-                    <StatusBadge map={CONSULTATION_STATUS} value={c.status} />
-                  </div>
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <Empty>Sin consultas agendadas.</Empty>
-          )}
-        </Card>
+        <div className="lg:col-span-2">
+          <Card title="Bandeja · últimos leads" actions={<A href={`/lineas${q ? `?${q}` : ""}`} className="text-xs">Ver todos</A>} flush>
+            {inbox.length === 0 ? <div className="p-4"><Empty>Todavía no han entrado leads{company ? ` en ${company.name}` : ""}.</Empty></div> : (
+              <ul className="divide-y divide-slate-100">
+                {inbox.map((r) => {
+                  const l = r.line_id ? byId.get(r.line_id) : despLine;
+                  return (
+                    <li key={`${r.kind}-${r.id}`} className="flex items-center gap-3 px-4 py-2.5 sm:px-5">
+                      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-paper text-lg" title={l?.name}>{l?.emoji ?? "•"}</span>
+                      <span className="min-w-0 flex-1">
+                        <Link href={r.kind === "linea" ? `/lineas/${r.id}` : `/leads/${r.id}`} className="block truncate font-semibold hover:underline">{r.full_name}</Link>
+                        <span className="block truncate text-xs text-slate-500">{l ? `${l.name} · ${l.company_name}` : ""} · {ago(r.created_at)}{r.priority ? ` · ${r.priority}` : ""}</span>
+                      </span>
+                      {r.phone && <a href={telHref(r.phone)} className="grid size-9 shrink-0 place-items-center rounded-xl bg-slate-100 hover:bg-slate-200" aria-label={`Llamar a ${r.full_name}`}>📞</a>}
+                      <span className="flex w-36 shrink-0 justify-end [&>select]:w-full">
+                        {r.kind === "linea" ? <LineStatusSelect id={r.id} value={r.status} map={statusMap(l)} /> : <StatusBadge map={LEAD_STATUS} value={r.status} />}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Card>
+        </div>
 
-        <Card title="Despachos para llamar hoy" actions={<A href="/prospeccion/llamar" className="text-xs">Empezar</A>}>
-          {topProspects.length ? (
+        <Card title="Pendientes">
+          {todo.length === 0 ? <Empty>Todo al día. No hay nada atascado.</Empty> : (
             <ul className="-my-1 divide-y divide-slate-100">
-              {topProspects.map((p) => (
-                <li key={p.id}>
-                  <Link href={`/prospeccion/${p.id}`} className="flex items-center gap-3 py-2.5">
-                    <ScorePill score={p.score} tier={p.score_tier} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-semibold">{p.name}</span>
-                      <span className="block text-xs text-slate-500">{p.city ?? "—"}</span>
-                    </span>
+              {todo.map((t) => (
+                <li key={t.label}>
+                  <Link href={t.href} className="flex items-center gap-3 py-2.5">
+                    <span className={`num grid size-9 shrink-0 place-items-center rounded-xl text-sm font-semibold ${t.tone === "bad" ? "bg-rose-50 text-rose-700" : "bg-amber-50 text-amber-900"}`}>{t.n}</span>
+                    <span className="min-w-0 flex-1 text-sm">{t.label}</span>
                     <span className="text-slate-300">›</span>
                   </Link>
                 </li>
               ))}
             </ul>
-          ) : (
-            <Empty>Aún no hay despachos. Lanza el flujo de n8n de prospección o importa un CSV.</Empty>
           )}
-        </Card>
-
-        <Card title="Embudo de venta a despachos" actions={<A href="/prospeccion" className="text-xs">Ver todos</A>}>
-          <div className="flex h-3 overflow-hidden rounded-full bg-slate-100">
-            {funnel.map((k) => (pmap[k] ? <span key={k} style={{ width: `${((pmap[k] ?? 0) / funnelTotal) * 100}%`, background: funnelColor[k] }} /> : null))}
+          <div className="mt-4 grid grid-cols-2 gap-2 border-t border-slate-100 pt-4">
+            <Link href={`/lineas/nuevo`} className={`${btn.secondary} text-xs`}>+ Lead</Link>
+            <Link href="/clientes#nuevo" className={`${btn.secondary} text-xs`}>+ Cliente</Link>
           </div>
-          <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-            {funnel.map((k) => (
-              <li key={k} className="flex items-center gap-2">
-                <span className="size-2.5 shrink-0 rounded-full" style={{ background: funnelColor[k] }} />
-                <span className="flex-1 truncate text-slate-600">{PROSPECT_STATUS[k].label}</span>
-                <span className="num font-semibold">{pmap[k] ?? 0}</span>
-              </li>
-            ))}
-          </ul>
         </Card>
       </div>
     </>

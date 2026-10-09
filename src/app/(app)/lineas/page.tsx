@@ -1,11 +1,12 @@
 // Leads de las demás empresas y líneas (Recorta luz, placas…). Llegan por Instagram (ManyChat) a POST /api/v1/particulares con "linea".
 import Link from "next/link";
 import { query } from "@/lib/db";
-import { PRIORITY, statusMap } from "@/lib/lineas";
+import { statusMap } from "@/lib/lineas";
 import { getLines } from "@/lib/services/lines";
-import { ago, eur, telHref } from "@/lib/format";
+import { ago, eur } from "@/lib/format";
 import { VerticalTabs } from "@/components/VerticalTabs";
-import { A, Card, Empty, Filters, PageHeader, Pager, Stat, StatusBadge, Table, Td, btn, input } from "@/components/ui";
+import { A, Card, ChipLink, Empty, Filters, PageHeader, Pager, Stat, btn, input } from "@/components/ui";
+import { LineLeadsWorkspace, type LeadRow } from "@/components/Operativa";
 
 const PER_PAGE = 50;
 
@@ -19,6 +20,8 @@ export default async function Lineas(props: PageProps<"/lineas">) {
   const empresa = companies.some(([s]) => s === str("empresa")) ? str("empresa") : "";
   const q = str("q"), status = str("status"), priority = str("prioridad"), canal = str("canal");
   const page = Math.max(1, Number(str("page") || 1));
+  const view = str("vista") === "tablero" ? "tablero" : "lista";
+  const perPage = view === "tablero" ? 300 : PER_PAGE;
   const where: string[] = ["bl.kind <> 'despachos'"];
   const params: unknown[] = [];
   const add = (sql: string, v: unknown) => { params.push(v); where.push(sql.replaceAll("?", `$${params.length}`)); };
@@ -35,11 +38,11 @@ export default async function Lineas(props: PageProps<"/lineas">) {
   const [{ total }] = await query<{ total: number }>(`SELECT count(*)::int total ${w}`, params);
   const rows = await query<{
     id: string; line_slug: string; full_name: string; phone: string; province: string | null; priority: string; priority_reasons: string[];
-    status: string; channel: string; campaign: string | null; value: number | null; created_at: string; next_call_at: string;
+    status: string; channel: string; campaign: string | null; value: number | null; created_at: string; next_call_at: string; client_id: string | null;
   }>(
     `SELECT ll.id, bl.slug AS line_slug, ll.full_name, ll.phone, ll.province, ll.priority, ll.priority_reasons, ll.status, ll.channel,
-            ll.campaign, ll.value, ll.created_at, ll.next_call_at
-       ${w} ORDER BY (ll.status = 'nuevo') DESC, ll.priority, ll.created_at DESC LIMIT ${PER_PAGE} OFFSET ${(page - 1) * PER_PAGE}`,
+            ll.campaign, ll.value, ll.created_at, ll.next_call_at, ll.client_id
+       ${w} ORDER BY (ll.status = 'nuevo') DESC, ll.priority, ll.created_at DESC LIMIT ${perPage} OFFSET ${(page - 1) * perPage}`,
     params,
   );
   const [k] = await query<{ mes: number; en_cola: number; ganados_mes: number; valor_mes: number | null }>(
@@ -52,19 +55,33 @@ export default async function Lineas(props: PageProps<"/lineas">) {
     [line?.id ?? null, empresa],
   );
   const canales = await query<{ channel: string }>("SELECT DISTINCT channel FROM line_leads ORDER BY 1");
+  const clients = await query<{ id: string; name: string; line_id: string }>("SELECT id, name, line_id FROM line_clients WHERE status <> 'baja' ORDER BY name");
   const bySlug = Object.fromEntries(lines.map((l) => [l.slug, l]));
   const href = (p: number) => {
-    const u = new URLSearchParams(Object.entries({ linea: line?.slug ?? "", empresa, q, status, prioridad: priority, canal }).filter(([, v]) => v) as [string, string][]);
+    const u = new URLSearchParams(Object.entries({ linea: line?.slug ?? "", empresa, q, status, prioridad: priority, canal, vista: view === "tablero" ? "tablero" : "" }).filter(([, v]) => v) as [string, string][]);
     u.set("page", String(p));
     return `/lineas?${u}`;
   };
+  const viewHref = (v: string) => {
+    const u = new URLSearchParams(Object.entries({ linea: line?.slug ?? "", empresa, q, status, prioridad: priority, canal, vista: v === "tablero" ? "tablero" : "" }).filter(([, x]) => x) as [string, string][]);
+    return `/lineas${u.size ? `?${u}` : ""}`;
+  };
+  const maps = Object.fromEntries([["", statusMap(line ?? undefined)], ...lines.map((l) => [l.id, statusMap(l)])]);
+  const leadRows: LeadRow[] = rows.map((r) => {
+    const l = bySlug[r.line_slug];
+    return {
+      id: r.id, full_name: r.full_name, phone: r.phone, province: r.province, line_id: l?.id ?? "", line_label: l ? `${l.emoji} ${l.name}` : r.line_slug,
+      company: l?.company_name ?? "", priority: r.priority, reasons: r.priority_reasons.slice(0, 2).join(" · ").replace(/ \([+-]\d+\)/g, ""),
+      status: r.status, channel: r.channel, campaign: r.campaign, value: r.value, entered: ago(r.created_at), client_id: r.client_id,
+    };
+  });
   const imported = str("importados");
 
   return (
     <>
       <PageHeader
-        title={line ? `${line.emoji} ${line.name}` : "Otras líneas"}
-        eyebrow={line ? line.company_name : "Recorta y demás empresas"}
+        title={line ? `${line.emoji} ${line.name}` : "Leads de las líneas"}
+        eyebrow={line ? line.company_name : "Todas las empresas del grupo"}
         subtitle={`${total} leads con consentimiento. Llama primero a los nuevos de prioridad A.`}
         actions={
           <>
@@ -89,9 +106,17 @@ export default async function Lineas(props: PageProps<"/lineas">) {
         <Stat label={`${line?.won_label ?? "Cierres"} este mes`} value={k.ganados_mes} tone="good" />
         <Stat label={`${line?.value_label ?? "Ingresos"} del mes`} value={eur(k.valor_mes ?? 0)} tone="good" />
       </div>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="inline-flex rounded-full bg-white p-1 ring-1 ring-inset ring-slate-200" role="tablist" aria-label="Vista">
+          <ChipLink href={viewHref("lista")} active={view === "lista"}>☰ Lista</ChipLink>
+          <ChipLink href={viewHref("tablero")} active={view === "tablero"}>▦ Tablero</ChipLink>
+        </div>
+        <p className="text-xs text-slate-500">{view === "tablero" ? "Arrastra cada tarjeta a su nuevo estado." : "Cambia el estado en la propia fila o marca varios para cambiarlos de golpe."}</p>
+      </div>
       <Filters active={[q, status, priority, canal, empresa].filter(Boolean).length}>
         <form className="grid grid-cols-2 gap-2 md:grid-cols-6">
           {line && <input type="hidden" name="linea" value={line.slug} />}
+          {view === "tablero" && <input type="hidden" name="vista" value="tablero" />}
           <input name="q" defaultValue={q} placeholder="Nombre, teléfono, email…" className={`${input} col-span-2`} />
           {!line && companies.length > 1 && (
             <select name="empresa" defaultValue={empresa} className={input}>
@@ -123,28 +148,9 @@ export default async function Lineas(props: PageProps<"/lineas">) {
           {" "}o <A href="/lineas/importar">importa contactos antiguos</A>.
         </Empty>
       ) : (
-        <Table head={["Nombre", "Entró", "Línea", "Datos", "Prioridad", "Estado", "Canal", line?.value_label ?? "Importe"]}>
-          {rows.map((r) => {
-            const l = bySlug[r.line_slug];
-            return (
-              <tr key={r.id} className="hover:bg-slate-50">
-                <Td primary>
-                  <A href={`/lineas/${r.id}`}>{r.full_name}</A>
-                  <div className="text-xs"><a className="text-indigo-600" href={telHref(r.phone)}>{r.phone}</a>{r.province ? ` · ${r.province}` : ""}</div>
-                </Td>
-                <Td className="text-xs">{ago(r.created_at)}</Td>
-                <Td>{l ? `${l.emoji} ${l.name}` : r.line_slug}{!line && l ? <div className="text-xs text-slate-500">{l.company_name}</div> : null}</Td>
-                <Td hide className="max-w-64 truncate text-xs text-slate-600">{r.priority_reasons.slice(0, 2).join(" · ").replace(/ \([+-]\d+\)/g, "")}</Td>
-                <Td><StatusBadge map={PRIORITY} value={r.priority} /></Td>
-                <Td><StatusBadge map={statusMap(l)} value={r.status} /></Td>
-                <Td hide>{r.channel}<div className="max-w-40 truncate text-xs text-slate-500">{r.campaign}</div></Td>
-                <Td hide>{r.value != null ? eur(r.value) : "—"}</Td>
-              </tr>
-            );
-          })}
-        </Table>
+        <LineLeadsWorkspace rows={leadRows} view={view} maps={maps} clients={clients} showLine={!line} valueLabel={line?.value_label ?? "Importe"} />
       )}
-      <Pager page={page} pages={Math.ceil(total / PER_PAGE)} makeHref={href} />
+      <Pager page={page} pages={Math.ceil(total / perPage)} makeHref={href} />
       <p className="mt-4 text-xs text-slate-500"><A href="/lineas/importar">Importar contactos antiguos (reactivación)</A></p>
     </>
   );
