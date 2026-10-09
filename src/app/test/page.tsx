@@ -4,7 +4,6 @@ import { contactInfo } from "@/lib/settings";
 import { CONSENT_TEXT, QUESTIONS } from "@/lib/lsoTest";
 import { PROVINCES } from "@/lib/normalize";
 import { TestForm } from "./TestForm";
-import { Logo } from "@/components/web/Site";
 
 export const dynamic = "force-dynamic";
 
@@ -27,12 +26,12 @@ export default async function TestPage(props: PageProps<"/test">) {
   return (
     <main className="brand-mcn min-h-dvh px-5" style={{ paddingTop: "calc(1.25rem + env(safe-area-inset-top, 0px))", paddingBottom: "calc(2rem + env(safe-area-inset-bottom, 0px))" }}>
       <div className="mx-auto w-full max-w-xl">
-        <Logo brand={c.brand} />
+        <div className="text-[17px] font-semibold tracking-tight">{c.brand}</div>
         <TestForm questions={QUESTIONS} provinces={PROVINCES} consentText={CONSENT_TEXT(c.brand)} utm={utm} privacyNote={privacyNote} />
         <p className="mt-8 text-center text-xs leading-relaxed text-slate-400">
           Resultado orientativo y gratuito. No es asesoramiento legal: lo revisa un abogado colegiado de un despacho colaborador y la decisión final es del juez.
           <br />
-          {c.brand} no es un despacho de abogados. <a href="/privacidad" className="underline">Política de privacidad</a> · <a href="/aviso-legal" className="underline">Aviso legal</a>
+          {c.brand} no es un despacho de abogados. <a href="/privacidad" className="underline">Política de privacidad</a>
         </p>
       </div>
     </main>
