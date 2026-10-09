@@ -36,6 +36,8 @@ export type LineSubmission = {
   utm?: Record<string, string>;
   notes?: string | null;
   raw?: unknown;
+  /** código del partner que trajo el lead (enlace ?p=); ver partners */
+  partner_code?: string | null;
   /** reactivación: leads antiguos que ya consintieron; no avisa por WhatsApp y van detrás en la cola */
   reactivation?: boolean;
 };
@@ -65,20 +67,22 @@ export async function submitLineLead(s: LineSubmission): Promise<LineResult> {
   if (prev) {
     await query(
       `UPDATE line_leads SET full_name = $2, email = coalesce($3, email), province = coalesce($4, province), data = $5,
-         priority = $6, priority_points = $7, priority_reasons = $8, updated_at = now()
+         priority = $6, priority_points = $7, priority_reasons = $8, updated_at = now(),
+       -- el mismo envío puede llegar dos veces (n8n y el respaldo directo de la web): el partner se completa solo en esa primera hora
+       partner_code = CASE WHEN partner_code IS NULL AND created_at > now() - interval '1 hour' THEN $9 ELSE partner_code END
        WHERE id = $1`,
-      [prev.id, full_name, email, province, JSON.stringify(data), pr.tier, pr.points, JSON.stringify(pr.reasons)],
+      [prev.id, full_name, email, province, JSON.stringify(data), pr.tier, pr.points, JSON.stringify(pr.reasons), s.partner_code ?? null],
     );
     return { ok: true, id: prev.id, duplicate: true, priority: pr.tier };
   }
   const row = await queryOne<{ id: string }>(
     `INSERT INTO line_leads(line_id, full_name, phone, email, province, data, priority, priority_points, priority_reasons,
-       channel, campaign, utm, consent_text, marketing_ok, notes, raw)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING id`,
+       channel, campaign, utm, consent_text, marketing_ok, notes, raw, partner_code)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING id`,
     [
       s.line.id, full_name, phone, email, province, JSON.stringify(data), pr.tier, pr.points, JSON.stringify(pr.reasons),
       channel, campaign, JSON.stringify(s.utm ?? {}), s.line.consent_text, !!s.marketing_ok, s.notes || null,
-      s.raw ? JSON.stringify(s.raw) : null,
+      s.raw ? JSON.stringify(s.raw) : null, s.partner_code ?? null,
     ],
   );
   if (!s.reactivation) {
