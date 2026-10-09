@@ -119,7 +119,7 @@ export default async function Lineas(props: PageProps<"/lineas">) {
       </Filters>
       {rows.length === 0 ? (
         <Empty>
-          Todavía no hay leads aquí. Conecta ManyChat con el cuerpo que verás en <A href={line ? `/negocios/${line.id}` : "/negocios"}>Empresas y líneas</A>
+          Todavía no hay leads aquí. Conecta ManyChat con el cuerpo que verás en <A href={line ? `/negocios/${line.id}` : "/negocios"}>Grupo y empresas</A>
           {" "}o <A href="/lineas/importar">importa contactos antiguos</A>.
         </Empty>
       ) : (

@@ -4,6 +4,7 @@ import { currentMonth, eur, monthLabel, shiftMonth } from "@/lib/format";
 import { reportInsights, reportText, type Insight } from "@/lib/insights";
 import { buildReport, type Breakdown, type LineReport } from "@/lib/services/reports";
 import { contactInfo } from "@/lib/settings";
+import { groupOverview } from "@/lib/services/group";
 import { Card, PageHeader, Stat, btn } from "@/components/ui";
 
 const pct = (a: number, b: number) => (b > 0 ? `${Math.round((a / b) * 100)} %` : "—");
@@ -72,6 +73,7 @@ export default async function Informes(props: PageProps<"/informes">) {
   const insights = reportInsights(r);
   const text = reportText(r, monthLabel(month), insights);
   const { phone } = await contactInfo();
+  const group = await groupOverview(month);
   const d = r.despachos;
   const series = [{ slug: "despachos", name: "Despachos" }, ...r.lines.map((l) => ({ slug: l.line.slug, name: `${l.line.emoji} ${l.line.name}` }))];
   const maxWeek = Math.max(1, ...r.weeks.map((w) => series.reduce((a, x) => a + (w.counts[x.slug] ?? 0), 0)));
@@ -80,8 +82,8 @@ export default async function Informes(props: PageProps<"/informes">) {
     <>
       <PageHeader
         title="Informes"
-        eyebrow="Solo para ti"
-        subtitle={`Todas las líneas en ${monthLabel(month)}: qué funciona y qué cambiar.`}
+        eyebrow="Leads Hunters · matriz · solo para ti"
+        subtitle={`Todo el grupo en ${monthLabel(month)}: cada empresa, cada línea, qué funciona y qué cambiar.`}
         actions={
           <>
             <Link href={`/informes?mes=${shiftMonth(month, -1)}`} className={btn.secondary}>← {monthLabel(shiftMonth(month, -1))}</Link>
@@ -96,6 +98,30 @@ export default async function Informes(props: PageProps<"/informes">) {
           <Stat key={l.line.slug} label={`${l.line.emoji} ${l.line.name}`} value={eur(l.comision)} hint={`${l.line.company_name} · ${l.leads} leads · ${l.contratados} ${l.line.won_label.toLowerCase()}`} tone="good" />
         ))}
       </div>
+
+      <Card title="El grupo por empresa" className="mb-4" flush>
+        <table className="w-full text-sm">
+          <thead className="text-left text-[11px] uppercase tracking-wide text-slate-500">
+            <tr><th className="px-4 py-2 sm:px-5">Empresa</th><th className="px-2 py-2 text-right">Leads</th><th className="px-2 py-2 text-right">Clientes</th><th className="px-4 py-2 text-right sm:px-5">Facturación</th></tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {[...group.companies, ...(group.parent ? [group.parent] : [])].map((c) => (
+              <tr key={c.id}>
+                <td className="px-4 py-2.5 sm:px-5"><span className="font-medium">{c.emoji} {c.name}</span><span className="block text-xs text-slate-500">{c.is_parent ? "Matriz · ramas propias" : c.lines.map((l) => l.name).join(", ") || "Sin líneas"}</span></td>
+                <td className="num px-2 py-2.5 text-right">{c.leads_mes}</td>
+                <td className="num px-2 py-2.5 text-right">{c.clientes}</td>
+                <td className="num px-4 py-2.5 text-right font-semibold sm:px-5">{eur(c.facturacion_mes)}</td>
+              </tr>
+            ))}
+            <tr className="bg-paper font-semibold">
+              <td className="px-4 py-2.5 sm:px-5">🎯 Total grupo Leads Hunters</td>
+              <td className="num px-2 py-2.5 text-right">{group.total.leads_mes}</td>
+              <td className="num px-2 py-2.5 text-right">{group.total.clientes}</td>
+              <td className="num px-4 py-2.5 text-right text-emerald-700 sm:px-5">{eur(group.total.facturacion_mes)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </Card>
 
       <Card title="Qué mejorar" className="mb-4">
         {insights.length === 0 ? (
@@ -112,7 +138,7 @@ export default async function Informes(props: PageProps<"/informes">) {
       </Card>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <Card title="⚖️ Despachos (Segunda Oportunidad)" actions={<Link href="/leads" className="text-xs font-semibold text-indigo-600">Ver leads</Link>}>
+        <Card title="⚖️ Segunda Oportunidad · Mi Cuenta Nueva (despachos)" actions={<Link href="/leads" className="text-xs font-semibold text-indigo-600">Ver leads</Link>}>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
             <div><dt className="text-xs text-slate-500">Leads</dt><dd className="num font-semibold">{d.leads}</dd><dd className="text-xs text-slate-500">{delta(d.leads, d.prev_leads)}</dd></div>
             <div><dt className="text-xs text-slate-500">Cualificados</dt><dd className="font-semibold"><span className="num">{d.cualificados}</span> <span className="text-xs font-normal text-slate-500">{pct(d.cualificados, d.leads)}</span></dd></div>

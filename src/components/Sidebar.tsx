@@ -41,7 +41,7 @@ export const SECTIONS = [
   { href: "/informes", label: "Informes", hint: "Qué mejorar en cada línea", icon: IconChart, tabs: [{ href: "/informes", label: "Informes" }] },
   {
     href: "/ajustes", label: "Ajustes", hint: "Empresas, líneas e integraciones", icon: IconCog,
-    tabs: [{ href: "/ajustes", label: "Ajustes" }, { href: "/negocios", label: "Empresas y líneas" }],
+    tabs: [{ href: "/ajustes", label: "Ajustes" }, { href: "/negocios", label: "Grupo y empresas" }],
   },
 ] as const;
 
@@ -75,7 +75,7 @@ export function Sidebar({ user, queueCount }: { user: { name: string; role: stri
     <>
       {/* ---------- Móvil: barra superior ---------- */}
       <header className="sticky top-0 z-30 flex items-center justify-between bg-paper/85 px-4 py-3 backdrop-blur lg:hidden" style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top, 0px))" }}>
-        <Link href="/" aria-label="Inicio"><Logo /></Link>
+        <Link href="/" aria-label="Inicio" className="flex items-center gap-2"><Logo /><span className="rounded-full bg-ink px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-white">Matriz</span></Link>
         <button onClick={() => setSheet(true)} className="grid size-10 place-items-center rounded-full bg-ink text-sm font-semibold text-white" aria-label="Menú y cuenta">
           {user.name.slice(0, 1).toUpperCase()}
         </button>
@@ -143,7 +143,10 @@ export function Sidebar({ user, queueCount }: { user: { name: string; role: stri
 
       {/* ---------- Ordenador: barra lateral ---------- */}
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col border-r border-slate-200 bg-paper px-4 py-6 lg:flex">
-        <Link href="/" className="px-2"><Logo /></Link>
+        <Link href="/" className="px-2">
+          <Logo />
+          <span className="mt-1.5 block pl-9 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">Matriz del grupo</span>
+        </Link>
         <Link href="/cola" className="group mt-7 flex items-center gap-3 rounded-[1.25rem] bg-ink p-3.5 text-white">
           <span className={`grid size-11 place-items-center rounded-full bg-blaze text-blaze-ink ${queueCount > 0 ? "lh-pulse" : ""}`}><IconBolt className="size-5" /></span>
           <span className="flex-1">

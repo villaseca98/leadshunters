@@ -161,3 +161,19 @@ export async function eraseLineLead(id: string) {
   await query("DELETE FROM line_leads WHERE id = $1", [id]);
   redirect("/lineas");
 }
+
+/** Ficha operativa del lead (CUPS, tejado, web actual…): campos propios de su línea. */
+export async function updateLeadOps(id: string, formData: FormData) {
+  await requireUser();
+  const cur = await queryOne<{ line_id: string; ops: Record<string, string> }>("SELECT line_id, ops FROM line_leads WHERE id = $1", [id]);
+  if (!cur) return;
+  const line = await getLine(cur.line_id);
+  const ops = { ...cur.ops };
+  for (const f of line?.lead_fields ?? []) {
+    const v = readField(f, String(formData.get(`o_${f.key}`) ?? "").trim().slice(0, 200));
+    if (v == null) delete ops[f.key];
+    else ops[f.key] = v;
+  }
+  await query("UPDATE line_leads SET ops = $2 WHERE id = $1", [id, JSON.stringify(ops)]);
+  revalidatePath(`/lineas/${id}`);
+}

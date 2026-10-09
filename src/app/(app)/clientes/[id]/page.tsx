@@ -15,6 +15,10 @@ import { despachoBilling, markersFor } from "@/lib/services/clientMetrics";
 import { ClientMetrics } from "@/components/ClientMetrics";
 import { VERTICALS, isEnergy } from "@/lib/energy";
 import { ClientAi } from "@/components/ClientAi";
+import { ClientAudit } from "@/components/ClientAudit";
+import { ClientEvolution } from "@/components/ClientEvolution";
+import { auditFor, evolution } from "@/lib/services/clientOps";
+
 import { aiState, anthropicKey, clientReports } from "@/lib/services/clientAi";
 
 export default async function ClientePage(props: PageProps<"/clientes/[id]">) {
@@ -28,6 +32,8 @@ export default async function ClientePage(props: PageProps<"/clientes/[id]">) {
   const [b] = await billingForMonth(month, id);
   const mes = typeof sp.mes === "string" && /^\d{4}-\d{2}$/.test(sp.mes) ? sp.mes : month;
   const [[mb], markers, ai, reports, key] = await Promise.all([despachoBilling(mes, id), markersFor("despacho", id, mes), aiState("despacho", id), clientReports("despacho", id), anthropicKey()]);
+  const [audit, evo] = await Promise.all([auditFor("despacho", id, mes), evolution("despacho", id, mes)]);
+  const energyLabels = c.vertical === "luz" ? { contactados: "Oportunidades", showups: "Aceptados", ventas: "Activados" } : { contactados: "Oportunidades", showups: "Aceptados", ventas: "Firmadas" };
   const consults = await query<{ id: string; scheduled_at: string; status: string; full_name: string; lead_id: string }>(
     `SELECT co.id, co.scheduled_at, co.status, l.full_name, l.id AS lead_id FROM consultations co JOIN leads l ON l.id = co.lead_id
       WHERE co.client_id = $1 ORDER BY co.scheduled_at DESC LIMIT 15`,
@@ -126,6 +132,8 @@ document.getElementById('lh-form').onsubmit = async (e) => {
               ))}
             </div>
           </ClientMetrics>
+          <ClientEvolution rows={evo} labels={isEnergy(c.vertical) ? energyLabels : { contactados: "Agendadas", showups: "Consultas hechas", ventas: "Casos firmados" }} />
+          {!isEnergy(c.vertical) && <ClientAudit kind="despacho" clientId={id} month={mes} monthName={monthLabel(mes)} items={audit.items} history={evo.map((r) => ({ month: r.month, score: r.auditoria }))} />}
           <Card title="Ficha y condiciones">
             {isAdmin ? <ClientForm action={updateClient.bind(null, id)} c={c} submit="Guardar cambios" /> : <p className="text-sm text-slate-500">Solo un administrador puede editar la ficha.</p>}
           </Card>
