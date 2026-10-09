@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Children, cloneElement, isValidElement, type ReactElement, type ReactNode } from "react";
 import type { Tone } from "@/lib/labels";
 
-const TONES: Record<Tone, string> = {
+export const TONES: Record<Tone, string> = {
   slate: "bg-slate-100 text-slate-700 ring-slate-200",
   blue: "bg-sky-50 text-sky-800 ring-sky-200",
   indigo: "bg-indigo-50 text-indigo-800 ring-indigo-200",
