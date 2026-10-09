@@ -6,6 +6,8 @@ import { A, Card, Empty, ScorePill, Stat, StatusBadge, btn } from "@/components/
 import { IconBolt } from "@/components/Sidebar";
 import { requireUser } from "@/lib/auth";
 import { CONSULTATION_STATUS, PROSPECT_STATUS } from "@/lib/labels";
+import { groupOverview } from "@/lib/services/group";
+import { GroupOverview } from "@/components/GroupOverview";
 
 export default async function Dashboard() {
   const user = await requireUser();
@@ -28,6 +30,7 @@ export default async function Dashboard() {
        (SELECT avg(CASE WHEN first_contact_at IS NOT NULL THEN 1.0 ELSE 0 END) FROM leads, m WHERE created_at >= m.start AND attempts > 0) AS contact_rate`,
   );
   const billing = await billingForMonth(month);
+  const group = await groupOverview(month);
   const mrr = billing.reduce((a, b) => a + b.total, 0);
 
   const pipeline = await query<{ status: string; n: number }>("SELECT status, count(*)::int AS n FROM prospects GROUP BY status");
@@ -61,11 +64,13 @@ export default async function Dashboard() {
   return (
     <>
       <div className="mb-4 sm:mb-6">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">{monthLabel(month)} · último lead {ago(lastLead?.created_at)}</div>
+        <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500"><span className="text-blaze">{group.parent?.name ?? "Leads Hunters"} · matriz</span> · {monthLabel(month)} · último lead {ago(lastLead?.created_at)}</div>
         <h1 className="font-display mt-1 text-[1.6rem] font-semibold leading-tight sm:text-3xl">{greet}, {shortName(user.name)}</h1>
       </div>
 
-      {/* Lo urgente primero: la cola */}
+      <GroupOverview parent={group.parent} companies={group.companies} total={group.total} monthName={monthLabel(month).split(" ")[0]} />
+
+      {/* Lo urgente: la cola */}
       <section className="relative overflow-hidden rounded-[1.75rem] bg-ink p-5 text-white sm:p-7">
         <svg viewBox="0 0 200 200" className="pointer-events-none absolute -right-14 -top-14 size-64 opacity-[0.13]" aria-hidden>
           <circle cx="100" cy="100" r="96" fill="none" stroke="#ff5b1a" strokeWidth="2" />

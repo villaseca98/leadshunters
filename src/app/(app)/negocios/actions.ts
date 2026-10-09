@@ -11,18 +11,25 @@ export async function createCompany(formData: FormData) {
   await requireAdmin();
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return;
-  await query("INSERT INTO companies(slug, name, website) VALUES ($1, $2, nullif($3,'')) ON CONFLICT (slug) DO NOTHING", [
-    slugify(name), name, String(formData.get("website") ?? "").trim(),
-  ]);
+  // toda empresa nueva cuelga de la matriz (Leads Hunters)
+  await query(
+    `INSERT INTO companies(slug, name, website, tagline, emoji, parent_id, position)
+     VALUES ($1, $2, nullif($3,''), nullif($4,''), coalesce(nullif($5,''), '🏢'), (SELECT id FROM companies WHERE is_parent LIMIT 1),
+             (SELECT coalesce(max(position), 0) + 10 FROM companies))
+     ON CONFLICT (slug) DO NOTHING`,
+    [slugify(name), name, String(formData.get("website") ?? "").trim(), String(formData.get("tagline") ?? "").trim(), String(formData.get("emoji") ?? "").trim()],
+  );
   revalidatePath("/negocios");
 }
 
 export async function updateCompany(id: string, formData: FormData) {
   await requireAdmin();
-  await query("UPDATE companies SET name = coalesce(nullif($2,''), name), website = nullif($3,''), notes = nullif($4,''), active = $5 WHERE id = $1", [
-    id, String(formData.get("name") ?? "").trim(), String(formData.get("website") ?? "").trim(), String(formData.get("notes") ?? "").trim(),
-    formData.get("active") === "on",
-  ]);
+  await query(
+    `UPDATE companies SET name = coalesce(nullif($2,''), name), website = nullif($3,''), notes = nullif($4,''), active = $5 OR is_parent,
+       tagline = nullif($6,''), emoji = coalesce(nullif($7,''), emoji) WHERE id = $1`,
+    [id, String(formData.get("name") ?? "").trim(), String(formData.get("website") ?? "").trim(), String(formData.get("notes") ?? "").trim(),
+      formData.get("active") === "on", String(formData.get("tagline") ?? "").trim(), String(formData.get("emoji") ?? "").trim()],
+  );
   revalidatePath("/negocios");
 }
 

@@ -8,7 +8,7 @@ export default async function NuevoLeadLinea(props: PageProps<"/lineas/nuevo">) 
   const lines = await getLines({ includeDespachos: false });
   const line = lines.find((l) => l.slug === sp.linea) ?? lines[0];
   const error = typeof sp.error === "string" ? sp.error : "";
-  if (!line) return <PageHeader title="Lead manual" subtitle="Primero crea una línea en Empresas y líneas." />;
+  if (!line) return <PageHeader title="Lead manual" subtitle="Primero crea una línea en Grupo y empresas." />;
   return (
     <>
       <PageHeader title="Lead manual" subtitle="Para quien te escribe por Instagram o WhatsApp y te da sus datos. Solo con su permiso." />

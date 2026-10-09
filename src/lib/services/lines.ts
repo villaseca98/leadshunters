@@ -10,7 +10,7 @@ const LINE_SELECT = `SELECT bl.*, c.name AS company_name, c.slug AS company_slug
 
 export async function getLines(opts: { includeInactive?: boolean; includeDespachos?: boolean } = {}): Promise<Line[]> {
   const where = [opts.includeInactive ? "true" : "bl.active AND c.active", opts.includeDespachos === false ? "bl.kind <> 'despachos'" : "true"];
-  return query<Line>(`${LINE_SELECT} WHERE ${where.join(" AND ")} ORDER BY c.name = 'Leads Hunters' DESC, c.name, bl.position, bl.name`);
+  return query<Line>(`${LINE_SELECT} WHERE ${where.join(" AND ")} ORDER BY c.is_parent, c.position, c.name, bl.position, bl.name`);
 }
 
 export async function getLine(idOrSlug: string): Promise<Line | null> {

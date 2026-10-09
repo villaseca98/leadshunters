@@ -5,7 +5,7 @@
 //         marketing_ok?, canal?: "instagram", campana? }  · las respuestas valen el código, el texto del botón o el número de opción.
 //         También admite los nombres en español: nombre, telefono, provincia, deuda, acreedores, puede_pagar, deuda_publica, deuda_especial,
 //         ingresos, situacion, vivienda, impedimentos, acepto.
-// Otras empresas y líneas (Recorta luz, placas… ver Empresas y líneas en la app): añade "linea": "<slug, nombre o palabra clave>".
+// Otras empresas y líneas (Recorta luz, placas… ver Grupo y empresas en la app): añade "linea": "<slug, nombre o palabra clave>".
 //         Body: { linea, nombre, telefono, provincia?, email?, acepto: "si", canal?, campana?, ...las preguntas de esa línea }
 //         Cualquier otro campo que mande ManyChat se guarda también en el lead. Sin "linea" (o "despachos") es el test de deudas.
 import { NextResponse } from "next/server";
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   const lineaRaw = b.linea ?? b.vertical ?? b.linea_negocio ?? b.interes;
   if (lineaRaw != null && String(lineaRaw).trim() !== "") {
     const line = await resolveLine(lineaRaw);
-    if (!line) return bad(`Línea no encontrada: "${String(lineaRaw).slice(0, 60)}". Créala en la app, en Empresas y líneas.`, 404);
+    if (!line) return bad(`Línea no encontrada: "${String(lineaRaw).slice(0, 60)}". Créala en la app, en Grupo y empresas.`, 404);
     if (line.kind !== "despachos") return otraLinea(b, line);
   }
 
