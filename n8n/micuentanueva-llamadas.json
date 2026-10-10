@@ -1,0 +1,222 @@
+{
+  "name": "Mi Cuenta Nueva · Leads por llamar (resumen diario)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Mi Cuenta Nueva · Leads por llamar\nDe lunes a sábado a las 9:30 te manda por WhatsApp (vía flujo 04) cuántos leads de Mi Cuenta Nueva esperan llamada, por línea y con los de prioridad A. Si no hay nadie, no manda nada.",
+        "width": 480,
+        "height": 180,
+        "color": 4
+      },
+      "id": "7f6bc7db-d734-477c-b6a5-6ace3b67af1c",
+      "name": "Nota 31a6",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        160,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 9 * * 1-6"
+            }
+          ]
+        }
+      },
+      "id": "36f27ba4-00e0-45f3-ace1-7e12898476a1",
+      "name": "Lunes a sábado 9:30",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Config').first().json.LH_API_URL }}/api/v1/cola?empresa=micuentanueva",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $('Config').first().json.LH_API_KEY }}"
+            }
+          ]
+        }
+      },
+      "id": "ef5cafe5-f4a3-4fd4-abc2-06c1b2815839",
+      "name": "Leads por llamar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b9515cb6-9767-4893-b188-de8148268e75",
+              "leftValue": "={{ $json.total > 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7eae436d-523e-4cd6-bff5-0e59f8c4aced",
+      "name": "¿Hay alguien?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.N8N_EVENTS_WEBHOOK_URL }}",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $('Config').first().json.LH_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ kind: 'aviso.texto', payload: { texto: $json.texto } }) }}"
+      },
+      "id": "a596c9dd-7951-4956-989f-21d74b5db8f5",
+      "name": "Mandar resumen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        220
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a4c2f9f4-9005-4851-a0c3-972889f6d47b",
+              "name": "LH_API_KEY",
+              "value": "PEGA_AQUI_LA_N8N_API_KEY_DE_LA_APP",
+              "type": "string"
+            },
+            {
+              "id": "32d29231-b13b-4409-aa9d-8296b096b120",
+              "name": "LH_API_URL",
+              "value": "https://app.tudominio.com",
+              "type": "string"
+            },
+            {
+              "id": "aaaff228-6e6e-4398-9e48-1c2830fb1900",
+              "name": "N8N_EVENTS_WEBHOOK_URL",
+              "value": "https://TU-N8N/webhook/leads-hunters-eventos",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9d27726c-dcf0-490f-adb5-f7052b50a782",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Lunes a sábado 9:30": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leads por llamar": {
+      "main": [
+        [
+          {
+            "node": "¿Hay alguien?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay alguien?": {
+      "main": [
+        [
+          {
+            "node": "Mandar resumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Leads por llamar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

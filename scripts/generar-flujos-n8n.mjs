@@ -151,6 +151,9 @@ const CONFIG_DEFAULTS = {
   N8N_EVENTS_WEBHOOK_URL: "https://TU-N8N/webhook/leads-hunters-eventos",
   WA_ACCESS_TOKEN: "PEGA_AQUI_EL_TOKEN_PERMANENTE_DE_WHATSAPP_BUSINESS",
   WA_NUMEROS: '{"PHONE_NUMBER_ID_DEL_DESPACHO": "CODIGO_DEL_TEST_DEL_DESPACHO"}',
+  FORM_KEY: "PEGA_AQUI_UNA_CLAVE_SECRETA",
+  META_TOKEN: "PEGA_AQUI_EL_TOKEN_DE_INSTAGRAM_DE_LA_EMPRESA",
+  REELS: "",
 };
 const TRIGGER_TYPES = ["Trigger", "webhook", "manualTrigger"];
 
@@ -158,7 +161,7 @@ const TRIGGER_TYPES = ["Trigger", "webhook", "manualTrigger"];
  * Sustituye $env.X por $('Config').first().json.X y mete un nodo "Config" (Set que conserva
  * los datos de entrada) justo después de los disparadores. n8n Cloud no permite $env.
  */
-function withConfig(wf) {
+function withConfig(wf, overrides = {}) {
   const used = new Set();
   const re = /\$env\.([A-Z0-9_]+)/g;
   for (const n of wf.nodes) for (const m of JSON.stringify(n.parameters).matchAll(re)) used.add(m[1]);
@@ -174,7 +177,7 @@ function withConfig(wf) {
     mode: "manual",
     includeOtherFields: true,
     assignments: {
-      assignments: [...used].sort().map((k) => ({ id: randomUUID(), name: k, value: CONFIG_DEFAULTS[k] ?? "", type: "string" })),
+      assignments: [...used].sort().map((k) => ({ id: randomUUID(), name: k, value: overrides[k] ?? CONFIG_DEFAULTS[k] ?? "", type: "string" })),
     },
     options: {},
   });
@@ -191,8 +194,8 @@ function withConfig(wf) {
   return wf;
 }
 
-function save(file, wf) {
-  wf = withConfig(wf);
+function save(file, wf, overrides) {
+  wf = withConfig(wf, overrides);
   writeFileSync(path.join(OUT, file), JSON.stringify(wf, null, 2) + "\n");
   console.log("✓", file);
 }
@@ -494,7 +497,7 @@ return [{ json: { event_id: b.id, kind: b.kind, ...b.payload } }];`);
     outputKey: key,
   });
   const sw = node("Tipo de evento", "n8n-nodes-base.switch", 3.2, [660, 400], {
-    rules: { values: ["lead.nuevo", "cita.agendada", "cita.asistida", "cita.no_asistio", "prospecto.cliente", "prospecto.vio_auditoria", "test.sin_despacho", "linea.lead_nuevo"].map(rule) },
+    rules: { values: ["lead.nuevo", "cita.agendada", "cita.asistida", "cita.no_asistio", "prospecto.cliente", "prospecto.vio_auditoria", "test.sin_despacho", "linea.lead_nuevo", "aviso.texto"].map(rule) },
     options: {},
   });
 
@@ -556,7 +559,9 @@ return [{ json: { event_id: b.id, kind: b.kind, ...b.payload } }];`);
     "=🙋 *{{ $json.nombre }}* ({{ $json.provincia }}) ha hecho el test: {{ $json.resultado === 'apto' ? 'cumple' : 'hay que revisar' }}, deuda {{ $json.deuda ? $json.deuda.toLocaleString('es-ES') + ' €' : '¿?' }}, {{ $json.acreedores }} acreedores.\nNo tienes despacho en {{ $json.provincia }}: ya son {{ $json.en_provincia_30d }} este mes. Llámale y ofrece el caso a un despacho de allí.\n{{ $('Config').first().json.APP_URL }}/particulares");
   const tgEnergy = whatsapp("⚡ Lead de otra línea", [940, 1340],
     "=⚡ *{{ $json.linea_nombre }}* ({{ $json.empresa }}) · prioridad {{ $json.prioridad }}\n{{ $json.nombre }} · {{ $json.telefono }} · {{ $json.provincia || '' }}\n{{ ($json.motivos || []).slice(0, 3).join(' · ') }}\n{{ $json.canal }} {{ $json.campana || '' }}\n👉 {{ $('Config').first().json.APP_URL }}/lineas/{{ $json.id }}");
-  [tgLead, tgDone, tgNo, tgClient, tgAudit, tgPool, tgEnergy].forEach((n) => (n.onError = "continueRegularOutput"));
+  // Los flujos de cada empresa (resumen de llamadas, informe del grupo…) mandan aquí su texto: así la apikey de CallMeBot vive solo en este flujo
+  const tgText = whatsapp("📣 Aviso de otro flujo", [940, 1500], "={{ $json.texto }}");
+  [tgLead, tgDone, tgNo, tgClient, tgAudit, tgPool, tgEnergy, tgText].forEach((n) => (n.onError = "continueRegularOutput"));
 
   // Reseña en Google (despachos con enlace de reseña): email al lead tras la consulta realizada
   const D = "$('Tipo de evento').item.json";
@@ -577,18 +582,18 @@ return [{ json: { event_id: b.id, kind: b.kind, ...b.payload } }];`);
   markReview.onError = "continueRegularOutput";
 
   const note = sticky(
-    "## 04 · Eventos de la app\nLa app llama a este webhook en cada evento (`N8N_EVENTS_WEBHOOK_URL`).\n- **lead.nuevo** → WhatsApp al equipo para llamar en < 5 min\n- **cita.agendada** → email al despacho con el resumen + enlace para confirmar asistencia, y confirmación al lead (email; SMS con Twilio si lo activas)\n- **cita.asistida / no_asistio** → aviso; si el despacho tiene enlace de reseña, email al lead pidiendo su opinión en Google\n- **prospecto.cliente** → aviso de nuevo cliente\n- **prospecto.vio_auditoria** → WhatsApp para llamar al despacho mientras mira su auditoría\n- **test.sin_despacho** → alguien hizo el test en una provincia sin despacho cliente\n- **linea.lead_nuevo** → lead de otra empresa o línea (Recorta luz, placas…) entrado por Instagram\n\nActiva el flujo para que la URL de producción funcione.",
+    "## 04 · Eventos de la app\nLa app llama a este webhook en cada evento (`N8N_EVENTS_WEBHOOK_URL`).\n- **lead.nuevo** → WhatsApp al equipo para llamar en < 5 min\n- **cita.agendada** → email al despacho con el resumen + enlace para confirmar asistencia, y confirmación al lead (email; SMS con Twilio si lo activas)\n- **cita.asistida / no_asistio** → aviso; si el despacho tiene enlace de reseña, email al lead pidiendo su opinión en Google\n- **prospecto.cliente** → aviso de nuevo cliente\n- **prospecto.vio_auditoria** → WhatsApp para llamar al despacho mientras mira su auditoría\n- **test.sin_despacho** → alguien hizo el test en una provincia sin despacho cliente\n- **linea.lead_nuevo** → lead de otra empresa o línea (Recorta luz, placas…) entrado por Instagram\n- **aviso.texto** → texto ya preparado por otro flujo (resúmenes por empresa, informe del grupo)\n\nActiva el flujo para que la URL de producción funcione.",
     [160, -40], 560, 300, 4,
   );
 
   save("04-eventos-app.json", workflow("04 · Eventos de la app (avisos y emails)",
-    [note, hook, check, sw, tgLead, mailClient, hasLeadEmail, mailLead, sms, tgDone, wantsReview, mailReview, markReview, tgNo, tgClient, tgAudit, tgPool, tgEnergy],
+    [note, hook, check, sw, tgLead, mailClient, hasLeadEmail, mailLead, sms, tgDone, wantsReview, mailReview, markReview, tgNo, tgClient, tgAudit, tgPool, tgEnergy, tgText],
     [
       ["Eventos de la app", "Comprobar clave"], ["Comprobar clave", "Tipo de evento"],
       ["Tipo de evento", "🔥 Nuevo lead al equipo", 0], ["Tipo de evento", "Email al despacho", 1], ["Tipo de evento", "✅ Consulta realizada", 2],
       ["Tipo de evento", "❌ No se presentó", 3], ["Tipo de evento", "🎉 Nuevo cliente", 4],
       ["Tipo de evento", "👀 Están viendo la auditoría", 5], ["Tipo de evento", "🙋 Persona sin despacho", 6],
-      ["Tipo de evento", "⚡ Lead de otra línea", 7],
+      ["Tipo de evento", "⚡ Lead de otra línea", 7], ["Tipo de evento", "📣 Aviso de otro flujo", 8],
       ["Email al despacho", "¿El lead tiene email?"], ["¿El lead tiene email?", "Email de confirmación al lead", 0],
       ["Email al despacho", "SMS al lead (opcional)"],
       ["✅ Consulta realizada", "¿Pedir reseña?"], ["¿Pedir reseña?", "⭐ Pedir reseña al lead", 0], ["⭐ Pedir reseña al lead", "Marcar reseña pedida"],
@@ -804,6 +809,165 @@ return out;`);
     [note, hook, verify, answer, parse, engine, send],
     [["Verificación de Meta", "Responder a Meta"], ["Mensaje de WhatsApp", "Leer mensaje"], ["Leer mensaje", "Asistente (app)"], ["Asistente (app)", "Enviar respuesta"]],
   ));
+}
+
+// ---------------------------------------------------------------------------
+// Flujos por empresa del grupo (Leads Hunters es la matriz; Mi Cuenta Nueva, Recorta y MewHub cuelgan de ella).
+// Los despachos (01-08) son los flujos de Mi Cuenta Nueva y de la captación B2B de Leads Hunters.
+// Los avisos de estos flujos pasan por el flujo 04 (evento aviso.texto): la apikey de CallMeBot solo se pega allí.
+// ---------------------------------------------------------------------------
+const EMPRESAS = [
+  { slug: "micuentanueva", nombre: "Mi Cuenta Nueva", linea: "despachos", formularios: false, reels: true },
+  { slug: "recorta", nombre: "Recorta", linea: "luz", formularios: true, reels: false }, // sus reels ya tienen flujo propio
+  { slug: "mewhub", nombre: "MewHub", linea: "web", formularios: true, reels: true },
+];
+
+/** Manda un texto al flujo 04, que lo reenvía por WhatsApp. */
+const aviso = (name, position, texto) =>
+  http(name, position, {
+    method: "POST", url: "={{ $env.N8N_EVENTS_WEBHOOK_URL }}",
+    body: `={{ JSON.stringify({ kind: 'aviso.texto', payload: { texto: ${texto} } }) }}`,
+    onError: "continueRegularOutput",
+  });
+
+const cron = (name, position, expression) =>
+  node(name, "n8n-nodes-base.scheduleTrigger", 1.2, position, { rule: { interval: [{ field: "cronExpression", expression }] } });
+
+for (const e of EMPRESAS) {
+  // Formularios web, de Google Ads o de cualquier herramienta (Typeform, landings…) → CRM, en la línea de la empresa
+  if (e.formularios) {
+    const hook = node("Formulario recibido", "n8n-nodes-base.webhook", 2, [220, 300], {
+      httpMethod: "POST", path: `${e.slug}-formularios`, responseMode: "onReceived", options: {},
+    }, { webhookId: randomUUID() });
+    const prep = code("Preparar lead", [440, 300], `// Acepta el formato de Google Ads (user_column_data + google_key), Meta (field_data) o un JSON plano.
+// Clave: google_key, "clave" en el cuerpo, ?clave= o la cabecera x-form-key (FORM_KEY del Config).
+const req = $input.first().json;
+const b = req.body ?? {};
+const google = Array.isArray(b.user_column_data);
+const clave = google ? b.google_key : (b.clave ?? req.query?.clave ?? req.headers?.['x-form-key']);
+if (!$env.FORM_KEY || clave !== $env.FORM_KEY) return [{ json: { valido: false, motivo: 'clave incorrecta' } }];
+const lead = {};
+if (google) {
+  const nombres = { FULL_NAME: 'nombre', FIRST_NAME: 'first_name', LAST_NAME: 'last_name', PHONE_NUMBER: 'telefono', EMAIL: 'email', POSTAL_CODE: 'codigo_postal', CITY: 'ciudad', REGION: 'provincia' };
+  for (const c of b.user_column_data) lead[nombres[c.column_id] || c.column_name || c.column_id] = c.string_value;
+  lead.canal = 'google';
+  lead.campana = b.campaign_id ? 'Google Ads ' + b.campaign_id : 'google-ads';
+  lead.acepto = 'si'; // el formulario de Google ya incluye la política de privacidad del anunciante
+} else {
+  for (const [k, v] of Object.entries(b)) if (k !== 'clave' && (v === null || typeof v !== 'object')) lead[k] = v;
+  if (b.answers && typeof b.answers === 'object') Object.assign(lead, b.answers);
+  if (Array.isArray(b.field_data)) for (const f of b.field_data) lead[f.name] = Array.isArray(f.values) ? f.values.join(', ') : f.values;
+  lead.canal = lead.canal ?? b.source ?? 'web';
+}
+lead.linea = lead.linea ?? lead.interes ?? $env.LINEA;
+return [{ json: { valido: true, lead } }];`);
+    const ok = ifNode("¿Clave correcta?", [660, 300], "={{ $json.valido }}");
+    const send = http("Guardar en el CRM", [880, 200], {
+      method: "POST", url: apiUrl("/api/v1/particulares"), body: "={{ JSON.stringify($json.lead) }}", timeout: 20000, onError: "continueRegularOutput",
+    });
+    const failed = ifNode("¿Ha fallado?", [1100, 200], "={{ $json.ok !== true }}");
+    const warn = aviso("Avisar del fallo", [1320, 120],
+      `'⚠️ *${e.nombre}: lead de formulario no guardado*\\n' + ($json.error?.message || JSON.stringify($json)).slice(0, 300)`);
+    const note = sticky(
+      `## ${e.nombre} · Formularios → CRM\nURL: \`https://TU-N8N/webhook/${e.slug}-formularios\` (POST, JSON).\n- **Google Ads**: formulario de clientes potenciales → Integración de webhook, con esta URL y la clave \`FORM_KEY\`.\n- **Web u otra herramienta**: manda los campos (nombre, telefono, email, provincia, acepto, las preguntas de la línea) y \`clave\`.\n- \`linea\` o \`interes\` eligen la línea; si no viene, va a **${e.linea}**.\n\nEl lead entra en Leads de la app con su prioridad y te avisa el flujo 04.`,
+      [160, -40], 560, 260, 4,
+    );
+    save(`${e.slug}-formularios.json`, workflow(`${e.nombre} · Formularios web y Google Ads → CRM`,
+      [note, hook, prep, ok, send, failed, warn],
+      [["Formulario recibido", "Preparar lead"], ["Preparar lead", "¿Clave correcta?"], ["¿Clave correcta?", "Guardar en el CRM", 0],
+        ["Guardar en el CRM", "¿Ha fallado?"], ["¿Ha fallado?", "Avisar del fallo", 0]],
+    ), { LINEA: e.linea });
+
+    // Meta Lead Ads (Facebook/Instagram) → CRM
+    const trigger = node("Meta · Nuevo lead", "n8n-nodes-base.facebookLeadAdsTrigger", 1, [220, 300], {
+      event: "newLead", page: { __rl: true, mode: "list", value: "" }, form: { __rl: true, mode: "list", value: "" }, options: {},
+    }, { webhookId: randomUUID() });
+    const map = code("Preparar lead", [440, 300], `return $input.all().map(({ json: l }) => {
+  const lead = {};
+  if (Array.isArray(l.field_data)) for (const f of l.field_data) lead[f.name] = Array.isArray(f.values) ? f.values.join(', ') : f.values;
+  else for (const [k, v] of Object.entries(l)) if (typeof v !== 'object' && !/^[A-Z0-9_]+$/.test(k)) lead[k] = v; // sin los campos del nodo Config
+  lead.linea = lead.linea ?? lead.interes ?? $env.LINEA;
+  lead.canal = 'meta';
+  lead.campana = l.campaign?.name ?? l.campaign_name ?? l.form?.name ?? 'meta-lead-ads';
+  lead.acepto = 'si'; // el formulario de Meta ya incluye la política de privacidad
+  return { json: lead };
+});`);
+    const msend = http("Guardar en el CRM", [660, 300], {
+      method: "POST", url: apiUrl("/api/v1/particulares"), body: "={{ JSON.stringify($json) }}", timeout: 20000, onError: "continueRegularOutput",
+    });
+    const mfailed = ifNode("¿Ha fallado?", [880, 300], "={{ $json.ok !== true }}");
+    const mwarn = aviso("Avisar del fallo", [1100, 220],
+      `'⚠️ *${e.nombre}: lead de Meta no guardado*\\n' + ($json.error?.message || JSON.stringify($json)).slice(0, 300)`);
+    const mnote = sticky(
+      `## ${e.nombre} · Meta Lead Ads → CRM\n1. En **Meta · Nuevo lead** conecta la credencial de Facebook Lead Ads y elige la página y el formulario de ${e.nombre}.\n2. Llama a las preguntas del formulario como en la línea (o añade una pregunta \`linea\`); si no, va a **${e.linea}**.\n3. Activa el flujo.`,
+      [160, 20], 520, 200, 4,
+    );
+    save(`${e.slug}-meta.json`, workflow(`${e.nombre} · Meta Lead Ads → CRM`,
+      [mnote, trigger, map, msend, mfailed, mwarn],
+      [["Meta · Nuevo lead", "Preparar lead"], ["Preparar lead", "Guardar en el CRM"], ["Guardar en el CRM", "¿Ha fallado?"], ["¿Ha fallado?", "Avisar del fallo", 0]],
+    ), { LINEA: e.linea });
+  }
+
+  // Resumen diario de quién espera llamada en las líneas de la empresa
+  {
+    const sched = cron("Lunes a sábado 9:30", [220, 300], "30 9 * * 1-6");
+    const queue = http("Leads por llamar", [440, 300], { url: apiUrl(`/api/v1/cola?empresa=${e.slug}`), onError: "continueRegularOutput" });
+    const any = ifNode("¿Hay alguien?", [660, 300], "={{ $json.total > 0 }}");
+    const send = aviso("Mandar resumen", [880, 220], "$json.texto");
+    const note = sticky(`## ${e.nombre} · Leads por llamar\nDe lunes a sábado a las 9:30 te manda por WhatsApp (vía flujo 04) cuántos leads de ${e.nombre} esperan llamada, por línea y con los de prioridad A. Si no hay nadie, no manda nada.`,
+      [160, 20], 480, 180, 4);
+    save(`${e.slug}-llamadas.json`, workflow(`${e.nombre} · Leads por llamar (resumen diario)`,
+      [note, sched, queue, any, send],
+      [["Lunes a sábado 9:30", "Leads por llamar"], ["Leads por llamar", "¿Hay alguien?"], ["¿Hay alguien?", "Mandar resumen", 0]],
+    ));
+  }
+
+  // Reels en el Instagram de la empresa (como el 09 de Leads Hunters): REELS = vídeos de /reels separados por comas
+  if (e.reels) {
+    const sched = node("2 al día (11 y 18 h)", "n8n-nodes-base.scheduleTrigger", 1.2, [220, 300], {
+      rule: { interval: [{ field: "days", triggerAtHour: 11 }, { field: "days", triggerAtHour: 18 }] },
+    });
+    const pick = code("Elegir reel", [440, 300], `const list = String($env.REELS || '').split(',').map(s => s.trim()).filter(Boolean);
+const token = $env.META_TOKEN;
+if (!list.length || !token || token.startsWith('PEGA_AQUI')) return [];
+const hour = Number(new Date().toLocaleString('en-GB', { timeZone: 'Europe/Madrid', hour: '2-digit', hour12: false }));
+const day = Math.floor(Date.now() / 86400000);
+const reel = list[(day * 2 + (hour < 15 ? 0 : 1)) % list.length];
+const url = $env.APP_URL + '/reels/' + reel + '.mp4';
+return [{ json: { reel, token, url, cover: url.replace('/reels/', '/reels/portadas/').replace('.mp4', '.jpg'), caption: $env.CAPTION } }];`);
+    const me = http("Comprobar cuenta", [660, 300], {
+      url: "https://graph.instagram.com/v21.0/me", headers: false, query: { fields: "user_id,username", access_token: "={{ $json.token }}" },
+    });
+    const up = http("Subir reel", [880, 300], {
+      method: "POST", url: "=https://graph.instagram.com/v21.0/{{ $json.user_id }}/media", headers: false,
+      query: { media_type: "REELS", video_url: "={{ $('Elegir reel').item.json.url }}", cover_url: "={{ $('Elegir reel').item.json.cover }}",
+        caption: "={{ $('Elegir reel').item.json.caption }}", access_token: "={{ $('Elegir reel').item.json.token }}" },
+    });
+    const wait = node("Esperar procesado", "n8n-nodes-base.wait", 1.1, [1100, 300], { amount: 90 }, { webhookId: randomUUID() });
+    const pub = http("Publicar reel", [1320, 300], {
+      method: "POST", url: "=https://graph.instagram.com/v21.0/{{ $('Comprobar cuenta').item.json.user_id }}/media_publish", headers: false,
+      query: { creation_id: "={{ $json.id }}", access_token: "={{ $('Elegir reel').item.json.token }}" },
+    });
+    const note = sticky(`## ${e.nombre} · Publicar reels en Instagram\nPublica 2 reels al día rotando la lista \`REELS\` del Config (nombres de vídeo de /reels, sin .mp4, separados por comas).\nNecesita \`META_TOKEN\`: el token de Instagram (Instagram Login) de la cuenta de ${e.nombre}. Sin reels o sin token no hace nada.`,
+      [160, 20], 520, 200, 4);
+    save(`${e.slug}-reels.json`, workflow(`${e.nombre} · Publicar reels en Instagram`,
+      [note, sched, pick, me, up, wait, pub],
+      [["2 al día (11 y 18 h)", "Elegir reel"], ["Elegir reel", "Comprobar cuenta"], ["Comprobar cuenta", "Subir reel"], ["Subir reel", "Esperar procesado"], ["Esperar procesado", "Publicar reel"]],
+    ), { CAPTION: `${e.nombre}. Escríbenos por mensaje directo.` });
+  }
+}
+
+// Leads Hunters (matriz) · informe mensual del grupo: todas las empresas y líneas, por WhatsApp
+{
+  const sched = node("Día 1 a las 9:00", "n8n-nodes-base.scheduleTrigger", 1.2, [220, 300], {
+    rule: { interval: [{ field: "months", monthsInterval: 1, triggerAtDayOfMonth: 1, triggerAtHour: 9 }] },
+  });
+  const rep = http("Informe del mes anterior", [440, 300], { url: "={{ $env.LH_API_URL }}/api/v1/informes?mes={{ $now.minus({ months: 1 }).toFormat('yyyy-MM') }}" });
+  const send = aviso("Mandar informe", [660, 300], "'📊 *Informe del grupo*\\n' + String($json.texto || '').slice(0, 1800) + '\\n' + $env.APP_URL + '/informes'");
+  const note = sticky("## Leads Hunters · Informe mensual del grupo\nEl día 1 te manda por WhatsApp (vía flujo 04) el resumen del mes anterior de todas las empresas y líneas: leads, contactados, ganados y mejoras propuestas.",
+    [160, 20], 480, 180, 4);
+  save("leads-hunters-informe-grupo.json", workflow("Leads Hunters · Informe mensual del grupo", [note, sched, rep, send],
+    [["Día 1 a las 9:00", "Informe del mes anterior"], ["Informe del mes anterior", "Mandar informe"]]));
 }
 
 void API;
