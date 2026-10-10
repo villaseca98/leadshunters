@@ -1,0 +1,184 @@
+{
+  "name": "Leads Hunters · Informe mensual del grupo",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Leads Hunters · Informe mensual del grupo\nEl día 1 te manda por WhatsApp (vía flujo 04) el resumen del mes anterior de todas las empresas y líneas: leads, contactados, ganados y mejoras propuestas.",
+        "width": 480,
+        "height": 180,
+        "color": 4
+      },
+      "id": "d100621d-1253-41e5-9eb4-4d3829333766",
+      "name": "Nota d676",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        160,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months",
+              "monthsInterval": 1,
+              "triggerAtDayOfMonth": 1,
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "id": "09cf3623-393d-41a8-ba17-46f961a242af",
+      "name": "Día 1 a las 9:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('Config').first().json.LH_API_URL }}/api/v1/informes?mes={{ $now.minus({ months: 1 }).toFormat('yyyy-MM') }}",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $('Config').first().json.LH_API_KEY }}"
+            }
+          ]
+        }
+      },
+      "id": "2702261d-320f-46bd-bc1e-61c527db4aca",
+      "name": "Informe del mes anterior",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.N8N_EVENTS_WEBHOOK_URL }}",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $('Config').first().json.LH_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ kind: 'aviso.texto', payload: { texto: '📊 *Informe del grupo*\\n' + String($json.texto || '').slice(0, 1800) + '\\n' + $('Config').first().json.APP_URL + '/informes' } }) }}"
+      },
+      "id": "2faa34df-e25d-42dc-85c3-eb2c55e00b6f",
+      "name": "Mandar informe",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8a030602-74b7-43e8-ad27-4717d8505ac1",
+              "name": "APP_URL",
+              "value": "https://app.tudominio.com",
+              "type": "string"
+            },
+            {
+              "id": "e40a329c-852f-4d3f-aba3-1cb917815555",
+              "name": "LH_API_KEY",
+              "value": "PEGA_AQUI_LA_N8N_API_KEY_DE_LA_APP",
+              "type": "string"
+            },
+            {
+              "id": "2be64c59-61c4-42cb-9e69-cbf05d1778aa",
+              "name": "LH_API_URL",
+              "value": "https://app.tudominio.com",
+              "type": "string"
+            },
+            {
+              "id": "bdd53596-cc21-4cb6-94fe-ee90dbfaaf42",
+              "name": "N8N_EVENTS_WEBHOOK_URL",
+              "value": "https://TU-N8N/webhook/leads-hunters-eventos",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "31c58570-424d-4392-9f4b-4fabd85e5f24",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Día 1 a las 9:00": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Informe del mes anterior": {
+      "main": [
+        [
+          {
+            "node": "Mandar informe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Informe del mes anterior",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

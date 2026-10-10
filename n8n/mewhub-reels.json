@@ -1,0 +1,290 @@
+{
+  "name": "MewHub · Publicar reels en Instagram",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## MewHub · Publicar reels en Instagram\nPublica 2 reels al día rotando la lista `REELS` del Config (nombres de vídeo de /reels, sin .mp4, separados por comas).\nNecesita `META_TOKEN`: el token de Instagram (Instagram Login) de la cuenta de MewHub. Sin reels o sin token no hace nada.",
+        "width": 520,
+        "height": 200,
+        "color": 4
+      },
+      "id": "a1f49099-496e-4e00-8f69-71ecf0e19e67",
+      "name": "Nota 9c15",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        160,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 11
+            },
+            {
+              "field": "days",
+              "triggerAtHour": 18
+            }
+          ]
+        }
+      },
+      "id": "3e92b73b-3952-491d-a699-1991d1d10ca3",
+      "name": "2 al día (11 y 18 h)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const list = String($('Config').first().json.REELS || '').split(',').map(s => s.trim()).filter(Boolean);\nconst token = $('Config').first().json.META_TOKEN;\nif (!list.length || !token || token.startsWith('PEGA_AQUI')) return [];\nconst hour = Number(new Date().toLocaleString('en-GB', { timeZone: 'Europe/Madrid', hour: '2-digit', hour12: false }));\nconst day = Math.floor(Date.now() / 86400000);\nconst reel = list[(day * 2 + (hour < 15 ? 0 : 1)) % list.length];\nconst url = $('Config').first().json.APP_URL + '/reels/' + reel + '.mp4';\nreturn [{ json: { reel, token, url, cover: url.replace('/reels/', '/reels/portadas/').replace('.mp4', '.jpg'), caption: $('Config').first().json.CAPTION } }];"
+      },
+      "id": "d120fd5b-989d-4a60-bdca-7ba4fc62d797",
+      "name": "Elegir reel",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://graph.instagram.com/v21.0/me",
+        "options": {},
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "fields",
+              "value": "user_id,username"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $json.token }}"
+            }
+          ]
+        }
+      },
+      "id": "dd07b121-991e-44a1-a8b5-0044edacfeef",
+      "name": "Comprobar cuenta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.instagram.com/v21.0/{{ $json.user_id }}/media",
+        "options": {},
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "media_type",
+              "value": "REELS"
+            },
+            {
+              "name": "video_url",
+              "value": "={{ $('Elegir reel').item.json.url }}"
+            },
+            {
+              "name": "cover_url",
+              "value": "={{ $('Elegir reel').item.json.cover }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $('Elegir reel').item.json.caption }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $('Elegir reel').item.json.token }}"
+            }
+          ]
+        }
+      },
+      "id": "95b6057a-5cf5-4a8a-99d6-3fe74f66de19",
+      "name": "Subir reel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 90
+      },
+      "id": "04de2769-5d29-4a2d-afcf-3efbbf1f21fb",
+      "name": "Esperar procesado",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1320,
+        300
+      ],
+      "webhookId": "b3f801e1-c5e4-4211-b12b-2f3344ace825"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.instagram.com/v21.0/{{ $('Comprobar cuenta').item.json.user_id }}/media_publish",
+        "options": {},
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "creation_id",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $('Elegir reel').item.json.token }}"
+            }
+          ]
+        }
+      },
+      "id": "86286a9c-b8d4-49af-90d3-0e4f2f6c967a",
+      "name": "Publicar reel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "37db594f-1a34-4f01-b005-6c7106f29eb6",
+              "name": "APP_URL",
+              "value": "https://app.tudominio.com",
+              "type": "string"
+            },
+            {
+              "id": "2b5895c5-252b-4b6b-ab86-f8dbd38661bf",
+              "name": "CAPTION",
+              "value": "MewHub. Escríbenos por mensaje directo.",
+              "type": "string"
+            },
+            {
+              "id": "fc725e52-7241-4138-805a-32f0df2194c4",
+              "name": "META_TOKEN",
+              "value": "PEGA_AQUI_EL_TOKEN_DE_INSTAGRAM_DE_LA_EMPRESA",
+              "type": "string"
+            },
+            {
+              "id": "6ee76edf-08c8-4892-8b7e-1302f4d82237",
+              "name": "REELS",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a302e155-f397-4fe8-a0e9-5263a2d16e6b",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "2 al día (11 y 18 h)": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Elegir reel": {
+      "main": [
+        [
+          {
+            "node": "Comprobar cuenta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comprobar cuenta": {
+      "main": [
+        [
+          {
+            "node": "Subir reel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Subir reel": {
+      "main": [
+        [
+          {
+            "node": "Esperar procesado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Esperar procesado": {
+      "main": [
+        [
+          {
+            "node": "Publicar reel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Elegir reel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

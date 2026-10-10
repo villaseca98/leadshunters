@@ -1,0 +1,305 @@
+{
+  "name": "Recorta · Formularios web y Google Ads → CRM",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Recorta · Formularios → CRM\nURL: `https://TU-N8N/webhook/recorta-formularios` (POST, JSON).\n- **Google Ads**: formulario de clientes potenciales → Integración de webhook, con esta URL y la clave `FORM_KEY`.\n- **Web u otra herramienta**: manda los campos (nombre, telefono, email, provincia, acepto, las preguntas de la línea) y `clave`.\n- `linea` o `interes` eligen la línea; si no viene, va a **luz**.\n\nEl lead entra en Leads de la app con su prioridad y te avisa el flujo 04.",
+        "width": 560,
+        "height": 260,
+        "color": 4
+      },
+      "id": "55cf50f3-efbf-4a18-a6b4-6190cd9f16ce",
+      "name": "Nota cb86",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        160,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "recorta-formularios",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "1a8d7a1e-493c-4ba6-9a01-2b769d01876c",
+      "name": "Formulario recibido",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "webhookId": "76cbdb45-c079-44cb-b46e-83ecc1f42edd"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Acepta el formato de Google Ads (user_column_data + google_key), Meta (field_data) o un JSON plano.\n// Clave: google_key, \"clave\" en el cuerpo, ?clave= o la cabecera x-form-key (FORM_KEY del Config).\nconst req = $input.first().json;\nconst b = req.body ?? {};\nconst google = Array.isArray(b.user_column_data);\nconst clave = google ? b.google_key : (b.clave ?? req.query?.clave ?? req.headers?.['x-form-key']);\nif (!$('Config').first().json.FORM_KEY || clave !== $('Config').first().json.FORM_KEY) return [{ json: { valido: false, motivo: 'clave incorrecta' } }];\nconst lead = {};\nif (google) {\n  const nombres = { FULL_NAME: 'nombre', FIRST_NAME: 'first_name', LAST_NAME: 'last_name', PHONE_NUMBER: 'telefono', EMAIL: 'email', POSTAL_CODE: 'codigo_postal', CITY: 'ciudad', REGION: 'provincia' };\n  for (const c of b.user_column_data) lead[nombres[c.column_id] || c.column_name || c.column_id] = c.string_value;\n  lead.canal = 'google';\n  lead.campana = b.campaign_id ? 'Google Ads ' + b.campaign_id : 'google-ads';\n  lead.acepto = 'si'; // el formulario de Google ya incluye la política de privacidad del anunciante\n} else {\n  for (const [k, v] of Object.entries(b)) if (k !== 'clave' && (v === null || typeof v !== 'object')) lead[k] = v;\n  if (b.answers && typeof b.answers === 'object') Object.assign(lead, b.answers);\n  if (Array.isArray(b.field_data)) for (const f of b.field_data) lead[f.name] = Array.isArray(f.values) ? f.values.join(', ') : f.values;\n  lead.canal = lead.canal ?? b.source ?? 'web';\n}\nlead.linea = lead.linea ?? lead.interes ?? $('Config').first().json.LINEA;\nreturn [{ json: { valido: true, lead } }];"
+      },
+      "id": "02cfbba2-b087-446e-8aed-6dcbb64912ed",
+      "name": "Preparar lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4df84007-abc5-4087-a6cf-95980441d80d",
+              "leftValue": "={{ $json.valido }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "286b5e1a-19b5-4085-82b1-8fb2006506e3",
+      "name": "¿Clave correcta?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.LH_API_URL }}/api/v1/particulares",
+        "options": {
+          "timeout": 20000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $('Config').first().json.LH_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.lead) }}"
+      },
+      "id": "55fdd0d9-1de2-400c-a3e0-93f146685a79",
+      "name": "Guardar en el CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        200
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a56b1233-5a01-4ddb-a4db-3afcdb3a7599",
+              "leftValue": "={{ $json.ok !== true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "668137bf-f4a5-4624-aeb2-52a0d45a5593",
+      "name": "¿Ha fallado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1320,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.N8N_EVENTS_WEBHOOK_URL }}",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $('Config').first().json.LH_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ kind: 'aviso.texto', payload: { texto: '⚠️ *Recorta: lead de formulario no guardado*\\n' + ($json.error?.message || JSON.stringify($json)).slice(0, 300) } }) }}"
+      },
+      "id": "d07ea9db-df44-4f1a-8775-72e561a960ef",
+      "name": "Avisar del fallo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        120
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e86c3767-4600-4ec6-97d3-8362d382d1e1",
+              "name": "FORM_KEY",
+              "value": "PEGA_AQUI_UNA_CLAVE_SECRETA",
+              "type": "string"
+            },
+            {
+              "id": "eb4153f7-516f-4d59-9d2b-b2373ad15961",
+              "name": "LH_API_KEY",
+              "value": "PEGA_AQUI_LA_N8N_API_KEY_DE_LA_APP",
+              "type": "string"
+            },
+            {
+              "id": "9f522285-16d6-4be0-9e91-b41e3da2d46a",
+              "name": "LH_API_URL",
+              "value": "https://app.tudominio.com",
+              "type": "string"
+            },
+            {
+              "id": "6bdc0b2e-d8bd-47d1-95a4-1463a4594c00",
+              "name": "LINEA",
+              "value": "luz",
+              "type": "string"
+            },
+            {
+              "id": "cdec4690-8fe6-4633-a326-93cf68055869",
+              "name": "N8N_EVENTS_WEBHOOK_URL",
+              "value": "https://TU-N8N/webhook/leads-hunters-eventos",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d4349302-5467-4e57-bc0a-6f6fb015ac7b",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Formulario recibido": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar lead": {
+      "main": [
+        [
+          {
+            "node": "¿Clave correcta?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Clave correcta?": {
+      "main": [
+        [
+          {
+            "node": "Guardar en el CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar en el CRM": {
+      "main": [
+        [
+          {
+            "node": "¿Ha fallado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Ha fallado?": {
+      "main": [
+        [
+          {
+            "node": "Avisar del fallo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Preparar lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

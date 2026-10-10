@@ -1,0 +1,262 @@
+{
+  "name": "Recorta · Meta Lead Ads → CRM",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Recorta · Meta Lead Ads → CRM\n1. En **Meta · Nuevo lead** conecta la credencial de Facebook Lead Ads y elige la página y el formulario de Recorta.\n2. Llama a las preguntas del formulario como en la línea (o añade una pregunta `linea`); si no, va a **luz**.\n3. Activa el flujo.",
+        "width": 520,
+        "height": 200,
+        "color": 4
+      },
+      "id": "005eac09-d836-4853-847f-88ff0e69d5e8",
+      "name": "Nota b6af",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        160,
+        20
+      ]
+    },
+    {
+      "parameters": {
+        "event": "newLead",
+        "page": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "form": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "options": {}
+      },
+      "id": "1785c6be-f5dc-4de2-b321-727e06295318",
+      "name": "Meta · Nuevo lead",
+      "type": "n8n-nodes-base.facebookLeadAdsTrigger",
+      "typeVersion": 1,
+      "position": [
+        220,
+        300
+      ],
+      "webhookId": "f8a1355c-5ebf-4354-838c-5485fa9386ac"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(({ json: l }) => {\n  const lead = {};\n  if (Array.isArray(l.field_data)) for (const f of l.field_data) lead[f.name] = Array.isArray(f.values) ? f.values.join(', ') : f.values;\n  else for (const [k, v] of Object.entries(l)) if (typeof v !== 'object' && !/^[A-Z0-9_]+$/.test(k)) lead[k] = v; // sin los campos del nodo Config\n  lead.linea = lead.linea ?? lead.interes ?? $('Config').first().json.LINEA;\n  lead.canal = 'meta';\n  lead.campana = l.campaign?.name ?? l.campaign_name ?? l.form?.name ?? 'meta-lead-ads';\n  lead.acepto = 'si'; // el formulario de Meta ya incluye la política de privacidad\n  return { json: lead };\n});"
+      },
+      "id": "b9f921fb-f964-467f-9f0a-159eade0b07b",
+      "name": "Preparar lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.LH_API_URL }}/api/v1/particulares",
+        "options": {
+          "timeout": 20000
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $('Config').first().json.LH_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "e8eccec9-85bb-4ab0-aa9d-a3326db2c87b",
+      "name": "Guardar en el CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "167560a1-6535-41a9-9493-c92f398a7bdb",
+              "leftValue": "={{ $json.ok !== true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "fd08fbe6-4137-4923-b0bb-9c562b5dff15",
+      "name": "¿Ha fallado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.N8N_EVENTS_WEBHOOK_URL }}",
+        "options": {},
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $('Config').first().json.LH_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ kind: 'aviso.texto', payload: { texto: '⚠️ *Recorta: lead de Meta no guardado*\\n' + ($json.error?.message || JSON.stringify($json)).slice(0, 300) } }) }}"
+      },
+      "id": "d71fa3e5-5467-4b9c-af31-ec4fd37611f5",
+      "name": "Avisar del fallo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        220
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "includeOtherFields": true,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6722c523-c567-4638-a9f7-2d77324cd770",
+              "name": "LH_API_KEY",
+              "value": "PEGA_AQUI_LA_N8N_API_KEY_DE_LA_APP",
+              "type": "string"
+            },
+            {
+              "id": "7b091256-ddc9-4a69-87db-f79e34a621f9",
+              "name": "LH_API_URL",
+              "value": "https://app.tudominio.com",
+              "type": "string"
+            },
+            {
+              "id": "e644358f-b92c-46a3-81bb-988ed51d9bf0",
+              "name": "LINEA",
+              "value": "luz",
+              "type": "string"
+            },
+            {
+              "id": "91d79e6c-8915-4909-9876-383c490ea937",
+              "name": "N8N_EVENTS_WEBHOOK_URL",
+              "value": "https://TU-N8N/webhook/leads-hunters-eventos",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ef6e8b14-4866-4e41-b4d5-29cc9bdc5980",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        440,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Meta · Nuevo lead": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar lead": {
+      "main": [
+        [
+          {
+            "node": "Guardar en el CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar en el CRM": {
+      "main": [
+        [
+          {
+            "node": "¿Ha fallado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Ha fallado?": {
+      "main": [
+        [
+          {
+            "node": "Avisar del fallo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Preparar lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Madrid",
+    "saveManualExecutions": true
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
